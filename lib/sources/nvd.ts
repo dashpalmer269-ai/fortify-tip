@@ -60,9 +60,14 @@ function determineFixStatus(item: NvdCveItem): FixStatus {
 }
 
 export async function fetchNvdCves(): Promise<RawThreatInput[]> {
-  const since = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString().split('.')[0];
+  // NVD requires format: 2021-08-04T00:00:00.000 (with milliseconds, no Z)
+  const since = new Date(Date.now() - 12 * 60 * 60 * 1000)
+    .toISOString()
+    .replace('Z', '');
+  const now = new Date().toISOString().replace('Z', '');
   const params = new URLSearchParams({
     pubStartDate: since,
+    pubEndDate: now,
     resultsPerPage: '100',
   });
 
