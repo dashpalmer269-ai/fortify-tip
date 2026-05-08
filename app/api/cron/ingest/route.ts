@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = createServerClient();
+  if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
   const results: Record<string, { fetched: number; inserted: number; error?: string }> = {};
 
   for (const source of SOURCES) {

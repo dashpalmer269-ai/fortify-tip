@@ -7,14 +7,16 @@ export const dynamic = 'force-dynamic';
 
 export default async function ForumsPage() {
   const supabase = createServerClient();
-  const { data: threats } = await supabase
-    .from("threats")
-    .select("*")
-    .eq("source_tab", "forums")
-    .order("published_at", { ascending: false })
-    .limit(50);
-
-  const items = (threats ?? []) as Threat[];
+  const items: Threat[] = [];
+  if (supabase) {
+    const { data } = await supabase
+      .from("threats")
+      .select("*")
+      .eq("source_tab", "forums")
+      .order("published_at", { ascending: false })
+      .limit(50);
+    items.push(...((data ?? []) as Threat[]));
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">

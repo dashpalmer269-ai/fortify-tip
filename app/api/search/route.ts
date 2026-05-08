@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = createServerClient();
+  if (!supabase) return NextResponse.json({ results: [], synthesis: null });
 
   // Full-text search via PostgreSQL
   const { data: ftsResults } = await supabase

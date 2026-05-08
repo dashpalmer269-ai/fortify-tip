@@ -22,8 +22,9 @@ const EXPLOIT_STYLES: Record<string, { label: string; color: string; bg: string 
 export default async function ThreatDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = createServerClient();
-  const { data } = await supabase.from("threats").select("*").eq("id", id).single();
+  if (!supabase) notFound();
 
+  const { data } = await supabase.from("threats").select("*").eq("id", id).single();
   if (!data) notFound();
   const threat = data as Threat;
 
@@ -43,7 +44,6 @@ export default async function ThreatDetailPage({ params }: { params: Promise<{ i
       ? { color: "#10B981", glow: "rgba(16,185,129,0.3)" }
       : { color: "#F97316", glow: "rgba(249,115,22,0.3)" };
 
-  // Fetch related threats by CVE or tags
   let related: Threat[] = [];
   if (threat.cve_id) {
     const { data: r } = await supabase
