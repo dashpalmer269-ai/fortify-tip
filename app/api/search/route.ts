@@ -2,24 +2,58 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { searchThreats } from "@/lib/ai/processor";
 
+// Simple in-memory rate limiter: 20 requests per IP per minute
+const rateLimitMap = new Map<string, { count: number; reset: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.reset) {
+    rateLimitMap.set(ip, { count: 1, reset: now + 60_000 });
+    return true;
+  }
+  if (entry.count >= 20) return false;
+  entry.count++;
+  return true;
+}
+
 export async function GET(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const q = req.nextUrl.searchParams.get("q")?.trim();
   if (!q || q.length < 2) {
     return NextResponse.json({ results: [], synthesis: null });
+  }
+  if (q.length > 200) {
+    return NextResponse.json({ error: "Query too long" }, { status: 400 });
   }
 
   const supabase = createServerClient();
   if (!supabase) return NextResponse.json({ results: [], synthesis: null });
 
-  // Full-text search via PostgreSQL
-  const { data: ftsResults } = await supabase
-    .from("threats")
-    .select("*")
-    .textSearch("title", q, { type: "websearch" })
-    .order("credibility_score", { ascending: false })
-    .limit(20);
+  // Full-text search via the FTS index (with ilike fallback)
+  let ftsResults: unknown[] | null = null;
+  try {
+    const { data } = await supabase.rpc("search_threats", { query: q }).limit(20);
+    ftsResults = data;
+  } catch {
+    // RPC not yet created — fall through to ilike fallback
+  }
 
-  // Also search by CVE id
+  if (!ftsResults) {
+    const { data } = await supabase
+      .from("threats")
+      .select("*")
+      .or(`title.ilike.%${q}%,summary.ilike.%${q}%`)
+      .order("credibility_score", { ascending: false })
+      .limit(20);
+    ftsResults = data;
+  }
+
+  // Also match by exact CVE id pattern
   const { data: cveResults } = await supabase
     .from("threats")
     .select("*")

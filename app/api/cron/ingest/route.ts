@@ -21,8 +21,14 @@ const SOURCES: { name: string; fn: () => Promise<RawThreatInput[]> }[] = [
 ];
 
 export async function GET(req: NextRequest) {
-  const secret = req.headers.get("x-cron-secret") ?? req.nextUrl.searchParams.get("secret");
-  if (secret !== process.env.CRON_SECRET) {
+  // Vercel crons send: Authorization: Bearer <CRON_SECRET>
+  // Manual calls send: ?secret=<CRON_SECRET>
+  const authHeader = req.headers.get("authorization");
+  const bearerSecret = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const querySecret = req.nextUrl.searchParams.get("secret");
+  const secret = bearerSecret ?? querySecret;
+
+  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

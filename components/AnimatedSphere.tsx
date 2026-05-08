@@ -9,19 +9,21 @@ interface Particle {
 
 export default function AnimatedSphere() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const SIZE = 600;
+    const SIZE = Math.min(600, container.clientWidth);
     canvas.width = SIZE;
     canvas.height = SIZE;
     const cx = SIZE / 2;
     const cy = SIZE / 2;
-    const R = 220;
+    const R = SIZE * 0.367; // ~220 at 600px
 
     // Generate particles on sphere surface
     const particles: Particle[] = Array.from({ length: 160 }, () => {
@@ -137,8 +139,11 @@ export default function AnimatedSphere() {
   }, []);
 
   return (
-    <div className="relative flex items-center justify-center" style={{ width: 600, height: 600 }}>
-      {/* Outer atmospheric glow */}
+    <div
+      ref={containerRef}
+      className="relative flex items-center justify-center w-full"
+      style={{ maxWidth: 600, aspectRatio: "1 / 1" }}
+    >
       <div
         className="absolute inset-0 rounded-full pointer-events-none"
         style={{
@@ -148,7 +153,7 @@ export default function AnimatedSphere() {
       />
       <canvas
         ref={canvasRef}
-        className="relative"
+        className="relative w-full h-full"
         style={{ animation: "float 6s ease-in-out infinite" }}
       />
     </div>

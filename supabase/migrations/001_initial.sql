@@ -41,6 +41,23 @@ create index if not exists idx_threats_is_critical on threats(is_critical);
 create index if not exists idx_threats_ingested_at on threats(ingested_at desc);
 create index if not exists idx_threats_published_at on threats(published_at desc);
 
--- Full-text search index
+-- Full-text search index across title + summary + raw_content
 create index if not exists idx_threats_fts on threats
   using gin(to_tsvector('english', coalesce(title,'') || ' ' || coalesce(summary,'') || ' ' || coalesce(raw_content,'')));
+
+-- RPC function used by the search API
+create or replace function search_threats(query text)
+returns setof threats
+language sql
+stable
+as $$
+  select *
+  from threats
+  where to_tsvector('english',
+      coalesce(title,'') || ' ' ||
+      coalesce(summary,'') || ' ' ||
+      coalesce(raw_content,'')
+    ) @@ websearch_to_tsquery('english', query)
+  order by credibility_score desc nulls last
+  limit 20;
+$$;

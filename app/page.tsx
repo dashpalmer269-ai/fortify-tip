@@ -162,8 +162,8 @@ export default function HomePage() {
       </div>
 
       {/* Main centerpiece */}
-      <div className="relative z-10 flex flex-col items-center mt-6 px-4">
-        <div className="relative flex flex-col items-center">
+      <div className="relative z-10 flex flex-col items-center mt-6 px-4 w-full">
+        <div className="relative flex flex-col items-center w-full max-w-[600px]">
           <AnimatedSphere />
 
           {/* Hero text overlay */}
