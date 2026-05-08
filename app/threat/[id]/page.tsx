@@ -12,12 +12,15 @@ const SEVERITY_STYLES: Record<string, { color: string; glow: string; bg: string 
   low:      { color: "#3b82f6", glow: "rgba(59,130,246,0.5)", bg: "rgba(59,130,246,0.12)" },
 };
 
-const EXPLOIT_STYLES: Record<string, { label: string; color: string; bg: string }> = {
-  active:      { label: "Actively Exploited", color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
-  poc:         { label: "PoC Available",       color: "#f97316", bg: "rgba(249,115,22,0.12)" },
-  theoretical: { label: "Theoretical",         color: "#eab308", bg: "rgba(234,179,8,0.12)" },
-  none:        { label: "No Known Exploit",    color: "#10b981", bg: "rgba(16,185,129,0.12)" },
-};
+function readableTitle(threat: Threat): string {
+  let title = threat.title ?? "";
+  title = title.replace(/^CVE-\d{4}-\d{4,7}:\s*/i, "");
+  title = title.replace(/^In the linux kernel,?\s+the following vulnerability has been (found|reported)[:\s]*/i, "Linux Kernel — ");
+  title = title.replace(/^The (.+?) plugin for WordPress is vulnerable to (.+)/i, "WordPress Plugin: $1 — $2");
+  title = title.trim();
+  if (title.length > 0) title = title[0].toUpperCase() + title.slice(1);
+  return title || threat.title;
+}
 
 export default async function ThreatDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -29,7 +32,7 @@ export default async function ThreatDetailPage({ params }: { params: Promise<{ i
   const threat = data as Threat;
 
   const sev = SEVERITY_STYLES[threat.severity ?? "low"];
-  const exploit = EXPLOIT_STYLES[threat.exploit_status ?? "none"];
+  const title = readableTitle(threat);
 
   const backHref = threat.source_tab === "registry"
     ? "/registry"
@@ -100,7 +103,7 @@ export default async function ThreatDetailPage({ params }: { params: Promise<{ i
               </span>
             )}
           </div>
-          <h1 className="text-3xl font-bold text-white leading-tight">{threat.title}</h1>
+          <h1 className="text-3xl font-bold text-white leading-tight">{title}</h1>
           <p className="text-gray-500 text-sm mt-3">
             {threat.source_name} ·{" "}
             {threat.published_at
@@ -111,7 +114,7 @@ export default async function ThreatDetailPage({ params }: { params: Promise<{ i
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            {/* AI Summary */}
+            {/* Overview */}
             {threat.summary && (
               <div
                 className="glass-card rounded-2xl p-6"
@@ -123,30 +126,11 @@ export default async function ThreatDetailPage({ params }: { params: Promise<{ i
                       <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" />
                     </svg>
                   </span>
-                  <span className="text-sm font-semibold text-gray-300 tracking-wide uppercase">AI Summary</span>
+                  <span className="text-sm font-semibold text-gray-300 tracking-wide uppercase">Overview</span>
                 </div>
                 <p className="text-gray-300 leading-relaxed">{threat.summary}</p>
               </div>
             )}
-
-            {/* Exploit & Fix Status */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="glass-card rounded-2xl p-5">
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">Exploit Status</p>
-                <div
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl"
-                  style={{ background: exploit.bg }}
-                >
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: exploit.color, boxShadow: `0 0 8px ${exploit.color}` }} />
-                  <span className="font-semibold text-sm" style={{ color: exploit.color }}>{exploit.label}</span>
-                </div>
-              </div>
-
-              <div className="glass-card rounded-2xl p-5">
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">Fix Status</p>
-                <FixStatusDisplay fixStatus={threat.fix_status} />
-              </div>
-            </div>
 
             {/* Affected Products */}
             {threat.affected_products && threat.affected_products.length > 0 && (
@@ -206,12 +190,6 @@ export default async function ThreatDetailPage({ params }: { params: Promise<{ i
 
           {/* Sidebar */}
           <div className="space-y-5">
-            {/* Credibility */}
-            <div className="glass-card rounded-2xl p-5">
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-4">Credibility Score</p>
-              <CredibilityDisplay score={threat.credibility_score} />
-            </div>
-
             {/* Related threats */}
             {related.length > 0 && (
               <div className="glass-card rounded-2xl p-5">
@@ -239,49 +217,6 @@ export default async function ThreatDetailPage({ params }: { params: Promise<{ i
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function FixStatusDisplay({ fixStatus }: { fixStatus: string | null }) {
-  const map: Record<string, { label: string; color: string; bg: string }> = {
-    patched:    { label: "Patched",    color: "#10b981", bg: "rgba(16,185,129,0.12)" },
-    workaround: { label: "Workaround", color: "#eab308", bg: "rgba(234,179,8,0.12)" },
-    fixing:     { label: "Fixing…",   color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
-  };
-  const s = map[fixStatus ?? "fixing"] ?? map.fixing;
-  return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: s.bg }}>
-      <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.color, boxShadow: `0 0 8px ${s.color}` }} />
-      <span className="font-semibold text-sm" style={{ color: s.color }}>{s.label}</span>
-    </div>
-  );
-}
-
-function CredibilityDisplay({ score }: { score: number | null }) {
-  const s = score ?? 0;
-  const color = s >= 8 ? "#10b981" : s >= 5 ? "#eab308" : "#ef4444";
-  const label = s >= 8 ? "High" : s >= 5 ? "Medium" : "Low";
-  return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="relative w-20 h-20">
-        <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90">
-          <circle cx="40" cy="40" r="30" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
-          <circle
-            cx="40" cy="40" r="30"
-            fill="none"
-            stroke={color}
-            strokeWidth="8"
-            strokeDasharray={`${(s / 10) * 188.5} 188.5`}
-            strokeLinecap="round"
-            style={{ filter: `drop-shadow(0 0 6px ${color})` }}
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-xl font-bold" style={{ color }}>{s}</span>
-        </div>
-      </div>
-      <span className="text-sm font-semibold" style={{ color }}>{label} Credibility</span>
     </div>
   );
 }
