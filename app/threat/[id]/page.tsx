@@ -5,13 +5,6 @@ import { Threat } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const SEVERITY_STYLES: Record<string, { color: string; glow: string; bg: string }> = {
-  critical: { color: "#ef4444", glow: "rgba(239,68,68,0.5)", bg: "rgba(239,68,68,0.12)" },
-  high:     { color: "#f97316", glow: "rgba(249,115,22,0.5)", bg: "rgba(249,115,22,0.12)" },
-  medium:   { color: "#eab308", glow: "rgba(234,179,8,0.5)",  bg: "rgba(234,179,8,0.12)" },
-  low:      { color: "#3b82f6", glow: "rgba(59,130,246,0.5)", bg: "rgba(59,130,246,0.12)" },
-};
-
 export default async function ThreatDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = createServerClient();
@@ -21,7 +14,6 @@ export default async function ThreatDetailPage({ params }: { params: Promise<{ i
   if (!data) notFound();
   const threat = data as Threat;
 
-  const sev = SEVERITY_STYLES[threat.severity ?? "low"];
   const title = threat.title;
 
   const backHref =
@@ -70,23 +62,17 @@ export default async function ThreatDetailPage({ params }: { params: Promise<{ i
       </div>
 
       <div className="max-w-3xl mx-auto px-6 py-10">
-        {/* Severity + critical badge */}
-        <div className="flex flex-wrap items-center gap-3 mb-4">
-          <span
-            className="text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider"
-            style={{ color: sev.color, background: sev.bg, boxShadow: `0 0 10px ${sev.glow}` }}
-          >
-            {threat.severity ?? "low"}
-          </span>
-          {threat.is_critical && (
+        {/* Critical alert badge (severity label removed per UX spec) */}
+        {threat.is_critical && (
+          <div className="flex flex-wrap items-center gap-3 mb-4">
             <span
               className="text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider"
               style={{ color: "#ef4444", background: "rgba(239,68,68,0.15)", boxShadow: "0 0 10px rgba(239,68,68,0.5)" }}
             >
-              ⚡ Critical
+              ⚡ Critical Alert
             </span>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Headline */}
         <h1 className="text-3xl font-black text-white leading-tight tracking-tight mb-5">

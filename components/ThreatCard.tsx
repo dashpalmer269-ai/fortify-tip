@@ -15,6 +15,12 @@ const TAB_ACCENT: Record<string, string> = {
   forums:    "#F97316",
 };
 
+function truncateWords(text: string, maxWords: number): string {
+  const words = text.trim().split(/\s+/);
+  if (words.length <= maxWords) return text.trim();
+  return words.slice(0, maxWords).join(" ") + "…";
+}
+
 function relativeDate(dateStr: string | null): string {
   if (!dateStr) return "Unknown";
   const now = new Date();
@@ -65,8 +71,8 @@ export default function ThreatCard({ threat }: { threat: Threat; accentColor?: s
           </h3>
 
           {threat.summary && (
-            <p className="text-gray-500 text-sm leading-relaxed line-clamp-2 mb-3">
-              {threat.summary}
+            <p className="text-gray-500 text-sm leading-relaxed mb-3">
+              {truncateWords(threat.summary, 12)}
             </p>
           )}
 
