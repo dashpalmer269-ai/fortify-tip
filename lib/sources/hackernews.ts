@@ -2,10 +2,15 @@ import { RawThreatInput } from '../types';
 
 const HN_API = 'https://hacker-news.firebaseio.com/v0';
 
+// Strong cybersecurity-only keywords. Bare words like "security" or "patch" are too broad
+// (they match "social security", "patch notes", etc) so we require explicit threat/incident terms.
 const SECURITY_KEYWORDS = [
-  'cve', 'vulnerability', 'exploit', 'breach', 'hack', 'malware', 'ransomware',
-  'zero-day', '0day', 'phishing', 'supply chain', 'attack', 'security', 'patch',
-  'rce', 'sqli', 'xss', 'csrf', 'idor', 'privilege escalation', 'backdoor',
+  'cve-', 'vulnerability', 'vulnerable', 'exploit', 'exploited', 'data breach',
+  'security breach', 'hack', 'hacked', 'hacker', 'malware', 'ransomware',
+  'zero-day', '0day', 'phishing', 'supply chain attack', 'cyberattack',
+  'cybersecurity', 'rce', 'sqli', 'xss', 'csrf', 'privilege escalation',
+  'backdoor', 'data leak', 'leaked', 'infostealer', 'credential stuffing',
+  'apt', 'botnet', 'rootkit', 'trojan', 'keylogger', 'cve', 'kev',
 ];
 
 interface HnStory {

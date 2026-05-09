@@ -64,16 +64,19 @@ export async function GET(req: NextRequest) {
           existingCveSources = count ?? 0;
         }
 
-        // AI enrichment
-        let enrichment = { headline: "", summary: "", credibility_score: 5, is_critical: false, tags: [] as string[] };
+        // AI enrichment with relevance gate
+        let enrichment = { is_relevant: true, headline: "", summary: "", credibility_score: 5, is_critical: false, tags: [] as string[] };
         try {
           enrichment = await enrichThreat(item, existingCveSources);
         } catch (aiErr) {
           console.error("AI enrichment failed:", aiErr);
         }
 
+        // Skip off-topic items (Hacker News non-security stories, marketing posts, etc.)
+        if (!enrichment.is_relevant) continue;
+
         // Use AI-generated headline as the stored title; preserve original in raw_content
-        const { headline, ...enrichmentRest } = enrichment;
+        const { headline, is_relevant: _isRelevant, ...enrichmentRest } = enrichment;
         const { error } = await supabase.from("threats").insert({
           ...item,
           ...enrichmentRest,
