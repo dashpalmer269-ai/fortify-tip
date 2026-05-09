@@ -15,65 +15,6 @@ const TAB_ACCENT: Record<string, string> = {
   forums:    "#F97316",
 };
 
-function readableTitle(threat: Threat): string {
-  let title = threat.title ?? "";
-  title = title.replace(/^CVE-\d{4}-\d{4,7}:\s*/i, "");
-  title = title.replace(/^In the linux kernel,?\s+the following vulnerability has been (found|reported)[:\s]*/i, "Linux Kernel — ");
-  title = title.replace(/^The (.+?) plugin for WordPress is vulnerable to (.+)/i, "WordPress Plugin: $1 — $2");
-  title = title.trim();
-  if (title.length > 0) title = title[0].toUpperCase() + title.slice(1);
-  return title || threat.title;
-}
-
-function normalizeVuln(text: string): string {
-  return text
-    .replace(/\bvulnerability\b/gi, "Flaw")
-    .replace(/\bvulnerabilities\b/gi, "Flaws")
-    .replace(/\b(remote\s+)?code\s+execution\b/gi, "RCE")
-    .replace(/\bprivilege\s+escalation\b/gi, "Privesc")
-    .replace(/\bcross[- ]site\s+scripting\b/gi, "XSS")
-    .replace(/\bcross[- ]site\s+request\s+forgery\b/gi, "CSRF")
-    .replace(/\bsql\s+injection\b/gi, "SQL Injection")
-    .replace(/\bdenial[- ]of[- ]service\b/gi, "DoS")
-    .replace(/\binformation\s+disclosure\b/gi, "Data Exposure")
-    .replace(/\bbuffer\s+overflow\b/gi, "Buffer Overflow")
-    .replace(/\buse[- ]after[- ]free\b/gi, "Use-After-Free")
-    .replace(/\bpath\s+traversal\b/gi, "Path Traversal")
-    .replace(/\bimproper\s+(input\s+)?validation\b/gi, "Validation Flaw")
-    .replace(/\bout[- ]of[- ]bounds\s*(read|write)?\b/gi, "OOB Memory")
-    .replace(/\bnull\s+pointer\s+dereference\b/gi, "Null Ptr Crash")
-    .replace(/\bserver[- ]side\s+request\s+forgery\b/gi, "SSRF")
-    .replace(/\bcommand\s+injection\b/gi, "Cmd Injection")
-    .replace(/\bis\s+vulnerable\s+to\b/gi, "—")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-}
-
-function headlineTitle(threat: Threat): string {
-  // Forums articles are already written as news headlines
-  if (threat.source_tab === "forums") {
-    const t = threat.title ?? "";
-    return t.length > 85 ? t.slice(0, 82) + "…" : t;
-  }
-
-  let title = readableTitle(threat);
-
-  // WordPress: "WordPress Plugin: XYZ — SQL injection" → "XYZ — SQL Injection"
-  const wpMatch = title.match(/^WordPress Plugin:\s*(.+?)\s*[—–]\s*(.+)/i);
-  if (wpMatch) {
-    return `${wpMatch[1].trim()} — ${normalizeVuln(wpMatch[2])}`;
-  }
-
-  // Linux Kernel: "Linux Kernel — use-after-free in subsystem" → "Linux Kernel Use-After-Free"
-  const linuxMatch = title.match(/^Linux Kernel\s*[—–]\s*(.+)/i);
-  if (linuxMatch) {
-    const part = linuxMatch[1].split(/\s+in\s+/i)[0];
-    return `Linux Kernel — ${normalizeVuln(part)}`;
-  }
-
-  return normalizeVuln(title);
-}
-
 function relativeDate(dateStr: string | null): string {
   if (!dateStr) return "Unknown";
   const now = new Date();
@@ -88,11 +29,9 @@ function relativeDate(dateStr: string | null): string {
   return then.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export default function ThreatCard({ threat, accentColor }: { threat: Threat; accentColor?: string }) {
+export default function ThreatCard({ threat }: { threat: Threat; accentColor?: string }) {
   const sev = SEVERITY_COLOR[threat.severity ?? "low"] ?? SEVERITY_COLOR.low;
   const tabColor = TAB_ACCENT[threat.source_tab ?? "registry"] ?? "#8B5CF6";
-  const hoverColor = accentColor ?? `${tabColor}80`;
-  const headline = headlineTitle(threat);
 
   return (
     <Link href={`/threat/${threat.id}`}>
@@ -122,7 +61,7 @@ export default function ThreatCard({ threat, accentColor }: { threat: Threat; ac
         {/* Main content */}
         <div className="flex-1 px-5 py-4 min-w-0">
           <h3 className="text-white font-bold text-[1.05rem] leading-snug mb-2 group-hover:text-violet-300 transition-colors">
-            {headline}
+            {threat.title}
           </h3>
 
           {threat.summary && (

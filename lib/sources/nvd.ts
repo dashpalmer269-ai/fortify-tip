@@ -78,7 +78,11 @@ export async function fetchNvdCves(): Promise<RawThreatInput[]> {
   if (!res.ok) throw new Error(`NVD API error: ${res.status}`);
 
   const data = await res.json() as { vulnerabilities: NvdCveItem[] };
-  const items = data.vulnerabilities ?? [];
+  const items = (data.vulnerabilities ?? []).filter((item) => {
+    const desc = item.cve.descriptions.find((d) => d.lang === "en")?.value ?? "";
+    // Skip Linux kernel boilerplate floods — they're identical low-signal noise
+    return !/^In the Linux kernel,?\s+the following vulnerability/i.test(desc);
+  });
 
   return items.map((item): RawThreatInput => {
     const cve = item.cve;

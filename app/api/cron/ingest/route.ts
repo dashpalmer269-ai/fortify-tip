@@ -65,16 +65,19 @@ export async function GET(req: NextRequest) {
         }
 
         // AI enrichment
-        let enrichment = { summary: "", credibility_score: 5, is_critical: false, tags: [] as string[] };
+        let enrichment = { headline: "", summary: "", credibility_score: 5, is_critical: false, tags: [] as string[] };
         try {
           enrichment = await enrichThreat(item, existingCveSources);
         } catch (aiErr) {
           console.error("AI enrichment failed:", aiErr);
         }
 
+        // Use AI-generated headline as the stored title; preserve original in raw_content
+        const { headline, ...enrichmentRest } = enrichment;
         const { error } = await supabase.from("threats").insert({
           ...item,
-          ...enrichment,
+          ...enrichmentRest,
+          title: headline || item.title,
         });
 
         if (!error) log.inserted++;

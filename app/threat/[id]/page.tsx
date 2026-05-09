@@ -12,16 +12,6 @@ const SEVERITY_STYLES: Record<string, { color: string; glow: string; bg: string 
   low:      { color: "#3b82f6", glow: "rgba(59,130,246,0.5)", bg: "rgba(59,130,246,0.12)" },
 };
 
-function readableTitle(threat: Threat): string {
-  let title = threat.title ?? "";
-  title = title.replace(/^CVE-\d{4}-\d{4,7}:\s*/i, "");
-  title = title.replace(/^In the linux kernel,?\s+the following vulnerability has been (found|reported)[:\s]*/i, "Linux Kernel — ");
-  title = title.replace(/^The (.+?) plugin for WordPress is vulnerable to (.+)/i, "WordPress Plugin: $1 — $2");
-  title = title.trim();
-  if (title.length > 0) title = title[0].toUpperCase() + title.slice(1);
-  return title || threat.title;
-}
-
 export default async function ThreatDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = createServerClient();
@@ -32,7 +22,7 @@ export default async function ThreatDetailPage({ params }: { params: Promise<{ i
   const threat = data as Threat;
 
   const sev = SEVERITY_STYLES[threat.severity ?? "low"];
-  const title = readableTitle(threat);
+  const title = threat.title;
 
   const backHref =
     threat.source_tab === "registry" ? "/registry" :
