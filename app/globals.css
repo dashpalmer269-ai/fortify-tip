@@ -37,6 +37,7 @@ body {
 .glow-emerald{ box-shadow: 0 0 20px rgba(16, 185, 129, 0.35),  0 0 40px rgba(16, 185, 129, 0.1); }
 .glow-orange { box-shadow: 0 0 20px rgba(249, 115, 22, 0.35),  0 0 40px rgba(249, 115, 22, 0.1); }
 
+@keyframes spin          { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes sphere-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes sphere-pulse  { 0%,100% { opacity:0.6; transform:scale(1); } 50% { opacity:1; transform:scale(1.06); } }
 @keyframes float         { 0%,100% { transform:translateY(0px); } 50% { transform:translateY(-14px); } }
