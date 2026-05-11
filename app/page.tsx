@@ -16,14 +16,6 @@ function HomeIcon() {
   );
 }
 
-function MoonIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-    </svg>
-  );
-}
-
 function SearchIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -118,12 +110,8 @@ export default function HomePage() {
           </h1>
         </div>
 
-        <button
-          className="glass-card rounded-xl p-2.5 text-white transition-all duration-200 hover:scale-105"
-          aria-label="Toggle theme"
-        >
-          <MoonIcon />
-        </button>
+        {/* Spacer to keep title centered after moon button removal */}
+        <div className="w-[44px] h-[44px]" aria-hidden="true" />
       </div>
 
       {/* Tab cards */}
@@ -166,62 +154,64 @@ export default function HomePage() {
         <div className="relative flex flex-col items-center w-full max-w-[600px]">
           <AnimatedSphere />
 
-          {/* Hero text overlay */}
+          {/* Search bar overlay — centered inside the orb */}
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+            className="absolute inset-0 flex items-center justify-center pointer-events-none px-6"
             style={{ zIndex: 2 }}
           >
-            <h2
-              className="text-white font-medium text-center leading-tight"
-              style={{
-                fontSize: "clamp(28px,4vw,48px)",
-                letterSpacing: "0.12em",
-                textShadow: "0 0 30px rgba(139,92,246,0.8), 0 0 60px rgba(139,92,246,0.4), 0 2px 4px rgba(0,0,0,0.8)",
-              }}
-            >
-              Fortify Your Defense
-            </h2>
+            <form onSubmit={handleSearch} className="w-full max-w-md pointer-events-auto">
+              <div
+                className="glass-card rounded-full flex items-center gap-3 px-5 py-3.5 transition-all duration-300"
+                style={{ boxShadow: "0 0 0 1.5px rgba(139,92,246,0.65), 0 0 22px rgba(139,92,246,0.28)" }}
+              >
+                <span className="text-violet-400 flex-shrink-0"><SearchIcon /></span>
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Discover"
+                  maxLength={69}
+                  className="flex-1 bg-transparent text-white text-sm placeholder:text-violet-300/60"
+                  onFocus={(e) => {
+                    (e.target.closest("div") as HTMLDivElement).style.boxShadow = "0 0 0 2px rgba(139,92,246,0.9), 0 0 32px rgba(139,92,246,0.45)";
+                  }}
+                  onBlur={(e) => {
+                    (e.target.closest("div") as HTMLDivElement).style.boxShadow = "0 0 0 1.5px rgba(139,92,246,0.65), 0 0 22px rgba(139,92,246,0.28)";
+                  }}
+                />
+                <button
+                  type="submit"
+                  className="text-violet-400 hover:text-violet-300 flex-shrink-0 transition-colors"
+                  title="AI Search"
+                >
+                  <SparkleIcon />
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-
-        {/* Search bar */}
-        <form
-          onSubmit={handleSearch}
-          className="w-full max-w-2xl -mt-4 relative z-10"
-        >
-          <div
-            className="glass-card rounded-full flex items-center gap-3 px-5 py-3.5 transition-all duration-300"
-            style={{ boxShadow: "0 0 0 1.5px rgba(139,92,246,0.65), 0 0 22px rgba(139,92,246,0.28)" }}
-          >
-            <span className="text-violet-400 flex-shrink-0"><SearchIcon /></span>
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Discover"
-              maxLength={69}
-              className="flex-1 bg-transparent text-white text-sm placeholder:text-violet-300/60"
-              onFocus={(e) => {
-                (e.target.closest("div") as HTMLDivElement).style.boxShadow = "0 0 0 2px rgba(139,92,246,0.9), 0 0 32px rgba(139,92,246,0.45)";
-              }}
-              onBlur={(e) => {
-                (e.target.closest("div") as HTMLDivElement).style.boxShadow = "0 0 0 1.5px rgba(139,92,246,0.65), 0 0 22px rgba(139,92,246,0.28)";
-              }}
-            />
-            <button
-              type="submit"
-              className="text-violet-400 hover:text-violet-300 flex-shrink-0 transition-colors"
-              title="AI Search"
-            >
-              <SparkleIcon />
-            </button>
-          </div>
-        </form>
       </div>
 
       {/* Perspective grid floor */}
       <div className="relative z-0 mt-8">
         <PerspectiveGrid />
+      </div>
+
+      {/* "Fortify Your Defense" — pinned to bottom of screen */}
+      <div
+        className="absolute bottom-8 left-0 right-0 flex justify-center pointer-events-none px-4"
+        style={{ zIndex: 5 }}
+      >
+        <h2
+          className="text-white font-medium text-center leading-tight"
+          style={{
+            fontSize: "clamp(28px,4vw,48px)",
+            letterSpacing: "0.12em",
+            textShadow: "0 0 30px rgba(139,92,246,0.8), 0 0 60px rgba(139,92,246,0.4), 0 2px 4px rgba(0,0,0,0.8)",
+          }}
+        >
+          Fortify Your Defense
+        </h2>
       </div>
     </div>
   );
