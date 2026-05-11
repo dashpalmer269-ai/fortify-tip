@@ -191,21 +191,21 @@ export default function HomePage() {
         >
           <div
             className="glass-card rounded-full flex items-center gap-3 px-5 py-3.5 transition-all duration-300"
-            style={{ boxShadow: "0 0 0 1px rgba(139,92,246,0.15)" }}
-            onFocus={() => {}}
+            style={{ boxShadow: "0 0 0 1.5px rgba(139,92,246,0.65), 0 0 22px rgba(139,92,246,0.28)" }}
           >
-            <span className="text-gray-400 flex-shrink-0"><SearchIcon /></span>
+            <span className="text-violet-400 flex-shrink-0"><SearchIcon /></span>
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search threats, CVEs, errors, tools, solutions..."
-              className="flex-1 bg-transparent text-white text-sm"
+              placeholder="Discover"
+              maxLength={69}
+              className="flex-1 bg-transparent text-white text-sm placeholder:text-violet-300/60"
               onFocus={(e) => {
-                (e.target.closest("div") as HTMLDivElement).style.boxShadow = "0 0 0 1px rgba(139,92,246,0.5), 0 0 20px rgba(139,92,246,0.2)";
+                (e.target.closest("div") as HTMLDivElement).style.boxShadow = "0 0 0 2px rgba(139,92,246,0.9), 0 0 32px rgba(139,92,246,0.45)";
               }}
               onBlur={(e) => {
-                (e.target.closest("div") as HTMLDivElement).style.boxShadow = "0 0 0 1px rgba(139,92,246,0.15)";
+                (e.target.closest("div") as HTMLDivElement).style.boxShadow = "0 0 0 1.5px rgba(139,92,246,0.65), 0 0 22px rgba(139,92,246,0.28)";
               }}
             />
             <button
