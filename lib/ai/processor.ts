@@ -1,7 +1,18 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { RawThreatInput } from '../types';
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// Lazy init so the SDK reads ANTHROPIC_API_KEY at first call rather than module-load time.
+// Standalone scripts load .env.local AFTER imports run, so module-time init would see undefined.
+let _client: Anthropic | null = null;
+function getClient(): Anthropic {
+  if (!_client) {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error('ANTHROPIC_API_KEY environment variable is not set');
+    }
+    _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+  return _client;
+}
 
 export interface AiEnrichment {
   is_relevant: boolean;
@@ -170,7 +181,7 @@ export async function generateArticle(ctx: ArticleContext, maxAttempts = 3): Pro
     let rawText = '';
 
     try {
-      const msg = await client.messages.create({
+      const msg = await getClient().messages.create({
         model: 'claude-opus-4-7',
         max_tokens: 2000,
         messages: [{ role: 'user', content: buildPrompt(ctx, correction) }],
@@ -244,7 +255,7 @@ export async function enrichThreat(
 }
 
 export async function searchThreats(query: string, context: string): Promise<string> {
-  const message = await client.messages.create({
+  const message = await getClient().messages.create({
     model: 'claude-opus-4-7',
     max_tokens: 1024,
     messages: [
