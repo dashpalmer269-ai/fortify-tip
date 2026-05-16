@@ -1,0 +1,663 @@
+{
+  "frameworks": [
+    {
+      "code": "HIPAA",
+      "name": "HIPAA Security Rule",
+      "authority": "U.S. Department of Health and Human Services (HHS)",
+      "current_version": "2013 Omnibus (45 CFR Part 164, Subpart C)",
+      "description": "U.S. federal regulation establishing administrative, physical, and technical safeguards for electronic protected health information (ePHI) held by covered entities and business associates."
+    },
+    {
+      "code": "SOC2",
+      "name": "SOC 2 Trust Services Criteria",
+      "authority": "American Institute of Certified Public Accountants (AICPA)",
+      "current_version": "2017 TSC (revised 2022)",
+      "description": "Audit framework evaluating service providers across five Trust Services Categories: Security, Availability, Processing Integrity, Confidentiality, and Privacy."
+    },
+    {
+      "code": "ISO27001",
+      "name": "ISO/IEC 27001 Information Security Management",
+      "authority": "International Organization for Standardization (ISO/IEC)",
+      "current_version": "2022",
+      "description": "International standard for establishing, implementing, maintaining, and improving an Information Security Management System (ISMS). Annex A lists 93 controls."
+    },
+    {
+      "code": "GDPR",
+      "name": "General Data Protection Regulation",
+      "authority": "European Union",
+      "current_version": "Regulation (EU) 2016/679 (effective 2018)",
+      "description": "EU regulation governing the processing of personal data of individuals in the European Union, establishing data protection rights and processor obligations."
+    }
+  ],
+
+  "framework_requirements": [
+    {
+      "framework_code": "HIPAA",
+      "citation": "164.308(a)(1)(ii)(A)",
+      "title": "Risk Analysis",
+      "description": "Conduct an accurate and thorough assessment of the potential risks and vulnerabilities to the confidentiality, integrity, and availability of electronic protected health information held by the covered entity.",
+      "category": "administrative",
+      "obligation_type": "required",
+      "weight": 1.5,
+      "source_url": "https://www.ecfr.gov/current/title-45/section-164.308#p-164.308(a)(1)(ii)(A)"
+    },
+    {
+      "framework_code": "HIPAA",
+      "citation": "164.308(a)(1)(ii)(D)",
+      "title": "Information System Activity Review",
+      "description": "Implement procedures to regularly review records of information system activity, such as audit logs, access reports, and security incident tracking reports.",
+      "category": "administrative",
+      "obligation_type": "required",
+      "weight": 1.5,
+      "source_url": "https://www.ecfr.gov/current/title-45/section-164.308#p-164.308(a)(1)(ii)(D)"
+    },
+    {
+      "framework_code": "HIPAA",
+      "citation": "164.308(a)(5)(i)",
+      "title": "Security Awareness and Training",
+      "description": "Implement a security awareness and training program for all members of its workforce (including management).",
+      "category": "administrative",
+      "obligation_type": "required",
+      "weight": 1.5,
+      "source_url": "https://www.ecfr.gov/current/title-45/section-164.308#p-164.308(a)(5)(i)"
+    },
+    {
+      "framework_code": "HIPAA",
+      "citation": "164.308(a)(5)(ii)(C)",
+      "title": "Log-in Monitoring",
+      "description": "Procedures for monitoring log-in attempts and reporting discrepancies.",
+      "category": "administrative",
+      "obligation_type": "addressable",
+      "weight": 1.0,
+      "source_url": "https://www.ecfr.gov/current/title-45/section-164.308#p-164.308(a)(5)(ii)(C)"
+    },
+    {
+      "framework_code": "HIPAA",
+      "citation": "164.308(a)(7)(ii)(A)",
+      "title": "Data Backup Plan",
+      "description": "Establish and implement procedures to create and maintain retrievable exact copies of electronic protected health information.",
+      "category": "administrative",
+      "obligation_type": "required",
+      "weight": 1.5,
+      "source_url": "https://www.ecfr.gov/current/title-45/section-164.308#p-164.308(a)(7)(ii)(A)"
+    },
+    {
+      "framework_code": "HIPAA",
+      "citation": "164.308(a)(7)(ii)(B)",
+      "title": "Disaster Recovery Plan",
+      "description": "Establish (and implement as needed) procedures to restore any loss of data.",
+      "category": "administrative",
+      "obligation_type": "required",
+      "weight": 1.5
+    },
+    {
+      "framework_code": "HIPAA",
+      "citation": "164.308(a)(7)(ii)(D)",
+      "title": "Testing and Revision Procedures",
+      "description": "Implement procedures for periodic testing and revision of contingency plans.",
+      "category": "administrative",
+      "obligation_type": "addressable",
+      "weight": 1.0
+    },
+    {
+      "framework_code": "HIPAA",
+      "citation": "164.308(b)(1)",
+      "title": "Business Associate Contracts",
+      "description": "A covered entity may permit a business associate to create, receive, maintain, or transmit electronic protected health information on the covered entity's behalf only if the covered entity obtains satisfactory assurances, in accordance with §164.314(a), that the business associate will appropriately safeguard the information.",
+      "category": "administrative",
+      "obligation_type": "required",
+      "weight": 1.5,
+      "source_url": "https://www.ecfr.gov/current/title-45/section-164.308#p-164.308(b)(1)"
+    },
+    {
+      "framework_code": "HIPAA",
+      "citation": "164.312(a)(2)(i)",
+      "title": "Unique User Identification",
+      "description": "Assign a unique name and/or number for identifying and tracking user identity.",
+      "category": "technical",
+      "obligation_type": "required",
+      "weight": 1.5
+    },
+    {
+      "framework_code": "HIPAA",
+      "citation": "164.312(a)(2)(iv)",
+      "title": "Encryption and Decryption",
+      "description": "Implement a mechanism to encrypt and decrypt electronic protected health information.",
+      "category": "technical",
+      "obligation_type": "addressable",
+      "weight": 1.0,
+      "source_url": "https://www.ecfr.gov/current/title-45/section-164.312#p-164.312(a)(2)(iv)"
+    },
+    {
+      "framework_code": "HIPAA",
+      "citation": "164.312(b)",
+      "title": "Audit Controls",
+      "description": "Implement hardware, software, and/or procedural mechanisms that record and examine activity in information systems that contain or use electronic protected health information.",
+      "category": "technical",
+      "obligation_type": "required",
+      "weight": 1.5,
+      "source_url": "https://www.ecfr.gov/current/title-45/section-164.312#p-164.312(b)"
+    },
+    {
+      "framework_code": "HIPAA",
+      "citation": "164.312(d)",
+      "title": "Person or Entity Authentication",
+      "description": "Implement procedures to verify that a person or entity seeking access to electronic protected health information is the one claimed.",
+      "category": "technical",
+      "obligation_type": "required",
+      "weight": 1.5,
+      "source_url": "https://www.ecfr.gov/current/title-45/section-164.312#p-164.312(d)"
+    },
+    {
+      "framework_code": "HIPAA",
+      "citation": "164.312(e)(1)",
+      "title": "Transmission Security",
+      "description": "Implement technical security measures to guard against unauthorized access to electronic protected health information that is being transmitted over an electronic communications network.",
+      "category": "technical",
+      "obligation_type": "required",
+      "weight": 1.5
+    },
+    {
+      "framework_code": "HIPAA",
+      "citation": "164.312(e)(2)(ii)",
+      "title": "Transmission Encryption",
+      "description": "Implement a mechanism to encrypt electronic protected health information whenever deemed appropriate.",
+      "category": "technical",
+      "obligation_type": "addressable",
+      "weight": 1.0
+    },
+    {
+      "framework_code": "HIPAA",
+      "citation": "164.314(a)(1)",
+      "title": "Business Associate Contract Requirements",
+      "description": "The contract between the covered entity and the business associate must provide that the business associate will implement administrative, physical, and technical safeguards that reasonably and appropriately protect the confidentiality, integrity, and availability of ePHI.",
+      "category": "organizational",
+      "obligation_type": "required",
+      "weight": 1.5
+    },
+
+    {
+      "framework_code": "SOC2",
+      "citation": "CC1.4",
+      "title": "Commitment to Competence",
+      "description": "The entity demonstrates a commitment to attract, develop, and retain competent individuals in alignment with objectives.",
+      "category": "control_environment",
+      "obligation_type": "required",
+      "weight": 1.0
+    },
+    {
+      "framework_code": "SOC2",
+      "citation": "CC3.2",
+      "title": "Risk Identification and Analysis",
+      "description": "The entity identifies risks to the achievement of its objectives across the entity and analyzes risks as a basis for determining how the risks should be managed.",
+      "category": "risk_assessment",
+      "obligation_type": "required",
+      "weight": 1.0
+    },
+    {
+      "framework_code": "SOC2",
+      "citation": "CC6.1",
+      "title": "Logical Access Security",
+      "description": "The entity implements logical access security software, infrastructure, and architectures over protected information assets to protect them from security events to meet the entity's objectives.",
+      "category": "logical_access",
+      "obligation_type": "required",
+      "weight": 1.0
+    },
+    {
+      "framework_code": "SOC2",
+      "citation": "CC6.7",
+      "title": "Transmission and Disposal Controls",
+      "description": "The entity restricts the transmission, movement, and removal of information to authorized internal and external users and processes, and protects it during transmission, movement, or removal to meet the entity's objectives.",
+      "category": "system_operations",
+      "obligation_type": "required",
+      "weight": 1.0
+    },
+    {
+      "framework_code": "SOC2",
+      "citation": "CC7.2",
+      "title": "System Monitoring",
+      "description": "The entity monitors system components and the operation of those components for anomalies that are indicative of malicious acts, natural disasters, and errors affecting the entity's ability to meet its objectives.",
+      "category": "system_operations",
+      "obligation_type": "required",
+      "weight": 1.0
+    },
+    {
+      "framework_code": "SOC2",
+      "citation": "CC9.2",
+      "title": "Vendor and Business Partner Risk Management",
+      "description": "The entity assesses and manages risks associated with vendors and business partners.",
+      "category": "risk_assessment",
+      "obligation_type": "required",
+      "weight": 1.0
+    },
+    {
+      "framework_code": "SOC2",
+      "citation": "A1.2",
+      "title": "Availability Backup Procedures",
+      "description": "The entity authorizes, designs, develops or acquires, implements, operates, approves, maintains, and monitors environmental protections, software, data backup processes, and recovery infrastructure to meet its objectives.",
+      "category": "availability",
+      "obligation_type": "required",
+      "weight": 1.0
+    },
+
+    {
+      "framework_code": "ISO27001",
+      "citation": "A.5.19",
+      "title": "Information Security in Supplier Relationships",
+      "description": "Processes and procedures shall be defined and implemented to manage the information security risks associated with the use of suppliers' products or services.",
+      "category": "supplier_relationships",
+      "obligation_type": "required",
+      "weight": 1.0
+    },
+    {
+      "framework_code": "ISO27001",
+      "citation": "A.6.3",
+      "title": "Information Security Awareness, Education and Training",
+      "description": "Personnel of the organization and relevant interested parties shall receive appropriate information security awareness, education and training and regular updates of the organization's information security policy and procedures.",
+      "category": "people_controls",
+      "obligation_type": "required",
+      "weight": 1.0
+    },
+    {
+      "framework_code": "ISO27001",
+      "citation": "A.8.5",
+      "title": "Secure Authentication",
+      "description": "Secure authentication technologies and procedures shall be implemented based on information access restrictions and the access control policy.",
+      "category": "technological_controls",
+      "obligation_type": "required",
+      "weight": 1.0
+    },
+    {
+      "framework_code": "ISO27001",
+      "citation": "A.8.13",
+      "title": "Information Backup",
+      "description": "Backup copies of information, software and systems shall be maintained and regularly tested in accordance with the agreed topic-specific policy on backup.",
+      "category": "technological_controls",
+      "obligation_type": "required",
+      "weight": 1.0
+    },
+    {
+      "framework_code": "ISO27001",
+      "citation": "A.8.15",
+      "title": "Logging",
+      "description": "Logs that record activities, exceptions, faults and other relevant events shall be produced, stored, protected and analysed.",
+      "category": "technological_controls",
+      "obligation_type": "required",
+      "weight": 1.0
+    },
+    {
+      "framework_code": "ISO27001",
+      "citation": "A.8.24",
+      "title": "Use of Cryptography",
+      "description": "Rules for the effective use of cryptography, including cryptographic key management, shall be defined and implemented.",
+      "category": "technological_controls",
+      "obligation_type": "required",
+      "weight": 1.0
+    },
+    {
+      "framework_code": "ISO27001",
+      "citation": "Clause 6.1.2",
+      "title": "Information Security Risk Assessment",
+      "description": "The organization shall define and apply an information security risk assessment process that establishes and maintains information security risk criteria and ensures repeated assessments produce consistent, valid, and comparable results.",
+      "category": "isms_clauses",
+      "obligation_type": "required",
+      "weight": 1.5
+    },
+
+    {
+      "framework_code": "GDPR",
+      "citation": "Art.28",
+      "title": "Processor Obligations and Contracts",
+      "description": "Processing by a processor shall be governed by a contract or other legal act that binds the processor to the controller and sets out the subject-matter and duration of the processing, the nature and purpose of the processing, the type of personal data and categories of data subjects, and the obligations and rights of the controller.",
+      "category": "processor_controller",
+      "obligation_type": "required",
+      "weight": 1.5
+    },
+    {
+      "framework_code": "GDPR",
+      "citation": "Art.32(1)(a)",
+      "title": "Pseudonymisation and Encryption of Personal Data",
+      "description": "Taking into account the state of the art, the costs of implementation and the nature, scope, context and purposes of processing, the controller and the processor shall implement appropriate technical and organisational measures, including the pseudonymisation and encryption of personal data.",
+      "category": "security_of_processing",
+      "obligation_type": "required",
+      "weight": 1.5
+    },
+    {
+      "framework_code": "GDPR",
+      "citation": "Art.32(1)(b)",
+      "title": "Ongoing Confidentiality, Integrity, Availability, Resilience",
+      "description": "The ability to ensure the ongoing confidentiality, integrity, availability and resilience of processing systems and services.",
+      "category": "security_of_processing",
+      "obligation_type": "required",
+      "weight": 1.5
+    },
+    {
+      "framework_code": "GDPR",
+      "citation": "Art.32(1)(c)",
+      "title": "Restore Availability and Access",
+      "description": "The ability to restore the availability and access to personal data in a timely manner in the event of a physical or technical incident.",
+      "category": "security_of_processing",
+      "obligation_type": "required",
+      "weight": 1.5
+    },
+    {
+      "framework_code": "GDPR",
+      "citation": "Art.32(1)(d)",
+      "title": "Regular Testing of Security Measures",
+      "description": "A process for regularly testing, assessing and evaluating the effectiveness of technical and organisational measures for ensuring the security of the processing.",
+      "category": "security_of_processing",
+      "obligation_type": "required",
+      "weight": 1.5
+    }
+  ],
+
+  "controls": [
+    {
+      "control_key": "mfa_enforcement",
+      "title": "Multi-Factor Authentication Enforcement",
+      "description": "Enforce multi-factor authentication (MFA) for every user account with access to systems containing electronic protected health information (ePHI) or other sensitive customer data. MFA must use at least two of: something you know, something you have, something you are.",
+      "category": "access_control",
+      "implementation_type": "technical",
+      "default_priority": "critical",
+      "healthcare_baseline": true
+    },
+    {
+      "control_key": "audit_logging_enabled",
+      "title": "Audit Logging Enabled on ePHI Systems",
+      "description": "Enable and retain audit logs that record user activity, system events, security events, and access to ePHI on all systems that store, process, or transmit ePHI. Logs must be tamper-resistant and reviewed regularly.",
+      "category": "audit_logging",
+      "implementation_type": "technical",
+      "default_priority": "critical",
+      "healthcare_baseline": true
+    },
+    {
+      "control_key": "encryption_at_rest",
+      "title": "Encryption at Rest",
+      "description": "Encrypt all ePHI stored on workstations, servers, mobile devices, backups, and removable media using FIPS 140-2 validated cryptography. Includes disk-level, database-level, and file-level encryption as appropriate.",
+      "category": "encryption",
+      "implementation_type": "technical",
+      "default_priority": "critical",
+      "healthcare_baseline": true
+    },
+    {
+      "control_key": "encryption_in_transit",
+      "title": "Encryption in Transit",
+      "description": "Use TLS 1.2 or higher for all ePHI transmitted over public networks (web traffic, API calls, email between organizations, file transfers). Disable insecure protocols (TLS 1.0/1.1, SSL).",
+      "category": "encryption",
+      "implementation_type": "technical",
+      "default_priority": "critical",
+      "healthcare_baseline": true
+    },
+    {
+      "control_key": "workforce_security_training",
+      "title": "Annual Workforce Security Awareness Training",
+      "description": "Provide annual security awareness training to all workforce members covering HIPAA Privacy and Security Rule basics, phishing identification, password hygiene, incident reporting procedures, and acceptable use. Track completion and retain records for six years.",
+      "category": "training",
+      "implementation_type": "administrative",
+      "default_priority": "high",
+      "healthcare_baseline": true
+    },
+    {
+      "control_key": "risk_analysis_completed",
+      "title": "Documented Annual Risk Analysis",
+      "description": "Conduct and document a comprehensive risk analysis at least annually (and after any major change) that identifies potential threats and vulnerabilities to the confidentiality, integrity, and availability of ePHI. Produce a remediation plan addressing identified risks.",
+      "category": "risk_management",
+      "implementation_type": "administrative",
+      "default_priority": "critical",
+      "healthcare_baseline": true
+    },
+    {
+      "control_key": "backup_validated",
+      "title": "Backups Performed and Validated",
+      "description": "Maintain encrypted backups of all ePHI according to defined schedule. Test restore procedures at least quarterly to verify backups are usable. Document successful test restores.",
+      "category": "backup",
+      "implementation_type": "technical",
+      "default_priority": "critical",
+      "healthcare_baseline": true
+    },
+    {
+      "control_key": "baa_signed_for_vendor",
+      "title": "Signed Business Associate Agreement for Each Vendor with ePHI Access",
+      "description": "Maintain a current, signed Business Associate Agreement (BAA) with every vendor, contractor, or service provider that creates, receives, maintains, or transmits ePHI on behalf of the practice. Track expiration and renewal dates.",
+      "category": "vendor_risk",
+      "implementation_type": "administrative",
+      "default_priority": "critical",
+      "healthcare_baseline": true
+    }
+  ],
+
+  "framework_mappings": [
+    { "control_key": "mfa_enforcement", "framework_code": "HIPAA",    "citation": "164.312(d)",            "mapping_strength": "fully_satisfies" },
+    { "control_key": "mfa_enforcement", "framework_code": "HIPAA",    "citation": "164.308(a)(5)(ii)(C)",  "mapping_strength": "partially_satisfies" },
+    { "control_key": "mfa_enforcement", "framework_code": "HIPAA",    "citation": "164.312(a)(2)(i)",      "mapping_strength": "contributes_to" },
+    { "control_key": "mfa_enforcement", "framework_code": "SOC2",     "citation": "CC6.1",                 "mapping_strength": "fully_satisfies" },
+    { "control_key": "mfa_enforcement", "framework_code": "ISO27001", "citation": "A.8.5",                 "mapping_strength": "fully_satisfies" },
+    { "control_key": "mfa_enforcement", "framework_code": "GDPR",     "citation": "Art.32(1)(b)",          "mapping_strength": "contributes_to" },
+
+    { "control_key": "audit_logging_enabled", "framework_code": "HIPAA",    "citation": "164.312(b)",                "mapping_strength": "fully_satisfies" },
+    { "control_key": "audit_logging_enabled", "framework_code": "HIPAA",    "citation": "164.308(a)(1)(ii)(D)",      "mapping_strength": "partially_satisfies" },
+    { "control_key": "audit_logging_enabled", "framework_code": "SOC2",     "citation": "CC7.2",                     "mapping_strength": "fully_satisfies" },
+    { "control_key": "audit_logging_enabled", "framework_code": "ISO27001", "citation": "A.8.15",                    "mapping_strength": "fully_satisfies" },
+    { "control_key": "audit_logging_enabled", "framework_code": "GDPR",     "citation": "Art.32(1)(d)",              "mapping_strength": "contributes_to" },
+
+    { "control_key": "encryption_at_rest", "framework_code": "HIPAA",    "citation": "164.312(a)(2)(iv)",  "mapping_strength": "fully_satisfies" },
+    { "control_key": "encryption_at_rest", "framework_code": "SOC2",     "citation": "CC6.7",              "mapping_strength": "partially_satisfies" },
+    { "control_key": "encryption_at_rest", "framework_code": "ISO27001", "citation": "A.8.24",             "mapping_strength": "fully_satisfies" },
+    { "control_key": "encryption_at_rest", "framework_code": "GDPR",     "citation": "Art.32(1)(a)",       "mapping_strength": "fully_satisfies" },
+
+    { "control_key": "encryption_in_transit", "framework_code": "HIPAA",    "citation": "164.312(e)(1)",     "mapping_strength": "fully_satisfies" },
+    { "control_key": "encryption_in_transit", "framework_code": "HIPAA",    "citation": "164.312(e)(2)(ii)", "mapping_strength": "fully_satisfies" },
+    { "control_key": "encryption_in_transit", "framework_code": "SOC2",     "citation": "CC6.7",             "mapping_strength": "partially_satisfies" },
+    { "control_key": "encryption_in_transit", "framework_code": "ISO27001", "citation": "A.8.24",            "mapping_strength": "partially_satisfies" },
+    { "control_key": "encryption_in_transit", "framework_code": "GDPR",     "citation": "Art.32(1)(a)",      "mapping_strength": "partially_satisfies" },
+
+    { "control_key": "workforce_security_training", "framework_code": "HIPAA",    "citation": "164.308(a)(5)(i)", "mapping_strength": "fully_satisfies" },
+    { "control_key": "workforce_security_training", "framework_code": "SOC2",     "citation": "CC1.4",            "mapping_strength": "fully_satisfies" },
+    { "control_key": "workforce_security_training", "framework_code": "ISO27001", "citation": "A.6.3",            "mapping_strength": "fully_satisfies" },
+
+    { "control_key": "risk_analysis_completed", "framework_code": "HIPAA",    "citation": "164.308(a)(1)(ii)(A)", "mapping_strength": "fully_satisfies" },
+    { "control_key": "risk_analysis_completed", "framework_code": "SOC2",     "citation": "CC3.2",                "mapping_strength": "fully_satisfies" },
+    { "control_key": "risk_analysis_completed", "framework_code": "ISO27001", "citation": "Clause 6.1.2",         "mapping_strength": "fully_satisfies" },
+
+    { "control_key": "backup_validated", "framework_code": "HIPAA",    "citation": "164.308(a)(7)(ii)(A)", "mapping_strength": "fully_satisfies" },
+    { "control_key": "backup_validated", "framework_code": "HIPAA",    "citation": "164.308(a)(7)(ii)(B)", "mapping_strength": "partially_satisfies" },
+    { "control_key": "backup_validated", "framework_code": "HIPAA",    "citation": "164.308(a)(7)(ii)(D)", "mapping_strength": "fully_satisfies" },
+    { "control_key": "backup_validated", "framework_code": "SOC2",     "citation": "A1.2",                 "mapping_strength": "fully_satisfies" },
+    { "control_key": "backup_validated", "framework_code": "ISO27001", "citation": "A.8.13",               "mapping_strength": "fully_satisfies" },
+    { "control_key": "backup_validated", "framework_code": "GDPR",     "citation": "Art.32(1)(c)",         "mapping_strength": "fully_satisfies" },
+
+    { "control_key": "baa_signed_for_vendor", "framework_code": "HIPAA",    "citation": "164.308(b)(1)",  "mapping_strength": "fully_satisfies" },
+    { "control_key": "baa_signed_for_vendor", "framework_code": "HIPAA",    "citation": "164.314(a)(1)",  "mapping_strength": "fully_satisfies" },
+    { "control_key": "baa_signed_for_vendor", "framework_code": "SOC2",     "citation": "CC9.2",          "mapping_strength": "partially_satisfies" },
+    { "control_key": "baa_signed_for_vendor", "framework_code": "ISO27001", "citation": "A.5.19",         "mapping_strength": "partially_satisfies" },
+    { "control_key": "baa_signed_for_vendor", "framework_code": "GDPR",     "citation": "Art.28",         "mapping_strength": "fully_satisfies" }
+  ],
+
+  "evidence_checks": [
+    {
+      "control_key": "mfa_enforcement",
+      "check_key": "m365_mfa_users_enforced",
+      "title": "All Microsoft 365 user accounts have MFA enforced",
+      "description": "Queries Microsoft Graph for credential registration status; passes when 100% of active users have MFA registered and enforced.",
+      "collection_method": "automated_api",
+      "source_integration": "microsoft_365",
+      "frequency_hours": 6,
+      "check_config": {
+        "graph_endpoint": "/reports/credentialUserRegistrationDetails",
+        "extract": "value[*].isMfaRegistered"
+      },
+      "pass_criteria": { "operator": "all_true" }
+    },
+    {
+      "control_key": "mfa_enforcement",
+      "check_key": "mfa_manual_attestation",
+      "title": "Practice owner attests MFA is enforced for all users",
+      "description": "Manual attestation fallback when no automated integration is connected.",
+      "collection_method": "manual_attestation",
+      "source_integration": "manual",
+      "frequency_hours": 2160,
+      "check_config": { "renewal_months": 3 },
+      "pass_criteria": { "operator": "attested_within_days", "value": 90 }
+    },
+
+    {
+      "control_key": "audit_logging_enabled",
+      "check_key": "m365_audit_log_enabled",
+      "title": "Microsoft 365 unified audit log is enabled",
+      "description": "Verifies the Microsoft 365 audit log search service is turned on and ingesting events.",
+      "collection_method": "automated_api",
+      "source_integration": "microsoft_365",
+      "frequency_hours": 24,
+      "check_config": {
+        "graph_endpoint": "/security/auditLog/queries",
+        "extract": "value | length"
+      },
+      "pass_criteria": { "operator": "gt", "value": 0 }
+    },
+
+    {
+      "control_key": "encryption_at_rest",
+      "check_key": "m365_bitlocker_enforcement",
+      "title": "BitLocker enforced on all managed Windows endpoints",
+      "description": "Checks Intune device compliance reports for BitLocker enforcement.",
+      "collection_method": "automated_api",
+      "source_integration": "microsoft_365",
+      "frequency_hours": 24,
+      "check_config": {
+        "graph_endpoint": "/deviceManagement/managedDevices",
+        "extract": "value[*].isEncrypted"
+      },
+      "pass_criteria": { "operator": "all_true" }
+    },
+
+    {
+      "control_key": "encryption_in_transit",
+      "check_key": "tls_external_endpoint_scan",
+      "title": "Public-facing endpoints accept only TLS 1.2+",
+      "description": "Probes registered domains and rejects if TLS 1.0/1.1 or SSLv3 are enabled.",
+      "collection_method": "automated_scan",
+      "source_integration": "scanner",
+      "frequency_hours": 168,
+      "check_config": {
+        "scan_type": "tls_protocol",
+        "min_version": "1.2"
+      },
+      "pass_criteria": { "operator": "all_endpoints_min_version_met" }
+    },
+
+    {
+      "control_key": "workforce_security_training",
+      "check_key": "training_completion_rate",
+      "title": "Annual security training completion rate ≥ 95%",
+      "description": "Queries practice_users and training_completions to compute the percentage of active workforce members with current (within 365 days) training.",
+      "collection_method": "automated_db_query",
+      "source_integration": "internal",
+      "frequency_hours": 24,
+      "check_config": { "window_days": 365 },
+      "pass_criteria": { "operator": "gte", "field": "completion_rate", "value": 0.95 }
+    },
+
+    {
+      "control_key": "risk_analysis_completed",
+      "check_key": "risk_analysis_current",
+      "title": "Risk analysis completed in the last 12 months",
+      "description": "Checks the risk_assessments table for a record dated within the last 365 days.",
+      "collection_method": "automated_db_query",
+      "source_integration": "internal",
+      "frequency_hours": 24,
+      "check_config": { "max_age_days": 365 },
+      "pass_criteria": { "operator": "exists_within_days", "value": 365 }
+    },
+
+    {
+      "control_key": "backup_validated",
+      "check_key": "backup_test_restore_quarterly",
+      "title": "Quarterly successful test restore documented",
+      "description": "Confirms a successful backup test restore has been logged within the last 90 days.",
+      "collection_method": "document_upload",
+      "source_integration": "manual",
+      "frequency_hours": 720,
+      "check_config": { "max_age_days": 90, "required_doc_type": "restore_test_report" },
+      "pass_criteria": { "operator": "exists_within_days", "value": 90 }
+    },
+
+    {
+      "control_key": "baa_signed_for_vendor",
+      "check_key": "all_phi_vendors_have_baa",
+      "title": "Every vendor with ePHI access has a current, signed BAA",
+      "description": "Queries the vendors table for any phi_access=true vendor without an active BAA in the baas table.",
+      "collection_method": "automated_db_query",
+      "source_integration": "internal",
+      "frequency_hours": 24,
+      "check_config": { "expiration_warning_days": 30 },
+      "pass_criteria": { "operator": "zero", "field": "vendors_missing_baa" }
+    }
+  ],
+
+  "remediation_guidance": [
+    {
+      "control_key": "mfa_enforcement",
+      "severity": "critical",
+      "title": "Enforce MFA for all Microsoft 365 users",
+      "step_by_step_markdown": "1. Sign in to https://admin.microsoft.com as Global Administrator.\n2. Navigate to **Users › Active users**.\n3. Click **Multi-factor authentication** at the top of the page.\n4. Select all users, then click **Enable** in the right panel.\n5. After enabling, repeat and click **Enforce** to require MFA at next sign-in.\n6. Confirm by signing in as a test user — you should be prompted to register a second factor.\n7. Communicate the change to staff at least 48 hours in advance and provide setup instructions for the Microsoft Authenticator app.",
+      "estimated_effort_minutes": 30,
+      "required_systems": ["microsoft_365"]
+    },
+    {
+      "control_key": "audit_logging_enabled",
+      "severity": "critical",
+      "title": "Turn on the Microsoft 365 unified audit log",
+      "step_by_step_markdown": "1. Sign in to https://compliance.microsoft.com as a Compliance Administrator.\n2. Navigate to **Audit** in the left nav.\n3. If you see a banner reading *Start recording user and admin activity*, click **Turn on auditing**.\n4. Verify by waiting 30 minutes, then running a test search for any signed-in user.\n5. Document the activation date in your audit log policy.",
+      "estimated_effort_minutes": 15,
+      "required_systems": ["microsoft_365"]
+    },
+    {
+      "control_key": "encryption_at_rest",
+      "severity": "critical",
+      "title": "Enforce BitLocker via Intune compliance policy",
+      "step_by_step_markdown": "1. In Microsoft Endpoint Manager (https://endpoint.microsoft.com), go to **Devices › Compliance policies**.\n2. Create a new Windows 10/11 policy requiring **System Security › Encryption of data storage on device = Require**.\n3. Assign the policy to all device groups.\n4. Push to existing devices; non-compliant devices will surface in the report within 24 hours.\n5. For non-compliant devices, run *manage-bde -on C:* with a TPM-protected key, then sync Intune.",
+      "estimated_effort_minutes": 60,
+      "required_systems": ["microsoft_365", "intune"]
+    },
+    {
+      "control_key": "encryption_in_transit",
+      "severity": "high",
+      "title": "Disable TLS 1.0/1.1 on public endpoints",
+      "step_by_step_markdown": "1. Inventory every internet-facing endpoint (web servers, API gateways, mail servers).\n2. For each, disable TLS 1.0, TLS 1.1, and SSLv3. Allow only TLS 1.2 and TLS 1.3.\n3. On Windows IIS, edit registry under HKLM\\\\SYSTEM\\\\CurrentControlSet\\\\Control\\\\SecurityProviders\\\\SCHANNEL\\\\Protocols. Set Enabled=0 for TLS 1.0/1.1 client and server keys.\n4. Restart affected services.\n5. Validate with `nmap --script ssl-enum-ciphers -p 443 yourdomain.com`.",
+      "estimated_effort_minutes": 90,
+      "required_systems": ["web_servers"]
+    },
+    {
+      "control_key": "workforce_security_training",
+      "severity": "high",
+      "title": "Roll out annual security training to all staff",
+      "step_by_step_markdown": "1. Assign the HIPAA Security Awareness module in Fortify under **Training › Modules**.\n2. Set the due date to 30 days from assignment.\n3. Confirm every active workforce member has been enrolled (Settings › Users).\n4. Configure automated weekly reminder emails for non-completers.\n5. Retain completion records and quiz scores for six years per HIPAA retention requirements.",
+      "estimated_effort_minutes": 45,
+      "required_systems": ["fortify_training"]
+    },
+    {
+      "control_key": "risk_analysis_completed",
+      "severity": "critical",
+      "title": "Complete a documented annual risk analysis",
+      "step_by_step_markdown": "1. Launch the Risk Assessment Wizard under **Risk › New Assessment**.\n2. Walk through each section: asset inventory, threat identification, vulnerability rating, likelihood, impact.\n3. For each high-risk finding, create a remediation task with an assigned owner and due date.\n4. Export the final report and store under **Documents › Risk Assessments**.\n5. Schedule the next assessment for one year out (or immediately after any material change to your environment).",
+      "estimated_effort_minutes": 180,
+      "required_systems": ["fortify_risk_module"]
+    },
+    {
+      "control_key": "backup_validated",
+      "severity": "critical",
+      "title": "Test a backup restore and upload the report",
+      "step_by_step_markdown": "1. Select a recent backup of a system containing ePHI.\n2. Restore the backup to an isolated test environment (not production).\n3. Verify the restored data is complete, intact, and accessible.\n4. Document the test: date, system restored, backup date, verifier, outcome.\n5. Upload the test report under **Evidence › backup_validated** and mark the control compliant.\n6. Schedule the next test within 90 days.",
+      "estimated_effort_minutes": 120,
+      "required_systems": ["backup_provider"]
+    },
+    {
+      "control_key": "baa_signed_for_vendor",
+      "severity": "critical",
+      "title": "Obtain and upload BAAs for any vendor missing one",
+      "step_by_step_markdown": "1. Open **Vendors** in Fortify; the dashboard flags every vendor with `phi_access = true` and no active BAA.\n2. For each flagged vendor, contact their privacy office or HIPAA team and request a BAA template.\n3. Have your designated signatory review and sign the agreement.\n4. Upload the executed BAA under **Vendors › [Vendor name] › BAA documents**, including expiration date.\n5. Set the vendor's status to **Active BAA**; the compliance score will refresh within minutes.\n6. If a vendor refuses to sign a BAA, flag for executive review and consider replacement.",
+      "estimated_effort_minutes": 240,
+      "required_systems": ["fortify_vendor_module"]
+    }
+  ]
+}
