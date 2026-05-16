@@ -249,9 +249,7 @@ language sql stable as $$
     join frameworks f on f.id = fr.framework_id
     where f.code = p_framework_code
   ),
-  -- A requirement is "satisfied" when at least one mapped control is compliant
-  -- for this practice. partially_satisfies mappings count at half weight by
-  -- treating them as 0.5 instead of 1.
+  -- A requirement is "satisfied" when at least one mapped control is compliant.
   satisfaction as (
     select
       r.id as req_id,
@@ -273,27 +271,56 @@ language sql stable as $$
     left join practice_controls pc
       on pc.control_id = fm.control_id and pc.practice_id = p_practice_id
     group by r.id, r.category, r.weight, r.obligation_type
+  ),
+  -- Per-category rollup (single level of aggregation — no nesting)
+  by_category as (
+    select
+      coalesce(category, 'uncategorized') as cat,
+      count(*) filter (where satisfaction_factor >= 1.0) as cat_satisfied,
+      count(*) as cat_total,
+      round(
+        100.0 * sum(scaled_weight * satisfaction_factor)
+              / nullif(sum(scaled_weight), 0),
+        1
+      ) as cat_pct
+    from satisfaction
+    group by coalesce(category, 'uncategorized')
+  ),
+  -- Overall totals (single level of aggregation)
+  totals as (
+    select
+      count(*) filter (where satisfaction_factor >= 1.0)::int as t_satisfied,
+      count(*)::int as t_total,
+      round(
+        100.0 * sum(scaled_weight * satisfaction_factor)
+              / nullif(sum(scaled_weight), 0),
+        1
+      ) as t_pct
+    from satisfaction
+  ),
+  -- Assemble JSON from already-aggregated rows (no nested aggregates)
+  cats_json as (
+    select coalesce(
+      jsonb_object_agg(
+        cat,
+        jsonb_build_object(
+          'satisfied',    cat_satisfied,
+          'total',        cat_total,
+          'weighted_pct', cat_pct
+        )
+      ),
+      '{}'::jsonb
+    ) as breakdown
+    from by_category
   )
   select
     p_framework_code,
-    count(*) filter (where satisfaction_factor >= 1.0)::int as satisfied_requirements,
-    count(*)::int as total_requirements,
-    round(
-      100.0 * sum(scaled_weight * satisfaction_factor) / nullif(sum(scaled_weight), 0),
-      1
-    ) as weighted_pct,
-    jsonb_object_agg(
-      coalesce(category, 'uncategorized'),
-      jsonb_build_object(
-        'satisfied', count(*) filter (where satisfaction_factor >= 1.0),
-        'total',     count(*),
-        'weighted_pct',
-          round(100.0 * sum(scaled_weight * satisfaction_factor)
-                / nullif(sum(scaled_weight), 0), 1)
-      )
-    ) as category_breakdown
-  from satisfaction
-  group by ();
+    totals.t_satisfied,
+    totals.t_total,
+    totals.t_pct,
+    cats_json.breakdown
+  from totals
+  cross join cats_json;
 $$;
 
 -- ── Convenience: list all enabled frameworks for a practice with score ─────
@@ -307,11 +334,12 @@ returns table (
 language sql stable as $$
   select
     f.code,
-    (audit_readiness(p_practice_id, f.code)).weighted_pct,
-    (audit_readiness(p_practice_id, f.code)).satisfied_requirements,
-    (audit_readiness(p_practice_id, f.code)).total_requirements
+    r.weighted_pct,
+    r.satisfied_requirements,
+    r.total_requirements
   from frameworks f
   join practices p on p.id = p_practice_id
+  cross join lateral audit_readiness(p_practice_id, f.code) r
   where f.code = any (p.frameworks_enabled);
 $$;
 
@@ -337,7 +365,9 @@ alter table drift_alerts          enable row level security;
 alter table remediation_tasks     enable row level security;
 alter table audit_logs            enable row level security;
 
--- Global library — read for authenticated, write only via service role
+-- Global library — read for authenticated, write only via service role.
+-- NOTE: PL/pgSQL EXECUTE only accepts one statement per call, so we split
+-- the drop/create into two separate EXECUTEs.
 do $$
 declare t text;
 begin
@@ -345,11 +375,11 @@ begin
     'frameworks','framework_requirements','controls',
     'framework_mappings','evidence_checks','remediation_guidance'
   ] loop
-    execute format($f$
-      drop policy if exists "%1$s_read_authenticated" on %1$s;
-      create policy "%1$s_read_authenticated" on %1$s
-        for select using (auth.role() = 'authenticated');
-    $f$, t);
+    execute format('drop policy if exists "%1$s_read_authenticated" on %1$s', t);
+    execute format(
+      'create policy "%1$s_read_authenticated" on %1$s for select using (auth.role() = ''authenticated'')',
+      t
+    );
   end loop;
 end $$;
 
@@ -384,18 +414,20 @@ begin
     'practice_controls','practice_evidence','evidence_snapshots',
     'drift_alerts','remediation_tasks','audit_logs'
   ] loop
-    execute format($f$
-      drop policy if exists "%1$s_member_read" on %1$s;
+    execute format('drop policy if exists "%1$s_member_read" on %1$s', t);
+    execute format($p$
       create policy "%1$s_member_read" on %1$s for select using (
         practice_id in (select practice_id from practice_users where user_id = auth.uid())
-      );
-      drop policy if exists "%1$s_officer_write" on %1$s;
+      )
+    $p$, t);
+    execute format('drop policy if exists "%1$s_officer_write" on %1$s', t);
+    execute format($p$
       create policy "%1$s_officer_write" on %1$s for all using (
         practice_id in (select practice_id from practice_users
                         where user_id = auth.uid()
                           and role in ('owner','admin','compliance_officer'))
-      );
-    $f$, t);
+      )
+    $p$, t);
   end loop;
 end $$;
 
