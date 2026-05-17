@@ -14,7 +14,7 @@ export default function TabHeader({
         {/* Icon pair — Home on the left, Search on the right */}
         <div className="flex items-center justify-between mb-12">
           <Link
-            href="/"
+            href="/app"
             className="p-3 rounded-2xl glass-card transition-all duration-300"
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLElement).style.boxShadow = "0 0 24px rgba(139,92,246,0.65)";
@@ -30,7 +30,7 @@ export default function TabHeader({
           </Link>
 
           <Link
-            href="/search"
+            href="/app/threats/search"
             className="p-3 rounded-2xl glass-card transition-all duration-300"
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLElement).style.boxShadow = "0 0 24px rgba(139,92,246,0.65)";

@@ -17,8 +17,8 @@ export default async function ThreatDetailPage({ params }: { params: Promise<{ i
   const title = threat.title;
 
   const backHref =
-    threat.source_tab === "registry" ? "/registry" :
-    threat.source_tab === "community" ? "/community" : "/forums";
+    threat.source_tab === "registry" ? "/app/threats/registry" :
+    threat.source_tab === "community" ? "/app/threats/community" : "/app/threats/forums";
 
   const tabAccent =
     threat.source_tab === "registry"  ? { color: "#8B5CF6", glow: "rgba(139,92,246,0.3)" } :
@@ -57,7 +57,7 @@ export default async function ThreatDetailPage({ params }: { params: Promise<{ i
             </svg>
             Back
           </Link>
-          <Link href="/" className="text-gray-600 hover:text-gray-400 transition-colors text-sm">Home</Link>
+          <Link href="/app" className="text-gray-600 hover:text-gray-400 transition-colors text-sm">Dashboard</Link>
         </div>
       </div>
 

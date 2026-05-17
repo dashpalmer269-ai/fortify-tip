@@ -40,7 +40,7 @@ export default function ThreatCard({ threat }: { threat: Threat; accentColor?: s
   const tabColor = TAB_ACCENT[threat.source_tab ?? "registry"] ?? "#8B5CF6";
 
   return (
-    <Link href={`/threat/${threat.id}`}>
+    <Link href={`/app/threats/${threat.id}`}>
       <div
         className="glass-card flex items-stretch rounded-xl overflow-hidden cursor-pointer group transition-all duration-300"
         onMouseEnter={(e) => {
