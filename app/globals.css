@@ -93,6 +93,37 @@ body {
   animation: fade-in 0.4s ease-out backwards;
 }
 
+/* Marketing display — variable Fraunces, used only on public landing pages.
+   SOFT axis nudges toward warmer terminals; opsz uses display-optical sizing. */
+.font-marketing {
+  font-family: var(--font-marketing);
+  font-variation-settings: "SOFT" 35, "WONK" 0, "opsz" 144;
+  font-feature-settings: "ss01";
+}
+
+/* Orb-specific animations (homepage only) */
+@keyframes orb-breathe {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50%      { opacity: 0.95; transform: scale(1.06); }
+}
+@keyframes orb-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes cross-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.035); }
+}
+@keyframes particle-drift {
+  0%   { transform: translate(0, 0); opacity: 0.55; }
+  50%  { transform: translate(-2px, -6px); opacity: 1; }
+  100% { transform: translate(0, 0); opacity: 0.55; }
+}
+@keyframes ambient-shift {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(2%, -1.5%); }
+}
+
 /* Tabular figures for numeric data — prevents layout shift in score displays */
 .numeric,
 .tabular-nums {
