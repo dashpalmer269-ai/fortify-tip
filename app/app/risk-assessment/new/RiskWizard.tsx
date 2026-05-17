@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { RiskQuestion } from "@/lib/compliance/risk-questions";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 
 export default function RiskWizard({
   practiceId,
@@ -29,10 +31,7 @@ export default function RiskWizard({
         body: JSON.stringify({ practice_id: practiceId, framework: "HIPAA", answers }),
       });
       const body = await res.json();
-      if (!res.ok) {
-        setError(body.error ?? "Failed to submit.");
-        return;
-      }
+      if (!res.ok) { setError(body.error ?? "Failed to submit."); return; }
       router.push(`/app/risk-assessment/${body.id}`);
       router.refresh();
     } catch (e) {
@@ -44,96 +43,87 @@ export default function RiskWizard({
 
   return (
     <div>
-      {/* Progress bar */}
+      {/* Progress */}
       <div className="mb-6">
-        <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-          <span>
-            <span className="text-white font-medium">{answered}</span> of {total} answered
-          </span>
-          <span>{Math.round((answered / total) * 100)}%</span>
+        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-tertiary)] mb-2">
+          <span><span className="text-[var(--color-primary)]">{answered}</span> of {total}</span>
+          <span className="tabular-nums">{Math.round((answered / total) * 100)}%</span>
         </div>
-        <div className="h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
+        <div className="h-px bg-[var(--color-border-subtle)] relative overflow-hidden">
           <div
-            className="h-full bg-violet-500 rounded-full transition-all duration-300"
-            style={{
-              width: `${(answered / total) * 100}%`,
-              boxShadow: "0 0 10px rgba(139,92,246,0.6)",
-            }}
+            className="h-full bg-[var(--color-accent)] transition-all duration-300"
+            style={{ width: `${(answered / total) * 100}%` }}
           />
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-2">
         {questions.map((q, i) => {
           const currentAnswer = answers[q.key];
           return (
-            <div
-              key={q.key}
-              className={`glass-card rounded-2xl p-5 transition-all ${
-                currentAnswer ? "" : "opacity-90"
-              }`}
-              style={{ boxShadow: currentAnswer ? "0 0 18px rgba(139,92,246,0.18)" : undefined }}
-            >
-              <div className="flex items-start gap-3 mb-4">
-                <span className="text-xs uppercase tracking-wider text-violet-300 mt-0.5 font-semibold">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <div className="flex-1">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-600 mb-1">{q.category}</p>
-                  <p className="text-white text-sm font-medium leading-snug">{q.question}</p>
+            <Card key={q.key} variant={currentAnswer ? "raised" : "default"}>
+              <div className="px-5 py-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <span className="font-mono text-[11px] text-[var(--color-tertiary)] tabular-nums mt-0.5">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <div className="flex-1">
+                    <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--color-quaternary)] mb-1">
+                      {q.category}
+                    </p>
+                    <p className="text-[var(--color-primary)] text-sm leading-snug">{q.question}</p>
+                  </div>
+                </div>
+                <div className="pl-9 space-y-1">
+                  {q.options.map((opt) => {
+                    const isSelected = currentAnswer === opt.value;
+                    return (
+                      <label
+                        key={opt.value}
+                        className={`flex items-center gap-3 px-3 py-1.5 rounded-md cursor-pointer text-sm transition-colors ${
+                          isSelected
+                            ? "text-[var(--color-primary)] bg-[var(--color-surface-raised)]"
+                            : "text-[var(--color-secondary)] hover:bg-[var(--color-surface)] hover:text-[var(--color-primary)]"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name={q.key}
+                          value={opt.value}
+                          checked={isSelected}
+                          onChange={() => setAnswers((prev) => ({ ...prev, [q.key]: opt.value }))}
+                          className="accent-[var(--color-accent)]"
+                        />
+                        {opt.label}
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
-              <div className="space-y-2 pl-9">
-                {q.options.map((opt) => {
-                  const isSelected = currentAnswer === opt.value;
-                  return (
-                    <label
-                      key={opt.value}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer text-sm transition-colors ${
-                        isSelected
-                          ? "bg-violet-500/15 text-white"
-                          : "text-gray-400 hover:bg-white/[0.04] hover:text-white"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name={q.key}
-                        value={opt.value}
-                        checked={isSelected}
-                        onChange={() => setAnswers((prev) => ({ ...prev, [q.key]: opt.value }))}
-                        className="accent-violet-500"
-                      />
-                      {opt.label}
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
+            </Card>
           );
         })}
       </div>
 
       {error && (
-        <div className="mt-6 text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+        <div className="mt-6 text-sm text-[var(--color-danger)] bg-[var(--color-danger-soft)] border border-[var(--color-danger)]/30 rounded-md px-3 py-2">
           {error}
         </div>
       )}
 
       <div className="mt-8 sticky bottom-6 z-10">
-        <button
+        <Button
           onClick={handleSubmit}
-          disabled={!allAnswered || submitting}
-          className="w-full bg-violet-500 hover:bg-violet-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg px-4 py-3 transition-colors"
-          style={{ boxShadow: "0 0 24px rgba(139,92,246,0.4)" }}
+          disabled={!allAnswered}
+          loading={submitting}
+          variant="primary"
+          size="lg"
+          className="w-full"
         >
-          {submitting
-            ? "Analyzing with AI…"
-            : allAnswered
-            ? "Submit assessment → AI executive summary"
-            : `Answer all ${total} questions to continue`}
-        </button>
+          {allAnswered ? "Submit · AI generates summary" : `Answer all ${total} questions to continue`}
+        </Button>
         {!allAnswered && (
-          <p className="text-xs text-gray-600 text-center mt-2">
+          <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-quaternary)] text-center mt-2">
             {total - answered} remaining
           </p>
         )}

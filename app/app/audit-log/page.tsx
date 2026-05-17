@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
 import { getCurrentUserAndPractice, createAuthedServerClient } from "@/lib/supabase/server-auth";
+import PageHeader from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
+import Badge from "@/components/ui/Badge";
 
 export const dynamic = "force-dynamic";
 
@@ -29,57 +32,57 @@ export default async function AuditLogPage() {
     .limit(200);
 
   return (
-    <div className="px-8 py-8 max-w-5xl mx-auto">
-      <div className="mb-6">
-        <p className="text-xs uppercase tracking-[0.25em] text-violet-400 mb-1">Tamper-resistant trail</p>
-        <h1 className="text-3xl font-bold text-white">Audit log</h1>
-        <p className="text-sm text-gray-500 mt-2">
-          Every change made to controls, evidence, vendors, and team is recorded here for SOC 2 CC7.2 and HIPAA §164.312(b). Most recent first.
-        </p>
-      </div>
+    <div className="px-8 py-10 max-w-6xl mx-auto">
+      <PageHeader
+        eyebrow="Tamper-resistant trail"
+        title="Audit log"
+        description="Every change to controls, evidence, vendors, and team is recorded for SOC 2 CC7.2 and HIPAA §164.312(b). Most recent first."
+      />
 
-      {(!logs || logs.length === 0) ? (
-        <div className="glass-card rounded-2xl p-12 text-center text-gray-500">
-          No events recorded yet. Compliance actions, evidence captures, and system drift detections will appear here as they happen.
-        </div>
+      {!logs || logs.length === 0 ? (
+        <Card className="py-16 text-center">
+          <p className="text-sm text-[var(--color-tertiary)]">
+            No events recorded yet. Compliance actions, evidence captures, and system drift detections will appear here as they happen.
+          </p>
+        </Card>
       ) : (
-        <div className="glass-card rounded-2xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-white/[0.03] border-b border-white/[0.05] text-left text-xs uppercase tracking-wider text-gray-500">
-              <tr>
-                <th className="px-4 py-3 font-medium">Time</th>
-                <th className="px-4 py-3 font-medium">Actor</th>
-                <th className="px-4 py-3 font-medium">Action</th>
-                <th className="px-4 py-3 font-medium">Resource</th>
-                <th className="px-4 py-3 font-medium">Detail</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/[0.04]">
-              {(logs as LogRow[]).map((l) => (
-                <tr key={l.id} className="hover:bg-white/[0.02]">
-                  <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
-                    {new Date(l.occurred_at).toLocaleString("en-US", {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}
-                  </td>
-                  <td className="px-4 py-3 text-xs">
-                    {l.actor_service ? (
-                      <span className="text-violet-300">{l.actor_service}</span>
-                    ) : (
-                      <span className="text-gray-300">user</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-white font-medium">{formatAction(l.action)}</td>
-                  <td className="px-4 py-3 text-xs text-gray-400">{l.resource_type}</td>
-                  <td className="px-4 py-3 text-xs text-gray-500 max-w-xs truncate">
-                    {l.metadata ? summarizeMetadata(l.metadata) : "—"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Card className="overflow-hidden">
+          <div className="grid items-center gap-4 px-5 py-3 border-b border-[var(--color-border-subtle)] font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-quaternary)]"
+               style={{ gridTemplateColumns: "150px 90px 1fr 130px 1fr" }}>
+            <div>Time</div>
+            <div>Actor</div>
+            <div>Action</div>
+            <div>Resource</div>
+            <div>Detail</div>
+          </div>
+          <div className="divide-y divide-[var(--color-border-subtle)]">
+            {(logs as LogRow[]).map((l) => (
+              <div
+                key={l.id}
+                className="grid items-center gap-4 px-5 py-3 hover:bg-[var(--color-surface-raised)] transition-colors"
+                style={{ gridTemplateColumns: "150px 90px 1fr 130px 1fr" }}
+              >
+                <span className="font-mono text-[11px] text-[var(--color-tertiary)] whitespace-nowrap">
+                  {new Date(l.occurred_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+                </span>
+                <span className="text-xs">
+                  {l.actor_service ? (
+                    <Badge variant="accent">{l.actor_service}</Badge>
+                  ) : (
+                    <Badge variant="muted">user</Badge>
+                  )}
+                </span>
+                <span className="text-sm text-[var(--color-primary)] truncate">{formatAction(l.action)}</span>
+                <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--color-tertiary)]">
+                  {l.resource_type.replace(/_/g, " ")}
+                </span>
+                <span className="text-xs text-[var(--color-tertiary)] truncate font-mono">
+                  {l.metadata ? summarizeMetadata(l.metadata) : "—"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
       )}
     </div>
   );

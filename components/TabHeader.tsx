@@ -6,48 +6,28 @@ export default function TabHeader({
   accentBg,
 }: {
   title: string;
-  accentBg: string;
+  accentBg?: string;
 }) {
   return (
-    <div className="border-b border-white/[0.06]" style={{ background: accentBg }}>
-      <div className="max-w-3xl mx-auto px-6 pt-10 pb-8">
-        {/* Icon pair — Home on the left, Search on the right */}
-        <div className="flex items-center justify-between mb-12">
+    <div className="border-b border-[var(--color-border-subtle)]" style={accentBg ? { background: accentBg } : undefined}>
+      <div className="max-w-5xl mx-auto px-8 pt-10 pb-8">
+        <div className="flex items-center justify-between mb-10">
           <Link
-            href="/app"
-            className="p-3 rounded-2xl glass-card transition-all duration-300"
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.boxShadow = "0 0 24px rgba(139,92,246,0.65)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.boxShadow = "";
-            }}
+            href="/app/threats"
+            className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--color-tertiary)] hover:text-[var(--color-primary)] transition-colors"
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-              <polyline points="9 22 9 12 15 12 15 22" />
-            </svg>
+            ← Threat intel
           </Link>
-
           <Link
-            href="/app/threats/search"
-            className="p-3 rounded-2xl glass-card transition-all duration-300"
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.boxShadow = "0 0 24px rgba(139,92,246,0.65)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.boxShadow = "";
-            }}
+            href="/app/threats/search?q="
+            className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--color-tertiary)] hover:text-[var(--color-primary)] transition-colors"
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
+            Search →
           </Link>
         </div>
-
-        {/* Section title */}
-        <h1 className="text-6xl font-black tracking-tight text-white leading-none">{title}</h1>
+        <h1 className="font-display text-4xl text-[var(--color-primary)] leading-none" style={{ letterSpacing: "-0.025em" }}>
+          {title}
+        </h1>
       </div>
     </div>
   );

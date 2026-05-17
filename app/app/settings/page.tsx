@@ -1,5 +1,9 @@
 import { redirect } from "next/navigation";
 import { getCurrentUserAndPractice } from "@/lib/supabase/server-auth";
+import PageHeader from "@/components/ui/PageHeader";
+import { Card, CardBody } from "@/components/ui/Card";
+import Badge from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 
 export const dynamic = "force-dynamic";
 
@@ -16,73 +20,85 @@ export default async function SettingsPage() {
   } | null;
 
   return (
-    <div className="px-8 py-8 max-w-3xl mx-auto">
-      <div className="mb-6">
-        <p className="text-xs uppercase tracking-[0.25em] text-violet-400 mb-1">Account</p>
-        <h1 className="text-3xl font-bold text-white">Settings</h1>
-      </div>
+    <div className="px-8 py-10 max-w-3xl mx-auto">
+      <PageHeader eyebrow="Account" title="Settings" />
 
-      <section className="glass-card rounded-2xl p-6 mb-4">
-        <h2 className="text-lg font-semibold text-white mb-4">Profile</h2>
-        <dl className="space-y-3 text-sm">
-          <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">Email</dt>
-            <dd className="text-white">{session.user.email}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">Role</dt>
-            <dd className="text-white capitalize">{session.membership.role.replace("_", " ")}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">Account created</dt>
-            <dd className="text-white">
-              {new Date(session.user.created_at).toLocaleDateString("en-US", { dateStyle: "long" })}
-            </dd>
-          </div>
-        </dl>
-      </section>
+      <section className="space-y-px">
+        <Card>
+          <CardBody>
+            <h2 className="font-display text-lg text-[var(--color-primary)] mb-5" style={{ letterSpacing: "-0.015em" }}>
+              Profile
+            </h2>
+            <dl className="divide-y divide-[var(--color-border-subtle)]">
+              <Row label="Email" value={session.user.email ?? "—"} />
+              <Row label="Role" value={session.membership.role.replace("_", " ")} valueClass="capitalize" />
+              <Row
+                label="Account created"
+                value={new Date(session.user.created_at).toLocaleDateString("en-US", { dateStyle: "long" })}
+              />
+            </dl>
+          </CardBody>
+        </Card>
 
-      <section className="glass-card rounded-2xl p-6 mb-4">
-        <h2 className="text-lg font-semibold text-white mb-4">Practice</h2>
-        <dl className="space-y-3 text-sm">
-          <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">Name</dt>
-            <dd className="text-white">{practice?.name}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">Frameworks</dt>
-            <dd className="flex flex-wrap gap-1.5 justify-end">
-              {practice?.frameworks_enabled.map((f) => (
-                <span
-                  key={f}
-                  className="text-xs text-violet-300 bg-violet-500/15 px-2 py-0.5 rounded"
-                >
-                  {f}
-                </span>
-              ))}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">HIPAA covered entity</dt>
-            <dd className="text-white">{practice?.hipaa_covered_entity ? "Yes" : "No"}</dd>
-          </div>
-        </dl>
-      </section>
+        <Card>
+          <CardBody>
+            <h2 className="font-display text-lg text-[var(--color-primary)] mb-5" style={{ letterSpacing: "-0.015em" }}>
+              Practice
+            </h2>
+            <dl className="divide-y divide-[var(--color-border-subtle)]">
+              <Row label="Name" value={practice?.name ?? "—"} />
+              <Row
+                label="Frameworks"
+                custom={
+                  <div className="flex flex-wrap gap-1.5 justify-end">
+                    {practice?.frameworks_enabled.map((f) => (
+                      <Badge key={f} variant="accent">{f}</Badge>
+                    ))}
+                  </div>
+                }
+              />
+              <Row label="HIPAA covered entity" value={practice?.hipaa_covered_entity ? "Yes" : "No"} />
+            </dl>
+          </CardBody>
+        </Card>
 
-      <section className="glass-card rounded-2xl p-6">
-        <h2 className="text-lg font-semibold text-white mb-2">Security</h2>
-        <p className="text-sm text-gray-500 mb-4">
-          Multi-factor authentication and password updates land in the next pass. Until then, use Supabase&apos;s built-in account recovery.
-        </p>
-        <form action="/auth/signout" method="post">
-          <button
-            type="submit"
-            className="text-sm border border-white/15 hover:border-red-400/40 text-white rounded-lg px-4 py-2 transition-colors"
-          >
-            Sign out
-          </button>
-        </form>
+        <Card>
+          <CardBody>
+            <h2 className="font-display text-lg text-[var(--color-primary)] mb-2" style={{ letterSpacing: "-0.015em" }}>
+              Security
+            </h2>
+            <p className="text-sm text-[var(--color-tertiary)] mb-5 leading-relaxed">
+              Multi-factor authentication and password rotation are tracked here in the next pass.
+            </p>
+            <form action="/auth/signout" method="post">
+              <Button type="submit" variant="secondary" size="sm">
+                Sign out
+              </Button>
+            </form>
+          </CardBody>
+        </Card>
       </section>
+    </div>
+  );
+}
+
+function Row({
+  label,
+  value,
+  custom,
+  valueClass = "",
+}: {
+  label: string;
+  value?: string;
+  custom?: React.ReactNode;
+  valueClass?: string;
+}) {
+  return (
+    <div className="py-3 flex items-center justify-between gap-4 first:pt-0 last:pb-0">
+      <dt className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-tertiary)]">
+        {label}
+      </dt>
+      <dd className={`text-sm text-[var(--color-primary)] ${valueClass}`}>{custom ?? value}</dd>
     </div>
   );
 }

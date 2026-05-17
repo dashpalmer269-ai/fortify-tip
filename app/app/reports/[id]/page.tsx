@@ -1,6 +1,8 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUserAndPractice, createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { Card, CardBody } from "@/components/ui/Card";
+import Badge from "@/components/ui/Badge";
 
 export const dynamic = "force-dynamic";
 
@@ -37,75 +39,96 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
   const snap = r.snapshot ?? {};
 
   return (
-    <div className="px-8 py-8 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <Link href="/app/reports" className="text-xs text-gray-500 hover:text-white">
-          ← Back to reports
-        </Link>
-      </div>
+    <div className="px-8 py-10 max-w-4xl mx-auto">
+      <Link href="/app/reports" className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--color-tertiary)] hover:text-[var(--color-primary)] transition-colors">
+        ← Back to reports
+      </Link>
 
-      {/* Header */}
-      <div className="glass-card rounded-2xl p-6 mb-6" style={{ boxShadow: "0 0 24px rgba(139,92,246,0.2)" }}>
-        <p className="text-xs uppercase tracking-[0.25em] text-violet-400 mb-1">
-          {r.report_type.replace(/_/g, " ")} {r.framework ? `· ${r.framework}` : ""}
+      <div className="mt-6 mb-10">
+        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--color-tertiary)] mb-2 capitalize">
+          {r.report_type.replace(/_/g, " ")}{r.framework ? ` · ${r.framework}` : ""}
         </p>
-        <h1 className="text-3xl font-bold text-white">{snap.practice_name ?? "Compliance report"}</h1>
-        <p className="text-sm text-gray-500 mt-2">
+        <h1 className="font-display text-4xl text-[var(--color-primary)] leading-none mb-3" style={{ letterSpacing: "-0.025em" }}>
+          {snap.practice_name ?? "Compliance report"}
+        </h1>
+        <p className="font-mono text-[11px] text-[var(--color-tertiary)]">
           Generated {new Date(r.generated_at).toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" })}
         </p>
       </div>
 
-      {/* Executive summary */}
-      {r.ai_executive_summary ? (
-        <section className="glass-card rounded-2xl p-6 mb-4">
-          <p className="text-xs uppercase tracking-wider text-gray-500 mb-3">Executive summary</p>
-          <p className="text-gray-200 leading-relaxed whitespace-pre-wrap">{r.ai_executive_summary}</p>
-        </section>
-      ) : (
-        <section className="glass-card rounded-2xl p-6 mb-4 text-sm text-gray-500">
-          AI executive summary not yet generated.
-        </section>
-      )}
-
-      {/* Snapshot data */}
-      <section className="glass-card rounded-2xl p-6 mb-4">
-        <p className="text-xs uppercase tracking-wider text-gray-500 mb-4">Per-framework posture (snapshot at generation)</p>
-        {snap.readiness && snap.readiness.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {snap.readiness.map((r) => (
-              <div key={r.framework_code} className="rounded-lg bg-white/[0.03] p-3">
-                <p className="text-xs uppercase tracking-wider text-gray-500">{r.framework_code}</p>
-                <p className="text-2xl font-black text-white mt-1">{Math.round(Number(r.weighted_pct) || 0)}%</p>
-                <p className="text-[10px] text-gray-600 mt-1">
-                  {r.satisfied}/{r.total}
-                </p>
-              </div>
-            ))}
-          </div>
+      <section className="space-y-px">
+        {r.ai_executive_summary ? (
+          <Card>
+            <CardBody>
+              <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-tertiary)] mb-3">
+                Executive summary
+              </p>
+              <p className="text-[15px] text-[var(--color-primary)] leading-relaxed whitespace-pre-wrap">
+                {r.ai_executive_summary}
+              </p>
+            </CardBody>
+          </Card>
         ) : (
-          <p className="text-sm text-gray-500">No framework data captured.</p>
+          <Card>
+            <CardBody>
+              <p className="text-sm text-[var(--color-tertiary)]">AI executive summary not yet generated.</p>
+            </CardBody>
+          </Card>
         )}
+
+        <Card>
+          <CardBody>
+            <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-tertiary)] mb-4">
+              Per-framework posture
+            </p>
+            {snap.readiness && snap.readiness.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[var(--color-border-subtle)] surface rounded-lg overflow-hidden">
+                {snap.readiness.map((row) => (
+                  <div key={row.framework_code} className="bg-[var(--color-canvas)] px-4 py-4">
+                    <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-tertiary)] mb-1">
+                      {row.framework_code}
+                    </p>
+                    <p className="font-display text-2xl text-[var(--color-primary)] tabular-nums" style={{ letterSpacing: "-0.02em" }}>
+                      {Math.round(Number(row.weighted_pct) || 0)}%
+                    </p>
+                    <p className="font-mono text-[10px] text-[var(--color-quaternary)] mt-0.5 tabular-nums">
+                      {row.satisfied} / {row.total}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-[var(--color-tertiary)]">No framework data captured.</p>
+            )}
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardBody className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <SnapStat label="Critical controls open" value={snap.critical_open ?? 0} hot={(snap.critical_open ?? 0) > 0} />
+            <SnapStat label="Drift alerts (30d)" value={snap.recent_drift_alerts_30d ?? 0} hot={(snap.recent_drift_alerts_30d ?? 0) > 0} />
+            <SnapStat label="BAAs missing" value={snap.vendors_missing_baa ?? 0} hot={(snap.vendors_missing_baa ?? 0) > 0} />
+          </CardBody>
+        </Card>
       </section>
 
-      <section className="glass-card rounded-2xl p-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <SnapStat label="Critical controls open" value={snap.critical_open ?? 0} accent={(snap.critical_open ?? 0) > 0 ? "red" : "green"} />
-        <SnapStat label="Drift alerts (30d)" value={snap.recent_drift_alerts_30d ?? 0} accent={(snap.recent_drift_alerts_30d ?? 0) > 0 ? "orange" : "green"} />
-        <SnapStat label="BAAs missing" value={snap.vendors_missing_baa ?? 0} accent={(snap.vendors_missing_baa ?? 0) > 0 ? "red" : "green"} />
-      </section>
-
-      <div className="mt-6 rounded-xl bg-violet-500/5 border border-violet-500/20 px-4 py-3 text-xs text-gray-500">
-        PDF export lands once we wire a PDF renderer in Phase G. For now, print this page to PDF via your browser to deliver to an auditor.
+      <div className="mt-6 px-4 py-3 surface rounded-md">
+        <p className="text-xs text-[var(--color-tertiary)] leading-relaxed">
+          <Badge variant="muted">Note</Badge> Native PDF export ships later. Use browser <kbd className="font-mono">Print → Save as PDF</kbd> for now.
+        </p>
       </div>
     </div>
   );
 }
 
-function SnapStat({ label, value, accent }: { label: string; value: number; accent: "red" | "orange" | "green" }) {
-  const color = accent === "red" ? "#ef4444" : accent === "orange" ? "#f97316" : "#10b981";
+function SnapStat({ label, value, hot }: { label: string; value: number; hot: boolean }) {
+  const color = hot ? "var(--color-danger)" : "var(--color-success)";
   return (
     <div>
-      <p className="text-xs uppercase tracking-wider text-gray-500">{label}</p>
-      <p className="text-2xl font-black mt-1 tabular-nums" style={{ color }}>{value}</p>
+      <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-tertiary)] mb-1">{label}</p>
+      <p className="font-display text-2xl tabular-nums" style={{ color, letterSpacing: "-0.02em" }}>
+        {value}
+      </p>
     </div>
   );
 }

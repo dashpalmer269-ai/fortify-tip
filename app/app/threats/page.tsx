@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { createServerClient } from "@/lib/supabase/server";
+import PageHeader from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
 
 export const dynamic = "force-dynamic";
 
@@ -21,71 +23,42 @@ export default async function ThreatIntelOverviewPage() {
   }
 
   const sections = [
-    {
-      key: "registry",
-      label: "Registry",
-      desc: "Authoritative CVE feed — NVD / NIST + CISA KEV",
-      href: "/app/threats/registry",
-      count: counts.registry,
-      color: "#8b5cf6",
-    },
-    {
-      key: "community",
-      label: "Community",
-      desc: "AlienVault OTX threat actor pulses",
-      href: "/app/threats/community",
-      count: counts.community,
-      color: "#10b981",
-    },
-    {
-      key: "forums",
-      label: "Forums",
-      desc: "Curated news — BleepingComputer, Krebs, Hacker News",
-      href: "/app/threats/forums",
-      count: counts.forums,
-      color: "#f97316",
-    },
+    { key: "registry",  label: "Registry",  desc: "Authoritative CVE feed — NVD / NIST + CISA KEV", href: "/app/threats/registry",  count: counts.registry },
+    { key: "community", label: "Community", desc: "AlienVault OTX threat actor pulses",              href: "/app/threats/community", count: counts.community },
+    { key: "forums",    label: "Forums",    desc: "BleepingComputer, Krebs, Hacker News",            href: "/app/threats/forums",    count: counts.forums },
   ];
 
   return (
-    <div className="px-8 py-8 max-w-5xl mx-auto">
-      <div className="mb-8">
-        <p className="text-xs uppercase tracking-[0.25em] text-violet-400 mb-1">Threat intelligence</p>
-        <h1 className="text-3xl font-bold text-white">Live security feeds</h1>
-        <p className="text-gray-400 mt-2 max-w-2xl">
-          Continuously ingested CVEs, breach disclosures, and threat actor activity — AI-summarized into newsroom-style briefs and tagged for healthcare relevance.
-        </p>
-      </div>
+    <div className="px-8 py-10 max-w-5xl mx-auto">
+      <PageHeader
+        eyebrow="Continuously ingested"
+        title="Threat intel"
+        description="CVEs, breach disclosures, and threat-actor activity — AI-summarized into newsroom briefs and tagged for healthcare relevance."
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-px surface rounded-xl overflow-hidden">
         {sections.map((s) => (
-          <Link
-            key={s.key}
-            href={s.href}
-            className="glass-card rounded-2xl p-6 hover:bg-white/[0.02] transition-colors block"
-            style={{ boxShadow: `0 0 18px ${s.color}1a` }}
-          >
-            <p className="text-2xl font-black text-white tabular-nums" style={{ color: s.color }}>
+          <Link key={s.key} href={s.href} className="block bg-[var(--color-canvas)] hover:bg-[var(--color-surface-raised)] transition-colors p-6">
+            <p className="font-display text-3xl text-[var(--color-primary)] tabular-nums" style={{ letterSpacing: "-0.02em" }}>
               {s.count}
             </p>
-            <p className="text-sm uppercase tracking-wider text-gray-400 mt-3">{s.label}</p>
-            <p className="text-xs text-gray-500 mt-1 leading-relaxed">{s.desc}</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--color-tertiary)] mt-3 mb-1">
+              {s.label}
+            </p>
+            <p className="text-sm text-[var(--color-secondary)] leading-relaxed">{s.desc}</p>
+            <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--color-accent)] mt-4">Open →</p>
           </Link>
         ))}
       </div>
 
-      <div className="mt-8">
-        <Link
-          href="/app/threats/search?q="
-          className="inline-flex items-center gap-2 text-sm text-violet-300 hover:text-violet-200"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          Search across all feeds →
-        </Link>
-      </div>
+      <Card className="mt-6">
+        <div className="px-5 py-4 flex items-center justify-between">
+          <p className="text-sm text-[var(--color-secondary)]">Search across all feeds</p>
+          <Link href="/app/threats/search?q=" className="font-mono text-[11px] uppercase tracking-wider text-[var(--color-accent)] hover:text-[var(--color-primary)] transition-colors">
+            Open search →
+          </Link>
+        </div>
+      </Card>
     </div>
   );
 }

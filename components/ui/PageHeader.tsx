@@ -16,7 +16,7 @@ export default function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="mb-10 flex flex-wrap items-end justify-between gap-6 animate-fade-in">
+    <header className="mb-10 flex flex-wrap items-end justify-between gap-6">
       <div className="max-w-2xl">
         {eyebrow && (
           <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-[var(--color-tertiary)] mb-3">

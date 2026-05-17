@@ -1,20 +1,19 @@
 import type { Metadata } from "next";
-import { Geist, JetBrains_Mono, Instrument_Serif } from "next/font/google";
+import { Geist, JetBrains_Mono, IBM_Plex_Serif } from "next/font/google";
 import "./globals.css";
 
-// Body/UI sans — clean, technical
+// Body / UI sans
 const geistSans = Geist({ variable: "--font-sans", subsets: ["latin"] });
 
-// Display serif — editorial, distinctive, characterful
-// Used only at hero / page-title scale to set the high-end tone
-const instrumentSerif = Instrument_Serif({
+// Display serif — clinical-instrument tone, not magazine-italic.
+// Medium weight reads as institutional and trustworthy without losing character.
+const plexSerif = IBM_Plex_Serif({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["400"],
-  style: ["normal", "italic"],
+  weight: ["400", "500", "600"],
 });
 
-// Data / mono — for numbers, code, citations, tabular figures
+// Data / mono
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
@@ -31,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable}`}
+      className={`${geistSans.variable} ${plexSerif.variable} ${jetbrainsMono.variable}`}
     >
       <body className="min-h-screen bg-canvas text-primary antialiased">{children}</body>
     </html>

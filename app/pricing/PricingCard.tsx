@@ -2,6 +2,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Plan } from "@/lib/billing/plans";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import Badge from "@/components/ui/Badge";
 
 export default function PricingCard({ plan, featured }: { plan: Plan; featured?: boolean }) {
   const router = useRouter();
@@ -19,7 +22,6 @@ export default function PricingCard({ plan, featured }: { plan: Plan; featured?:
       });
       const body = await res.json();
       if (res.status === 401) {
-        // Not signed in — send to signup with intended plan
         router.push(`/signup?plan=${plan.id}`);
         return;
       }
@@ -36,48 +38,40 @@ export default function PricingCard({ plan, featured }: { plan: Plan; featured?:
   }
 
   return (
-    <div
-      className="glass-card rounded-2xl p-6"
-      style={{
-        boxShadow: featured ? "0 0 32px rgba(139,92,246,0.4)" : undefined,
-        borderColor: featured ? "rgba(139,92,246,0.5)" : undefined,
-      }}
-    >
+    <Card variant={featured ? "raised" : "default"} className="p-6 h-full flex flex-col">
       <div className="flex items-baseline justify-between mb-1">
-        <h3 className="text-lg font-semibold text-white">{plan.name}</h3>
-        {plan.badge && (
-          <span className="text-[10px] uppercase tracking-wider text-violet-300 px-2 py-0.5 rounded-full bg-violet-500/15">
-            {plan.badge}
-          </span>
-        )}
+        <h3 className="font-display text-xl text-[var(--color-primary)]" style={{ letterSpacing: "-0.015em" }}>
+          {plan.name}
+        </h3>
+        {plan.badge && <Badge variant="accent">{plan.badge}</Badge>}
       </div>
-      <p className="text-xs text-gray-500 mb-4">{plan.description}</p>
+      <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-tertiary)] mb-5">
+        {plan.description}
+      </p>
       <div className="flex items-baseline gap-1 mb-6">
-        <span className="text-3xl font-black text-white tabular-nums">${plan.monthly_price_usd.toLocaleString()}</span>
-        <span className="text-sm text-gray-500">/month</span>
+        <span className="font-display text-4xl text-[var(--color-primary)] tabular-nums" style={{ letterSpacing: "-0.025em" }}>
+          ${plan.monthly_price_usd.toLocaleString()}
+        </span>
+        <span className="text-sm text-[var(--color-tertiary)]">/mo</span>
       </div>
-      <ul className="space-y-2 mb-6 min-h-[14rem]">
+      <ul className="space-y-2.5 mb-6 flex-1">
         {plan.features.map((f) => (
-          <li key={f} className="text-sm text-gray-300 flex gap-2">
-            <span className="text-violet-400 mt-0.5">✓</span>
+          <li key={f} className="text-sm text-[var(--color-secondary)] flex gap-2.5">
+            <span className="text-[var(--color-accent)] mt-0.5 shrink-0">✓</span>
             <span>{f}</span>
           </li>
         ))}
       </ul>
-      <button
+      <Button
         onClick={startCheckout}
-        disabled={loading}
-        className={`w-full text-center text-sm font-medium rounded-lg px-4 py-2.5 transition-colors ${
-          featured
-            ? "bg-violet-500 hover:bg-violet-400 text-white"
-            : "border border-white/15 hover:border-violet-400/40 text-white"
-        }`}
+        loading={loading}
+        variant={featured ? "primary" : "secondary"}
+        size="md"
+        className="w-full"
       >
-        {loading ? "Starting checkout…" : "Start free trial"}
-      </button>
-      {error && (
-        <p className="text-xs text-red-400 mt-2 text-center">{error}</p>
-      )}
-    </div>
+        Start free trial
+      </Button>
+      {error && <p className="text-xs text-[var(--color-danger)] mt-2 text-center">{error}</p>}
+    </Card>
   );
 }

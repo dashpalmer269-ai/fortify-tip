@@ -56,7 +56,7 @@ export default function DashboardClient({
 
       {/* Hero stats — two columns: overall + critical findings */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-10">
-        <Card className="lg:col-span-2 p-8 animate-fade-in">
+        <Card className="lg:col-span-2 p-8 ">
           <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-[var(--color-tertiary)] mb-4">
             Weighted across {readiness.length} {readiness.length === 1 ? "framework" : "frameworks"}
           </p>
@@ -69,10 +69,10 @@ export default function DashboardClient({
             </span>
             <span className="font-display text-3xl text-[var(--color-tertiary)]">%</span>
           </div>
-          <ProgressBar pct={overallPct} tone="var(--color-accent)" />
+          <ProgressBar pct={overallPct} tone="var(--color-primary)" />
         </Card>
 
-        <Card className="p-8 animate-fade-in" variant={criticalCount > 0 ? "raised" : "default"}>
+        <Card className="p-8 " variant={criticalCount > 0 ? "raised" : "default"}>
           <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-[var(--color-tertiary)] mb-4">
             Critical findings
           </p>

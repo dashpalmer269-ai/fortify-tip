@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getCurrentUserAndPractice, createAuthedServerClient } from "@/lib/supabase/server-auth";
+import PageHeader from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
+import Badge from "@/components/ui/Badge";
+import { ButtonLink } from "@/components/ui/Button";
 
 export const dynamic = "force-dynamic";
 
@@ -25,32 +28,14 @@ const PROVIDERS: Array<{
     key: "microsoft_365",
     label: "Microsoft 365",
     description:
-      "Verify MFA enforcement, audit-log status, and BitLocker on managed devices. Required scopes: User.Read.All, AuditLog.Read.All, Reports.Read.All, DeviceManagementManagedDevices.Read.All.",
+      "Verify MFA enforcement, audit-log status, and BitLocker on managed devices.",
     connect_path: "/api/integrations/m365/connect",
     available: true,
     env_required: ["MS_CLIENT_ID", "MS_CLIENT_SECRET", "MS_REDIRECT_URI"],
   },
-  {
-    key: "aws",
-    label: "AWS",
-    description: "Pull encryption-at-rest, IAM MFA, CloudTrail config. Coming soon.",
-    connect_path: null,
-    available: false,
-  },
-  {
-    key: "datto",
-    label: "Datto",
-    description: "Backup health and restore-test attestations. Coming soon.",
-    connect_path: null,
-    available: false,
-  },
-  {
-    key: "okta",
-    label: "Okta",
-    description: "Workforce SSO posture + access reviews. Coming soon.",
-    connect_path: null,
-    available: false,
-  },
+  { key: "aws", label: "AWS", description: "Pull encryption-at-rest, IAM MFA, CloudTrail config.", connect_path: null, available: false },
+  { key: "datto", label: "Datto", description: "Backup health and restore-test attestations.", connect_path: null, available: false },
+  { key: "okta", label: "Okta", description: "Workforce SSO posture + access reviews.", connect_path: null, available: false },
 ];
 
 export default async function IntegrationsPage({
@@ -73,80 +58,60 @@ export default async function IntegrationsPage({
   );
 
   return (
-    <div className="px-8 py-8 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <p className="text-xs uppercase tracking-[0.25em] text-violet-400 mb-1">Automated evidence</p>
-        <h1 className="text-3xl font-bold text-white">Integrations</h1>
-        <p className="text-sm text-gray-500 mt-2 max-w-2xl">
-          Connect your environment to let Fortify collect compliance evidence automatically. Each integration powers one or more evidence checks across the control library.
-        </p>
-      </div>
+    <div className="px-8 py-10 max-w-4xl mx-auto">
+      <PageHeader
+        eyebrow="Automated evidence"
+        title="Integrations"
+        description="Connect your environment so Fortify collects compliance evidence on a schedule. Each integration powers one or more evidence checks across the control library."
+      />
 
       {params.connected && (
-        <div className="mb-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-4 py-3 text-sm text-emerald-300">
-          {params.connected} connected successfully.
-        </div>
+        <Card variant="raised" className="mb-5 px-4 py-3">
+          <p className="text-sm text-[var(--color-success)]">{params.connected} connected successfully.</p>
+        </Card>
       )}
       {params.error && (
-        <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-300">
-          Connection failed: {decodeURIComponent(params.error)}
-        </div>
+        <Card variant="raised" className="mb-5 px-4 py-3">
+          <p className="text-sm text-[var(--color-danger)]">Connection failed: {decodeURIComponent(params.error)}</p>
+        </Card>
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-px">
         {PROVIDERS.map((p) => {
           const c = byType.get(p.key);
           const connected = c?.status === "connected";
           return (
-            <div
-              key={p.key}
-              className="glass-card rounded-2xl p-5"
-              style={connected ? { boxShadow: "0 0 18px rgba(16,185,129,0.18)" } : undefined}
-            >
-              <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-white font-semibold">{p.label}</h3>
-                    {connected ? (
-                      <span className="text-[10px] uppercase tracking-wider text-emerald-300 px-2 py-0.5 rounded-full bg-emerald-500/15">
-                        Connected
-                      </span>
-                    ) : !p.available ? (
-                      <span className="text-[10px] uppercase tracking-wider text-gray-500 px-2 py-0.5 rounded-full bg-gray-500/15">
-                        Coming soon
-                      </span>
-                    ) : (
-                      <span className="text-[10px] uppercase tracking-wider text-violet-300 px-2 py-0.5 rounded-full bg-violet-500/15">
-                        Available
-                      </span>
-                    )}
+            <Card key={p.key}>
+              <div className="px-5 py-5 flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <h3 className="text-[var(--color-primary)] font-medium text-sm">{p.label}</h3>
+                    {connected
+                      ? <Badge variant="success">Connected</Badge>
+                      : !p.available
+                      ? <Badge variant="muted">Coming soon</Badge>
+                      : <Badge variant="accent">Available</Badge>}
                   </div>
-                  <p className="text-xs text-gray-500 max-w-2xl leading-relaxed">{p.description}</p>
+                  <p className="text-xs text-[var(--color-tertiary)] leading-relaxed">{p.description}</p>
                   {p.env_required && !connected && (
-                    <p className="text-[10px] text-gray-600 mt-2 font-mono">
+                    <p className="text-[10px] text-[var(--color-quaternary)] mt-2 font-mono">
                       Requires env: {p.env_required.join(", ")}
                     </p>
                   )}
-                  {c?.last_error && (
-                    <p className="text-xs text-red-400 mt-2">{c.last_error}</p>
-                  )}
+                  {c?.last_error && <p className="text-xs text-[var(--color-danger)] mt-2">{c.last_error}</p>}
                   {c?.last_synced_at && (
-                    <p className="text-[10px] text-gray-600 mt-2">
+                    <p className="text-[10px] text-[var(--color-quaternary)] mt-2 font-mono">
                       Last synced {new Date(c.last_synced_at).toLocaleString("en-US")}
                     </p>
                   )}
                 </div>
                 {p.available && p.connect_path && !connected && (
-                  <Link
-                    href={p.connect_path}
-                    className="bg-violet-500 hover:bg-violet-400 text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors shrink-0"
-                    style={{ boxShadow: "0 0 18px rgba(139,92,246,0.4)" }}
-                  >
-                    Connect →
-                  </Link>
+                  <ButtonLink href={p.connect_path} variant="primary" size="sm">
+                    Connect
+                  </ButtonLink>
                 )}
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>

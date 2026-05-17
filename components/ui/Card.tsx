@@ -18,7 +18,7 @@ export function Card({ children, className = "", variant = "default", as: As = "
     variant === "raised"
       ? "surface-raised"
       : variant === "interactive"
-      ? "surface transition-colors hover:bg-[var(--color-surface-raised)]"
+      ? "surface transition-all duration-150 hover:bg-[var(--color-surface-raised)] hover:border-[var(--color-border-strong)] group/card"
       : "surface";
   return <As className={`${base} rounded-xl ${className}`}>{children}</As>;
 }

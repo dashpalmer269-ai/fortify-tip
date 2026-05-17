@@ -1,46 +1,43 @@
 import Link from "next/link";
 import StarfieldBackground from "@/components/StarfieldBackground";
 import { PLANS } from "@/lib/billing/plans";
+import { ButtonLink } from "@/components/ui/Button";
 import PricingCard from "./PricingCard";
 
 export const dynamic = "force-dynamic";
 
 export default function PricingPage() {
   return (
-    <div className="relative min-h-screen bg-black text-white overflow-hidden">
+    <div className="relative min-h-screen bg-[var(--color-canvas)] text-[var(--color-primary)] overflow-hidden grain">
       <StarfieldBackground />
 
-      <header className="relative z-10 flex items-center justify-between px-6 py-5 max-w-6xl mx-auto">
+      <header className="relative z-20 mx-auto max-w-7xl px-8 py-6 flex items-center justify-between">
         <Link
           href="/"
-          className="text-lg font-bold tracking-[0.35em] text-white/85 uppercase"
-          style={{ textShadow: "0 0 18px rgba(139,92,246,0.55)" }}
+          className="font-display text-xl text-[var(--color-primary)]"
+          style={{ letterSpacing: "-0.01em" }}
         >
           Fortify
         </Link>
-        <nav className="flex items-center gap-4 text-sm">
-          <Link href="/login" className="text-gray-400 hover:text-white">Sign in</Link>
-          <Link
-            href="/signup"
-            className="bg-violet-500 hover:bg-violet-400 text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors"
-            style={{ boxShadow: "0 0 16px rgba(139,92,246,0.45)" }}
-          >
-            Start free trial
-          </Link>
+        <nav className="flex items-center gap-6 text-sm">
+          <Link href="/login" className="text-[var(--color-secondary)] hover:text-[var(--color-primary)] transition-colors">Sign in</Link>
+          <ButtonLink href="/signup" size="sm" variant="primary">Begin trial</ButtonLink>
         </nav>
       </header>
 
-      <main className="relative z-10 max-w-6xl mx-auto px-6 py-12">
-        <div className="text-center mb-12">
-          <p className="text-xs uppercase tracking-[0.3em] text-violet-400 mb-2">Pricing</p>
+      <main className="relative z-10 mx-auto max-w-6xl px-8 py-16">
+        <div className="text-center mb-14">
+          <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-[var(--color-tertiary)] mb-3">
+            Pricing
+          </p>
           <h1
-            className="text-4xl sm:text-5xl font-black tracking-tight text-white"
-            style={{ textShadow: "0 0 24px rgba(139,92,246,0.4)" }}
+            className="font-display text-[var(--text-display-2)] text-[var(--color-primary)] leading-[1.05]"
+            style={{ letterSpacing: "-0.025em" }}
           >
-            One-tenth the price of enterprise compliance.
+            One-tenth of enterprise <br/> compliance suites.
           </h1>
-          <p className="text-gray-400 mt-4 max-w-2xl mx-auto">
-            All plans include HIPAA, SOC 2, ISO 27001, and GDPR. Cancel anytime. Healthcare-focused support included.
+          <p className="text-[var(--color-secondary)] text-[15px] mt-4 max-w-2xl mx-auto leading-relaxed">
+            All plans include HIPAA, SOC 2, ISO 27001, and GDPR. Cancel any time. Healthcare-focused support included.
           </p>
         </div>
 
@@ -50,13 +47,12 @@ export default function PricingPage() {
           ))}
         </div>
 
-        <div className="mt-12 max-w-3xl mx-auto rounded-2xl bg-violet-500/5 border border-violet-500/20 px-6 py-5 text-center">
-          <p className="text-sm text-gray-300">
+        <div className="mt-12 max-w-3xl mx-auto px-6 py-5 surface rounded-xl text-center">
+          <p className="text-sm text-[var(--color-secondary)]">
             Need on-prem, custom integrations, or multi-region deployment?{" "}
-            <a href="mailto:sales@fortify.example" className="text-violet-300 hover:text-violet-200">
+            <a href="mailto:sales@fortify.example" className="text-[var(--color-accent)] hover:text-[var(--color-primary)] transition-colors">
               Talk to us
-            </a>
-            .
+            </a>.
           </p>
         </div>
       </main>

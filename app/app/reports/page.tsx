@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUserAndPractice, createAuthedServerClient } from "@/lib/supabase/server-auth";
+import PageHeader from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
+import EmptyState from "@/components/ui/EmptyState";
 import GenerateReportButton from "./GenerateReportButton";
 
 export const dynamic = "force-dynamic";
@@ -26,47 +29,43 @@ export default async function ReportsPage() {
     .order("generated_at", { ascending: false });
 
   return (
-    <div className="px-8 py-8 max-w-5xl mx-auto">
-      <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-violet-400 mb-1">Audit-ready exports</p>
-          <h1 className="text-3xl font-bold text-white">Reports</h1>
-          <p className="text-sm text-gray-500 mt-2 max-w-2xl">
-            Generate point-in-time compliance reports with AI-written executive summaries. Each report freezes the current state so you can hand a clean document to auditors.
-          </p>
-        </div>
-        <GenerateReportButton practiceId={session.membership.practice_id} />
-      </div>
+    <div className="px-8 py-10 max-w-5xl mx-auto">
+      <PageHeader
+        eyebrow="Audit-ready exports"
+        title="Reports"
+        description="Point-in-time compliance reports with AI-written executive summaries. Each freezes current state so you can hand a clean document to auditors."
+        action={<GenerateReportButton practiceId={session.membership.practice_id} />}
+      />
 
-      {(!reports || reports.length === 0) ? (
-        <div className="glass-card rounded-2xl p-12 text-center text-gray-500">
-          No reports generated yet. Click <span className="text-white">Generate report</span> above to produce your first executive summary.
-        </div>
+      {!reports || reports.length === 0 ? (
+        <EmptyState
+          title="No reports generated yet"
+          description="Click 'Generate report' above to produce your first executive summary from current posture."
+        />
       ) : (
-        <div className="space-y-3">
-          {(reports as ReportRow[]).map((r) => (
-            <Link
-              key={r.id}
-              href={`/app/reports/${r.id}`}
-              className="glass-card rounded-xl p-5 hover:bg-white/[0.02] transition-colors block"
-            >
-              <div className="flex items-center justify-between gap-4 mb-2">
-                <div>
-                  <p className="text-white font-medium capitalize">
-                    {r.report_type.replace(/_/g, " ")} {r.framework ? `· ${r.framework}` : ""}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {new Date(r.generated_at).toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" })}
-                  </p>
+        <Card className="overflow-hidden">
+          <div className="divide-y divide-[var(--color-border-subtle)]">
+            {(reports as ReportRow[]).map((r) => (
+              <Link key={r.id} href={`/app/reports/${r.id}`} className="block">
+                <div className="px-5 py-4 hover:bg-[var(--color-surface-raised)] transition-colors">
+                  <div className="flex items-center justify-between gap-4 mb-1">
+                    <p className="text-[var(--color-primary)] font-medium text-sm capitalize">
+                      {r.report_type.replace(/_/g, " ")}{r.framework ? ` · ${r.framework}` : ""}
+                    </p>
+                    <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--color-tertiary)]">
+                      {new Date(r.generated_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+                    </p>
+                  </div>
+                  {r.ai_executive_summary && (
+                    <p className="text-sm text-[var(--color-tertiary)] line-clamp-2 max-w-3xl">
+                      {r.ai_executive_summary}
+                    </p>
+                  )}
                 </div>
-                <span className="text-xs text-violet-300">View →</span>
-              </div>
-              {r.ai_executive_summary && (
-                <p className="text-sm text-gray-400 line-clamp-2">{r.ai_executive_summary}</p>
-              )}
-            </Link>
-          ))}
-        </div>
+              </Link>
+            ))}
+          </div>
+        </Card>
       )}
     </div>
   );
