@@ -281,18 +281,54 @@ async function runDocumentRecency(
 // ─── Stubs: real integration runners (M365 Graph, scanners) ─────────────────
 
 async function runAutomatedApi(
-  _supabase: SupabaseClient,
-  _practiceId: string,
+  supabase: SupabaseClient,
+  practiceId: string,
   check: EvidenceCheckRow
 ): Promise<CheckResult> {
-  // Real integration not wired yet. Phase 1.5 will implement runners for
-  // microsoft_365, aws, datto, etc. For now we report "not_collected" so the
-  // verifier doesn't block the rest of the pipeline.
+  if (check.source_integration === "microsoft_365") {
+    return await runMicrosoft365Check(supabase, practiceId, check);
+  }
   return {
     status: "not_collected",
     observed_value: null,
     raw: { note: `${check.source_integration ?? "automated_api"} runner not implemented yet` },
   };
+}
+
+async function runMicrosoft365Check(
+  supabase: SupabaseClient,
+  practiceId: string,
+  check: EvidenceCheckRow
+): Promise<CheckResult> {
+  const { data: integ } = await supabase
+    .from("integrations")
+    .select("status, encrypted_credentials")
+    .eq("practice_id", practiceId)
+    .eq("integration_type", "microsoft_365")
+    .eq("status", "connected")
+    .maybeSingle();
+  if (!integ?.encrypted_credentials) {
+    return { status: "not_collected", observed_value: null, raw: { note: "M365 not connected for this practice" } };
+  }
+  // Lazy-load to avoid a hard dependency when not used
+  const { checkMfaUsersEnforced, checkAuditLogEnabled, checkBitLockerEnforced } =
+    await import("@/lib/integrations/microsoft-graph");
+  const creds = integ.encrypted_credentials as unknown as Parameters<typeof checkMfaUsersEnforced>[0];
+
+  switch (check.check_key) {
+    case "m365_mfa_users_enforced":
+      return await checkMfaUsersEnforced(creds);
+    case "m365_audit_log_enabled":
+      return await checkAuditLogEnabled(creds);
+    case "m365_bitlocker_enforcement":
+      return await checkBitLockerEnforced(creds);
+    default:
+      return {
+        status: "not_collected",
+        observed_value: null,
+        raw: { note: `No M365 runner mapped for ${check.check_key}` },
+      };
+  }
 }
 
 async function runAutomatedScan(

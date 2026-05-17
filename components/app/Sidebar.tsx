@@ -5,14 +5,18 @@ import { usePathname } from "next/navigation";
 const NAV_ITEMS = [
   { href: "/app", label: "Dashboard", icon: DashboardIcon },
   { href: "/app/compliance", label: "Compliance", icon: ComplianceIcon },
+  { href: "/app/risk-assessment", label: "Risk", icon: RiskIcon },
+  { href: "/app/policies", label: "Policies", icon: PolicyIcon },
   { href: "/app/vendors", label: "Vendors & BAAs", icon: VendorIcon },
   { href: "/app/threats", label: "Threat Intel", icon: ThreatIcon },
+  { href: "/app/reports", label: "Reports", icon: ReportIcon },
   { href: "/app/audit-log", label: "Audit log", icon: AuditIcon },
 ] as const;
 
 const SETTINGS_ITEMS = [
-  { href: "/app/settings", label: "Settings" },
+  { href: "/app/integrations", label: "Integrations" },
   { href: "/app/team", label: "Team" },
+  { href: "/app/settings", label: "Settings" },
 ] as const;
 
 export default function Sidebar({ practiceName }: { practiceName: string }) {
@@ -121,6 +125,35 @@ function AuditIcon({ active }: { active: boolean }) {
       <line x1="16" y1="13" x2="8" y2="13" />
       <line x1="16" y1="17" x2="8" y2="17" />
       <line x1="10" y1="9" x2="8" y2="9" />
+    </svg>
+  );
+}
+function RiskIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={active ? "#a78bfa" : "currentColor"} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+function PolicyIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={active ? "#a78bfa" : "currentColor"} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 2h6a2 2 0 0 1 2 2v2H7V4a2 2 0 0 1 2-2z" />
+      <path d="M5 6h14a1 1 0 0 1 1 1v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a1 1 0 0 1 1-1z" />
+      <line x1="9" y1="12" x2="15" y2="12" />
+      <line x1="9" y1="16" x2="13" y2="16" />
+    </svg>
+  );
+}
+function ReportIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={active ? "#a78bfa" : "currentColor"} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
+      <line x1="3" y1="20" x2="21" y2="20" />
     </svg>
   );
 }
