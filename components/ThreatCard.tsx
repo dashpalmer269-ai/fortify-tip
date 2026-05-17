@@ -35,12 +35,19 @@ function relativeDate(dateStr: string | null): string {
   return then.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export default function ThreatCard({ threat }: { threat: Threat; accentColor?: string }) {
+export default function ThreatCard({
+  threat,
+  hrefPrefix = "/app/threats",
+}: {
+  threat: Threat;
+  accentColor?: string;
+  hrefPrefix?: string;
+}) {
   const sev = SEVERITY_COLOR[threat.severity ?? "low"] ?? SEVERITY_COLOR.low;
   const tabColor = TAB_ACCENT[threat.source_tab ?? "registry"] ?? "#8B5CF6";
 
   return (
-    <Link href={`/app/threats/${threat.id}`}>
+    <Link href={`${hrefPrefix}/${threat.id}`}>
       <div
         className="glass-card flex items-stretch rounded-xl overflow-hidden cursor-pointer group transition-all duration-300"
         onMouseEnter={(e) => {
