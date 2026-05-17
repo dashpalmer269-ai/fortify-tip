@@ -1,14 +1,6 @@
 {
   "crons": [
     {
-      "path": "/api/cron/ingest",
-      "schedule": "0 6 * * *"
-    },
-    {
-      "path": "/api/cron/ingest",
-      "schedule": "0 18 * * *"
-    },
-    {
       "path": "/api/cron/verify-compliance",
       "schedule": "5 4 * * *"
     }
