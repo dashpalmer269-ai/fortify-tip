@@ -2,6 +2,10 @@
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase/browser";
+import PageHeader from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
+import Badge from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 
 interface ControlRow {
   id: string;
@@ -19,26 +23,28 @@ interface ControlRow {
   implementation_notes: string | null;
 }
 
-const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
-  compliant:    { label: "Compliant",    color: "#10b981", bg: "rgba(16,185,129,0.12)" },
-  partial:      { label: "Partial",      color: "#eab308", bg: "rgba(234,179,8,0.12)" },
-  non_compliant:{ label: "Non-compliant",color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
-  not_started:  { label: "Not started",  color: "#6b7280", bg: "rgba(107,114,128,0.12)" },
-  not_applicable:{label: "N/A",          color: "#6b7280", bg: "rgba(107,114,128,0.08)" },
+type Variant = "default" | "muted" | "success" | "danger" | "warning" | "info" | "accent";
+
+const STATUS_META: Record<string, { label: string; variant: Variant }> = {
+  compliant:      { label: "Compliant",     variant: "success" },
+  partial:        { label: "Partial",       variant: "warning" },
+  non_compliant:  { label: "Non-compliant", variant: "danger" },
+  not_started:    { label: "Not started",   variant: "muted" },
+  not_applicable: { label: "N/A",           variant: "muted" },
 };
 
-const PRIORITY_META: Record<string, { dot: string }> = {
-  critical: { dot: "#ef4444" },
-  high:     { dot: "#f97316" },
-  medium:   { dot: "#eab308" },
-  low:      { dot: "#3b82f6" },
+const PRIORITY_DOT: Record<string, string> = {
+  critical: "var(--color-danger)",
+  high:     "var(--color-warning)",
+  medium:   "var(--color-info)",
+  low:      "var(--color-tertiary)",
 };
 
-const FRAMEWORK_COLOR: Record<string, string> = {
-  HIPAA: "#8b5cf6",
-  SOC2: "#3b82f6",
-  ISO27001: "#10b981",
-  GDPR: "#f97316",
+const FRAMEWORK_TONE: Record<string, string> = {
+  HIPAA:    "var(--color-fw-hipaa)",
+  SOC2:     "var(--color-fw-soc2)",
+  ISO27001: "var(--color-fw-iso)",
+  GDPR:     "var(--color-fw-gdpr)",
 };
 
 export default function ComplianceBrowser({
@@ -83,7 +89,7 @@ export default function ComplianceBrowser({
     not_started: filtered.filter((c) => c.status === "not_started").length,
   };
 
-  async function markCompliant(control: ControlRow) {
+  async function setStatusOnControl(control: ControlRow, newStatus: "compliant" | "non_compliant") {
     setSavingId(control.id);
     try {
       const supabase = createBrowserClient();
@@ -91,37 +97,7 @@ export default function ComplianceBrowser({
         {
           practice_id: practiceId,
           control_id: control.id,
-          status: "compliant",
-          last_verified_at: new Date().toISOString(),
-        },
-        { onConflict: "practice_id,control_id" }
-      );
-      if (error) throw new Error(error.message);
-      // Log the action so it shows up on the dashboard activity feed
-      await supabase.from("audit_logs").insert({
-        practice_id: practiceId,
-        action: "control.marked_compliant",
-        resource_type: "practice_control",
-        resource_id: control.id,
-        metadata: { control_key: control.control_key, control_title: control.title },
-      });
-      startTransition(() => router.refresh());
-    } catch (e) {
-      alert((e as Error).message);
-    } finally {
-      setSavingId(null);
-    }
-  }
-
-  async function markNonCompliant(control: ControlRow) {
-    setSavingId(control.id);
-    try {
-      const supabase = createBrowserClient();
-      const { error } = await supabase.from("practice_controls").upsert(
-        {
-          practice_id: practiceId,
-          control_id: control.id,
-          status: "non_compliant",
+          status: newStatus,
           last_verified_at: new Date().toISOString(),
         },
         { onConflict: "practice_id,control_id" }
@@ -129,7 +105,7 @@ export default function ComplianceBrowser({
       if (error) throw new Error(error.message);
       await supabase.from("audit_logs").insert({
         practice_id: practiceId,
-        action: "control.marked_non_compliant",
+        action: newStatus === "compliant" ? "control.marked_compliant" : "control.marked_non_compliant",
         resource_type: "practice_control",
         resource_id: control.id,
         metadata: { control_key: control.control_key, control_title: control.title },
@@ -143,17 +119,15 @@ export default function ComplianceBrowser({
   }
 
   return (
-    <div className="px-8 py-8 max-w-6xl mx-auto">
-      <div className="mb-6">
-        <p className="text-xs uppercase tracking-[0.25em] text-violet-400 mb-1">Controls library</p>
-        <h1 className="text-3xl font-bold text-white">Compliance</h1>
-        <p className="text-sm text-gray-500 mt-2">
-          One control row, many framework requirements. Marking compliant updates HIPAA, SOC 2, ISO 27001, and GDPR scores simultaneously.
-        </p>
-      </div>
+    <div className="px-8 py-10 max-w-6xl mx-auto">
+      <PageHeader
+        eyebrow="Controls library"
+        title="Compliance"
+        description="One control, many requirements. Marking compliant updates every framework score the control is mapped to."
+      />
 
-      {/* Filter bar */}
-      <div className="glass-card rounded-2xl p-4 mb-6 flex flex-wrap items-center gap-3">
+      {/* Filters */}
+      <Card className="px-4 py-3 mb-6 flex flex-wrap items-center gap-2">
         <FilterChip
           label="All frameworks"
           active={!framework}
@@ -164,19 +138,19 @@ export default function ComplianceBrowser({
             key={fw}
             label={fw}
             active={framework === fw}
-            color={FRAMEWORK_COLOR[fw]}
+            tone={FRAMEWORK_TONE[fw]}
             onClick={() => setFramework(framework === fw ? null : fw)}
           />
         ))}
-        <div className="w-px h-6 bg-white/10 mx-1" />
+        <span className="w-px h-5 bg-[var(--color-border-default)] mx-1" />
         <select
           value={category ?? ""}
           onChange={(e) => setCategory(e.target.value || null)}
-          className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-violet-400 focus:outline-none"
+          className="bg-transparent border border-[var(--color-border-default)] rounded-md px-2.5 py-1 text-xs text-[var(--color-primary)] hover:border-[var(--color-border-strong)] transition-colors"
         >
           <option value="" className="bg-black">All categories</option>
           {categories.map((c) => (
-            <option key={c} value={c} className="bg-black">
+            <option key={c} value={c} className="bg-black capitalize">
               {c.replace(/_/g, " ")}
             </option>
           ))}
@@ -184,77 +158,63 @@ export default function ComplianceBrowser({
         <select
           value={status ?? ""}
           onChange={(e) => setStatus(e.target.value || null)}
-          className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-violet-400 focus:outline-none"
+          className="bg-transparent border border-[var(--color-border-default)] rounded-md px-2.5 py-1 text-xs text-[var(--color-primary)] hover:border-[var(--color-border-strong)] transition-colors"
         >
           <option value="" className="bg-black">Any status</option>
           {Object.entries(STATUS_META).map(([key, m]) => (
             <option key={key} value={key} className="bg-black">{m.label}</option>
           ))}
         </select>
-      </div>
+      </Card>
 
       {/* Counts strip */}
-      <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 mb-4 px-1">
-        <span><strong className="text-white">{counts.total}</strong> showing</span>
-        <span>· <strong className="text-emerald-400">{counts.compliant}</strong> compliant</span>
-        <span>· <strong className="text-yellow-400">{counts.partial}</strong> partial</span>
-        <span>· <strong className="text-red-400">{counts.non_compliant}</strong> non-compliant</span>
-        <span>· <strong className="text-gray-300">{counts.not_started}</strong> not started</span>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 font-mono text-[11px] text-[var(--color-tertiary)] mb-5 px-1">
+        <span className="text-[var(--color-secondary)]"><strong className="text-[var(--color-primary)]">{counts.total}</strong> showing</span>
+        <span><strong className="text-[var(--color-success)]">{counts.compliant}</strong> compliant</span>
+        <span><strong className="text-[var(--color-warning)]">{counts.partial}</strong> partial</span>
+        <span><strong className="text-[var(--color-danger)]">{counts.non_compliant}</strong> non-compliant</span>
+        <span><strong className="text-[var(--color-tertiary)]">{counts.not_started}</strong> not started</span>
       </div>
 
       {/* Control list */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {filtered.length === 0 && (
-          <div className="glass-card rounded-2xl p-12 text-center text-gray-500">
+          <Card className="py-16 text-center text-sm text-[var(--color-tertiary)]">
             No controls match the current filters.
-          </div>
+          </Card>
         )}
         {filtered.map((c) => {
           const statusMeta = STATUS_META[c.status] ?? STATUS_META.not_started;
           const priority = c.default_priority ?? "medium";
-          const priorityMeta = PRIORITY_META[priority] ?? PRIORITY_META.medium;
           const isExpanded = expandedId === c.id;
           const isSaving = savingId === c.id;
           return (
-            <div
-              key={c.id}
-              className="glass-card rounded-xl overflow-hidden transition-all"
-              style={{ boxShadow: isExpanded ? `0 0 24px ${statusMeta.color}25` : undefined }}
-            >
+            <Card key={c.id} className="overflow-hidden">
               <button
                 onClick={() => setExpandedId(isExpanded ? null : c.id)}
-                className="w-full px-5 py-4 flex items-center gap-4 hover:bg-white/[0.02] transition-colors text-left"
+                className="w-full px-5 py-4 flex items-center gap-4 hover:bg-[var(--color-surface-raised)] transition-colors text-left"
               >
-                <div
-                  className="w-2 h-10 rounded-full shrink-0"
-                  style={{
-                    background: priorityMeta.dot,
-                    boxShadow: `0 0 8px ${priorityMeta.dot}80`,
-                  }}
+                <span
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                  style={{ background: PRIORITY_DOT[priority] }}
+                  aria-label={`Priority: ${priority}`}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <h3 className="text-white font-semibold text-sm">{c.title}</h3>
-                    {c.healthcare_baseline && (
-                      <span className="text-[10px] uppercase tracking-wider text-violet-300 px-1.5 py-0.5 rounded bg-violet-500/15">
-                        baseline
-                      </span>
-                    )}
+                    <h3 className="text-[var(--color-primary)] text-[14px] font-medium leading-tight">{c.title}</h3>
+                    {c.healthcare_baseline && <Badge variant="accent">baseline</Badge>}
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                    <span className="capitalize">{c.category.replace(/_/g, " ")}</span>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] text-[var(--color-tertiary)] uppercase tracking-wider">
+                    <span>{c.category.replace(/_/g, " ")}</span>
                     <span>·</span>
                     <span>{c.mapping_count} requirements</span>
                     <span>·</span>
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1.5 normal-case tracking-normal">
                       {c.frameworks.map((fw) => (
                         <span
                           key={fw}
-                          className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-                          style={{
-                            color: FRAMEWORK_COLOR[fw] ?? "#a78bfa",
-                            background: `${FRAMEWORK_COLOR[fw] ?? "#a78bfa"}18`,
-                          }}
+                          className="font-mono text-[9px] uppercase tracking-wider"
+                          style={{ color: FRAMEWORK_TONE[fw] ?? "var(--color-accent)" }}
                         >
                           {fw}
                         </span>
@@ -262,23 +222,18 @@ export default function ComplianceBrowser({
                     </span>
                   </div>
                 </div>
-                <span
-                  className="text-xs font-semibold px-3 py-1 rounded-full shrink-0"
-                  style={{ color: statusMeta.color, background: statusMeta.bg }}
-                >
-                  {statusMeta.label}
-                </span>
-                <span className="text-gray-600 text-xs shrink-0">
-                  {isExpanded ? "▲" : "▼"}
+                <Badge variant={statusMeta.variant}>{statusMeta.label}</Badge>
+                <span className="text-[var(--color-quaternary)] text-xs shrink-0 ml-1">
+                  {isExpanded ? "−" : "+"}
                 </span>
               </button>
 
               {isExpanded && (
-                <div className="border-t border-white/[0.05] px-5 py-4 bg-black/30">
-                  <p className="text-sm text-gray-300 leading-relaxed mb-4">{c.description}</p>
+                <div className="border-t border-[var(--color-border-subtle)] px-5 py-4 bg-[var(--color-surface)]">
+                  <p className="text-sm text-[var(--color-secondary)] leading-relaxed mb-4">{c.description}</p>
                   {c.last_verified_at && (
-                    <p className="text-xs text-gray-500 mb-4">
-                      Last verified:{" "}
+                    <p className="font-mono text-[11px] text-[var(--color-quaternary)] mb-4">
+                      Last verified{" "}
                       {new Date(c.last_verified_at).toLocaleString("en-US", {
                         dateStyle: "medium",
                         timeStyle: "short",
@@ -286,31 +241,29 @@ export default function ComplianceBrowser({
                     </p>
                   )}
                   <div className="flex flex-wrap gap-2">
-                    <button
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      loading={isSaving}
+                      onClick={() => setStatusOnControl(c, "compliant")}
+                    >
+                      Mark compliant
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
                       disabled={isSaving}
-                      onClick={() => markCompliant(c)}
-                      className="text-sm bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 disabled:opacity-50 rounded-lg px-4 py-2 transition-colors"
+                      onClick={() => setStatusOnControl(c, "non_compliant")}
                     >
-                      {isSaving ? "Saving…" : "✓ Mark compliant"}
-                    </button>
-                    <button
-                      disabled={isSaving}
-                      onClick={() => markNonCompliant(c)}
-                      className="text-sm bg-red-500/15 text-red-300 border border-red-500/40 hover:bg-red-500/25 disabled:opacity-50 rounded-lg px-4 py-2 transition-colors"
-                    >
-                      ✕ Mark non-compliant
-                    </button>
-                    <button
-                      disabled
-                      title="Evidence upload — Phase E"
-                      className="text-sm bg-violet-500/10 text-violet-300/60 border border-violet-500/20 rounded-lg px-4 py-2 cursor-not-allowed"
-                    >
-                      ⬆ Upload evidence
-                    </button>
+                      Non-compliant
+                    </Button>
+                    <Button variant="ghost" size="sm" disabled title="Evidence upload — planned">
+                      Upload evidence
+                    </Button>
                   </div>
                 </div>
               )}
-            </div>
+            </Card>
           );
         })}
       </div>
@@ -322,30 +275,22 @@ function FilterChip({
   label,
   active,
   onClick,
-  color,
+  tone,
 }: {
   label: string;
   active: boolean;
   onClick: () => void;
-  color?: string;
+  tone?: string;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`text-xs px-3 py-1.5 rounded-full transition-all ${
+      className={`text-[11px] px-2.5 py-1 rounded-md font-mono uppercase tracking-wider transition-all border ${
         active
-          ? "text-white"
-          : "text-gray-400 hover:text-white border border-white/10 hover:border-white/20"
+          ? "text-[var(--color-primary)] border-[var(--color-border-strong)]"
+          : "text-[var(--color-tertiary)] border-transparent hover:text-[var(--color-primary)] hover:border-[var(--color-border-default)]"
       }`}
-      style={
-        active
-          ? {
-              background: color ? `${color}25` : "rgba(139,92,246,0.25)",
-              border: `1px solid ${color ? `${color}80` : "rgba(139,92,246,0.5)"}`,
-              boxShadow: `0 0 12px ${color ? `${color}40` : "rgba(139,92,246,0.35)"}`,
-            }
-          : undefined
-      }
+      style={active && tone ? { color: tone, borderColor: `${tone}55` } : undefined}
     >
       {label}
     </button>

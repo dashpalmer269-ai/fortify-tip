@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createBrowserClient } from "@/lib/supabase/browser";
+import { Card, CardBody } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -34,8 +36,6 @@ export default function SignupPage() {
         setError(error.message);
         return;
       }
-      // If email confirmations are required by the project, the user gets a
-      // verification link. Otherwise they're already signed in.
       if (data.session) {
         router.push("/app/onboarding/new-practice");
         router.refresh();
@@ -49,78 +49,98 @@ export default function SignupPage() {
 
   if (confirmSent) {
     return (
-      <div className="glass-card rounded-2xl p-8 text-center">
-        <div className="w-12 h-12 mx-auto rounded-full bg-violet-500/20 flex items-center justify-center mb-4">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2">
-            <polyline points="22 6 12 13 2 6" />
-            <rect x="2" y="4" width="20" height="16" rx="2" />
-          </svg>
-        </div>
-        <h1 className="text-2xl font-bold text-white mb-2">Check your email</h1>
-        <p className="text-sm text-gray-400">
-          We sent a verification link to <span className="text-white">{email}</span>. Click it to finish creating your account.
-        </p>
-      </div>
+      <Card>
+        <CardBody className="py-10 text-center">
+          <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-[var(--color-tertiary)] mb-3">Almost there</p>
+          <h1 className="font-display text-3xl text-[var(--color-primary)] mb-3" style={{ letterSpacing: "-0.02em" }}>
+            Check your inbox
+          </h1>
+          <p className="text-sm text-[var(--color-secondary)]">
+            We sent a verification link to{" "}
+            <span className="text-[var(--color-primary)] font-mono">{email}</span>.
+            Click it to finish creating your account.
+          </p>
+        </CardBody>
+      </Card>
     );
   }
 
   return (
-    <div
-      className="glass-card rounded-2xl p-8"
-      style={{ boxShadow: "0 0 24px rgba(139,92,246,0.18)" }}
-    >
-      <h1 className="text-2xl font-bold text-white mb-1">Create your account</h1>
-      <p className="text-sm text-gray-400 mb-6">14-day free trial. No credit card required.</p>
+    <Card>
+      <CardBody className="py-8">
+        <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-[var(--color-tertiary)] mb-2">Get started</p>
+        <h1 className="font-display text-3xl text-[var(--color-primary)] mb-2" style={{ letterSpacing: "-0.02em" }}>
+          Begin a trial
+        </h1>
+        <p className="text-[13px] text-[var(--color-tertiary)] mb-7">14 days free · no credit card</p>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="text-xs uppercase tracking-wider text-gray-500 mb-1.5 block">Work email</label>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30 transition-all"
-            autoComplete="email"
-          />
-        </div>
-        <div>
-          <label className="text-xs uppercase tracking-wider text-gray-500 mb-1.5 block">
-            Password <span className="text-gray-700">· 12+ characters</span>
-          </label>
-          <input
-            type="password"
-            required
-            minLength={12}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30 transition-all"
-            autoComplete="new-password"
-          />
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <Field label="Work email">
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="auth-input"
+              autoComplete="email"
+            />
+          </Field>
+          <Field label="Password" hint="12 characters minimum">
+            <input
+              type="password"
+              required
+              minLength={12}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="auth-input"
+              autoComplete="new-password"
+            />
+          </Field>
 
-        {error && (
-          <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="text-[13px] text-[var(--color-danger)] bg-[var(--color-danger-soft)] border border-[var(--color-danger)]/30 rounded-md px-3 py-2">
+              {error}
+            </div>
+          )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-violet-500 hover:bg-violet-400 disabled:opacity-50 text-white font-medium rounded-lg px-4 py-2.5 transition-colors"
-          style={{ boxShadow: "0 0 20px rgba(139,92,246,0.4)" }}
-        >
-          {loading ? "Creating account…" : "Create account"}
-        </button>
-      </form>
+          <Button type="submit" loading={loading} variant="primary" size="lg" className="w-full">
+            Create account
+          </Button>
+        </form>
 
-      <p className="mt-6 text-sm text-gray-500 text-center">
-        Already have an account?{" "}
-        <Link href="/login" className="text-violet-400 hover:text-violet-300">
-          Sign in
-        </Link>
-      </p>
+        <p className="mt-8 text-[13px] text-[var(--color-tertiary)] text-center">
+          Already a Fortify user?{" "}
+          <Link href="/login" className="text-[var(--color-primary)] hover:text-[var(--color-accent)] transition-colors">
+            Sign in
+          </Link>
+        </p>
+      </CardBody>
+
+      <style>{`
+        .auth-input {
+          width: 100%;
+          background: transparent;
+          border: 1px solid var(--color-border-default);
+          border-radius: 8px;
+          padding: 10px 12px;
+          color: var(--color-primary);
+          font-size: 14px;
+          transition: border-color 150ms ease;
+        }
+        .auth-input:focus { border-color: var(--color-accent); outline: none; }
+      `}</style>
+    </Card>
+  );
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--color-tertiary)]">{label}</label>
+        {hint && <span className="text-[10px] text-[var(--color-quaternary)] font-mono">{hint}</span>}
+      </div>
+      {children}
     </div>
   );
 }

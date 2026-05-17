@@ -1,200 +1,152 @@
 import Link from "next/link";
 import StarfieldBackground from "@/components/StarfieldBackground";
-import PerspectiveGrid from "@/components/PerspectiveGrid";
 import AnimatedSphereWrapper from "@/components/AnimatedSphereWrapper";
+import { ButtonLink } from "@/components/ui/Button";
 
 export const dynamic = "force-dynamic";
 
 export default function LandingPage() {
   return (
-    <div className="relative min-h-screen bg-black text-white overflow-hidden">
+    <div className="relative min-h-screen bg-[var(--color-canvas)] text-[var(--color-primary)] overflow-hidden grain">
       <StarfieldBackground />
 
-      {/* Nav */}
-      <header className="relative z-20 flex items-center justify-between px-6 py-5 max-w-7xl mx-auto">
+      {/* Top nav — minimal, no background fill */}
+      <header className="relative z-20 mx-auto max-w-7xl px-8 py-6 flex items-center justify-between">
         <Link
           href="/"
-          className="text-lg font-bold tracking-[0.35em] text-white/85 uppercase"
-          style={{ textShadow: "0 0 18px rgba(139,92,246,0.55)" }}
+          className="font-display text-xl text-[var(--color-primary)] italic"
+          style={{ letterSpacing: "-0.01em" }}
         >
           Fortify
         </Link>
-        <nav className="flex items-center gap-6 text-sm">
-          <Link href="#how" className="text-gray-400 hover:text-white transition-colors">
-            How it works
+        <nav className="flex items-center gap-8 text-sm">
+          <Link href="#approach" className="text-[var(--color-secondary)] hover:text-[var(--color-primary)] transition-colors">
+            Approach
           </Link>
-          <Link href="#frameworks" className="text-gray-400 hover:text-white transition-colors hidden sm:inline">
+          <Link href="#frameworks" className="text-[var(--color-secondary)] hover:text-[var(--color-primary)] transition-colors hidden sm:inline">
             Frameworks
           </Link>
-          <Link href="#pricing" className="text-gray-400 hover:text-white transition-colors hidden sm:inline">
+          <Link href="/pricing" className="text-[var(--color-secondary)] hover:text-[var(--color-primary)] transition-colors hidden sm:inline">
             Pricing
           </Link>
-          <Link href="/login" className="text-gray-400 hover:text-white transition-colors">
+          <Link href="/login" className="text-[var(--color-secondary)] hover:text-[var(--color-primary)] transition-colors">
             Sign in
           </Link>
-          <Link
-            href="/signup"
-            className="bg-violet-500 hover:bg-violet-400 text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors"
-            style={{ boxShadow: "0 0 16px rgba(139,92,246,0.45)" }}
-          >
-            Start free trial
-          </Link>
+          <ButtonLink href="/signup" size="sm" variant="primary">
+            Begin trial
+          </ButtonLink>
         </nav>
       </header>
 
-      {/* Hero with sphere */}
-      <section className="relative z-10 max-w-6xl mx-auto px-6 pt-6 pb-12 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-        <div>
-          <div
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-card text-xs text-violet-300 mb-6"
-            style={{ boxShadow: "0 0 14px rgba(139,92,246,0.3)" }}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
-            Continuous compliance · AI-native · Healthcare-first
-          </div>
+      {/* Hero — editorial composition. Headline on the left, sphere as right column. */}
+      <section className="relative z-10 mx-auto max-w-7xl px-8 pt-8 pb-24 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        <div className="lg:col-span-7 animate-fade-in">
+          <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-[var(--color-tertiary)] mb-6">
+            For healthcare practices · HIPAA · SOC 2 · ISO 27001 · GDPR
+          </p>
           <h1
-            className="text-5xl sm:text-6xl font-black leading-[1.05] tracking-tight text-white mb-6"
-            style={{ textShadow: "0 0 30px rgba(139,92,246,0.4)" }}
+            className="font-display text-[var(--text-display-1)] leading-[0.95] text-[var(--color-primary)] mb-8"
+            style={{ letterSpacing: "-0.025em" }}
           >
-            HIPAA compliance that <span className="text-violet-300">runs itself</span>.
+            Compliance,{" "}
+            <span className="italic text-[var(--color-secondary)]">continuously</span> verified.
           </h1>
-          <p className="text-lg text-gray-400 leading-relaxed mb-8 max-w-xl">
-            Fortify continuously verifies your security controls against HIPAA, SOC 2, ISO 27001, and GDPR — collecting evidence automatically, flagging drift the moment it happens, and keeping your practice audit-ready 24/7.
+          <p className="text-[17px] text-[var(--color-secondary)] leading-relaxed max-w-xl mb-10">
+            Fortify translates the HIPAA Security Rule — and three other frameworks — into atomic technical controls.
+            One safeguard, verified once, satisfies many requirements at the same time.
+            Evidence is collected automatically. Drift is caught the moment it happens.
+            Your practice stays audit-ready, twenty-four hours a day.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Link
-              href="/signup"
-              className="bg-violet-500 hover:bg-violet-400 text-white font-medium rounded-lg px-6 py-3 transition-colors text-sm"
-              style={{ boxShadow: "0 0 24px rgba(139,92,246,0.5)" }}
-            >
-              Start free trial →
-            </Link>
-            <Link
-              href="#how"
-              className="glass-card hover:bg-white/5 text-white font-medium rounded-lg px-6 py-3 transition-colors text-sm"
-            >
-              See how it works
-            </Link>
+            <ButtonLink href="/signup" variant="primary" size="lg">
+              Start a 14-day trial →
+            </ButtonLink>
+            <ButtonLink href="#approach" variant="secondary" size="lg">
+              See the approach
+            </ButtonLink>
           </div>
-          <p className="text-xs text-gray-600 mt-5">
-            14-day trial · No credit card · Built for solo practices, dental offices, therapy clinics, and healthcare MSPs
+          <p className="font-mono text-[11px] text-[var(--color-quaternary)] mt-6 tracking-wider">
+            No credit card · solo · small · multi-site
           </p>
         </div>
 
-        <div className="relative flex items-center justify-center h-[420px] lg:h-[520px]">
+        <div className="lg:col-span-5 relative h-[420px] lg:h-[560px] flex items-center justify-center">
           <AnimatedSphereWrapper />
         </div>
       </section>
 
-      {/* "How it works" — three pillars */}
-      <section id="how" className="relative z-10 max-w-6xl mx-auto px-6 py-16">
-        <p className="text-xs uppercase tracking-[0.25em] text-violet-400 text-center mb-2">How it works</p>
-        <h2 className="text-3xl sm:text-4xl font-bold text-center text-white mb-12 leading-tight">
-          Three jobs, one platform
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <Pillar
-            color="#8b5cf6"
-            title="Virtual HIPAA officer"
-            body="Translate the HIPAA Security Rule (and SOC 2, ISO, GDPR) into atomic technical controls. One control satisfies many requirements at once — so when MFA is on, four frameworks score up simultaneously."
-          />
-          <Pillar
-            color="#3b82f6"
-            title="24/7 security guard"
-            body="Hourly drift scans across your environment. The moment encryption is disabled, MFA falls off a user, or a BAA expires, you know — with a remediation plan attached."
-          />
-          <Pillar
-            color="#10b981"
-            title="Audit-readiness engine"
-            body="Audit-grade evidence captured automatically and tagged to the right requirements. When the auditor asks, you export the package — not assemble it from scratch."
-          />
-        </div>
-      </section>
-
-      {/* Frameworks */}
-      <section id="frameworks" className="relative z-10 max-w-5xl mx-auto px-6 py-12">
-        <p className="text-xs uppercase tracking-[0.25em] text-violet-400 text-center mb-2">Frameworks supported</p>
-        <h2 className="text-2xl font-bold text-center text-white mb-8">Four frameworks. One control library.</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <FrameworkBadge code="HIPAA" name="HIPAA Security Rule" color="#8b5cf6" />
-          <FrameworkBadge code="SOC 2" name="AICPA Trust Services" color="#3b82f6" />
-          <FrameworkBadge code="ISO 27001" name="ISO/IEC 27001:2022" color="#10b981" />
-          <FrameworkBadge code="GDPR" name="EU Regulation 2016/679" color="#f97316" />
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section id="pricing" className="relative z-10 max-w-5xl mx-auto px-6 py-16">
-        <p className="text-xs uppercase tracking-[0.25em] text-violet-400 text-center mb-2">Pricing</p>
-        <h2 className="text-3xl font-bold text-center text-white mb-3">Built for healthcare budgets</h2>
-        <p className="text-sm text-gray-500 text-center mb-10">
-          One-tenth the price of enterprise compliance suites. All plans include all four frameworks.
+      {/* Approach — three columns, editorial labels, generous spacing */}
+      <section id="approach" className="relative z-10 mx-auto max-w-7xl px-8 py-24 border-t border-[var(--color-border-subtle)]">
+        <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-[var(--color-tertiary)] mb-3 text-center">
+          The approach
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <PricingTier
-            name="Solo"
-            price="$1,800"
-            cadence="/month"
-            help="For solo practitioners"
-            features={[
-              "Unified HIPAA/SOC 2/ISO/GDPR controls",
-              "Automated evidence collection",
-              "Hourly drift monitoring",
-              "Live threat intelligence",
-              "Up to 3 team members",
-            ]}
+        <h2
+          className="font-display text-[var(--text-display-2)] text-center text-[var(--color-primary)] mb-16 leading-[1.05]"
+          style={{ letterSpacing: "-0.02em" }}
+        >
+          Three jobs,{" "}
+          <span className="italic">one platform</span>.
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-[var(--color-border-subtle)] rounded-2xl overflow-hidden surface">
+          <Pillar
+            roman="I"
+            title="Virtual HIPAA officer"
+            body="The Security Rule, SOC 2 TSC, ISO Annex A, and GDPR Article 32 distilled into atomic controls. One verification cascades across every framework that requirement maps to."
           />
-          <PricingTier
-            name="Practice"
-            price="$3,500"
-            cadence="/month"
-            help="For 2–25 staff"
-            featured
-            features={[
-              "Everything in Solo, plus:",
-              "Vendor & BAA management",
-              "Microsoft 365 integration",
-              "Quarterly auditor exports",
-              "Up to 25 team members",
-              "Priority support",
-            ]}
+          <Pillar
+            roman="II"
+            title="A 24-hour guard"
+            body="Hourly drift scans across your environment. The moment encryption is disabled, MFA falls off a user, or a BAA expires, your dashboard knows — with a remediation plan attached."
           />
-          <PricingTier
-            name="Multi-site"
-            price="$6,000"
-            cadence="/month"
-            help="For MSPs & specialty groups"
-            features={[
-              "Everything in Practice, plus:",
-              "Unlimited team members",
-              "Multi-practice workspace",
-              "Custom integrations",
-              "Dedicated success manager",
-              "Annual on-site audit prep",
-            ]}
+          <Pillar
+            roman="III"
+            title="Audit-readiness engine"
+            body="Audit-grade evidence captured automatically and tagged to the right citation. When the auditor asks, you export the package. You no longer assemble it from scratch."
           />
         </div>
       </section>
 
-      {/* Perspective grid floor */}
-      <div className="relative z-0">
-        <PerspectiveGrid />
-      </div>
+      {/* Frameworks — restrained badge row */}
+      <section id="frameworks" className="relative z-10 mx-auto max-w-5xl px-8 py-20 border-t border-[var(--color-border-subtle)]">
+        <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-[var(--color-tertiary)] mb-3 text-center">
+          Frameworks supported
+        </p>
+        <h2 className="font-display text-3xl text-center text-[var(--color-primary)] mb-10" style={{ letterSpacing: "-0.02em" }}>
+          Four frameworks. <span className="italic">One control library.</span>
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[var(--color-border-subtle)] surface rounded-xl overflow-hidden">
+          <FrameworkCell code="HIPAA"     name="HIPAA Security Rule" />
+          <FrameworkCell code="SOC 2"     name="AICPA Trust Services" />
+          <FrameworkCell code="ISO 27001" name="ISO/IEC 27001:2022" />
+          <FrameworkCell code="GDPR"      name="EU Regulation 2016/679" />
+        </div>
+      </section>
+
+      {/* Pricing teaser */}
+      <section className="relative z-10 mx-auto max-w-3xl px-8 py-20 border-t border-[var(--color-border-subtle)] text-center">
+        <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-[var(--color-tertiary)] mb-3">
+          One-tenth of enterprise compliance suites
+        </p>
+        <h2 className="font-display text-3xl text-[var(--color-primary)] mb-6" style={{ letterSpacing: "-0.02em" }}>
+          From <span className="italic">$1,800</span> a month.
+        </h2>
+        <p className="text-[var(--color-secondary)] text-[15px] leading-relaxed mb-8 max-w-xl mx-auto">
+          Three tiers. All include HIPAA, SOC 2, ISO 27001, and GDPR. All include automated evidence, drift monitoring, and live threat intelligence.
+        </p>
+        <ButtonLink href="/pricing" variant="secondary" size="md">
+          See pricing →
+        </ButtonLink>
+      </section>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-white/[0.06] px-6 py-8">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
-          <p className="tracking-[0.25em] uppercase">Fortify · Compliance automation</p>
-          <div className="flex items-center gap-6">
-            <Link href="/security" className="hover:text-gray-400">
-              Security posture
-            </Link>
-            <Link href="/login" className="hover:text-gray-400">
-              Sign in
-            </Link>
-            <Link href="/signup" className="hover:text-gray-400">
-              Start trial
-            </Link>
+      <footer className="relative z-10 border-t border-[var(--color-border-subtle)] px-8 py-10 mt-12">
+        <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] font-mono text-[var(--color-tertiary)] uppercase tracking-[0.3em]">
+          <p>Fortify · Compliance automation</p>
+          <div className="flex items-center gap-8">
+            <Link href="/security" className="hover:text-[var(--color-primary)] transition-colors">Our posture</Link>
+            <Link href="/login" className="hover:text-[var(--color-primary)] transition-colors">Sign in</Link>
+            <Link href="/signup" className="hover:text-[var(--color-primary)] transition-colors">Begin</Link>
           </div>
         </div>
       </footer>
@@ -202,94 +154,27 @@ export default function LandingPage() {
   );
 }
 
-function Pillar({ color, title, body }: { color: string; title: string; body: string }) {
+function Pillar({ roman, title, body }: { roman: string; title: string; body: string }) {
   return (
-    <div
-      className="glass-card rounded-2xl p-6 hover:bg-white/[0.02] transition-colors"
-      style={{ boxShadow: `0 0 20px ${color}18` }}
-    >
-      <div
-        className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
-        style={{ background: `${color}1f`, boxShadow: `0 0 12px ${color}55` }}
-      >
-        <span style={{ color }} className="text-lg font-bold">
-          ⌬
-        </span>
-      </div>
-      <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>
-      <p className="text-sm text-gray-400 leading-relaxed">{body}</p>
+    <div className="bg-[var(--color-canvas)] p-10 transition-colors hover:bg-[var(--color-surface-raised)]">
+      <p className="font-display text-3xl italic text-[var(--color-accent)] mb-6" style={{ letterSpacing: "-0.02em" }}>
+        {roman}
+      </p>
+      <h3 className="text-[var(--color-primary)] text-lg font-medium mb-3 leading-snug">{title}</h3>
+      <p className="text-[var(--color-secondary)] text-sm leading-relaxed">{body}</p>
     </div>
   );
 }
 
-function FrameworkBadge({ code, name, color }: { code: string; name: string; color: string }) {
+function FrameworkCell({ code, name }: { code: string; name: string }) {
   return (
-    <div
-      className="glass-card rounded-xl px-4 py-4 text-center"
-      style={{ boxShadow: `inset 0 0 18px ${color}1a` }}
-    >
-      <p className="text-base font-bold" style={{ color }}>
+    <div className="bg-[var(--color-canvas)] py-8 px-4 text-center transition-colors hover:bg-[var(--color-surface-raised)]">
+      <p className="font-display text-xl text-[var(--color-primary)]" style={{ letterSpacing: "-0.02em" }}>
         {code}
       </p>
-      <p className="text-[10px] uppercase tracking-wider text-gray-500 mt-1">{name}</p>
-    </div>
-  );
-}
-
-function PricingTier({
-  name,
-  price,
-  cadence,
-  help,
-  features,
-  featured = false,
-}: {
-  name: string;
-  price: string;
-  cadence: string;
-  help: string;
-  features: string[];
-  featured?: boolean;
-}) {
-  return (
-    <div
-      className="glass-card rounded-2xl p-6"
-      style={{
-        boxShadow: featured ? "0 0 30px rgba(139,92,246,0.4)" : undefined,
-        borderColor: featured ? "rgba(139,92,246,0.5)" : undefined,
-      }}
-    >
-      <div className="flex items-baseline justify-between mb-1">
-        <h3 className="text-lg font-semibold text-white">{name}</h3>
-        {featured && (
-          <span className="text-[10px] uppercase tracking-wider text-violet-300 px-2 py-0.5 rounded-full bg-violet-500/15">
-            Most popular
-          </span>
-        )}
-      </div>
-      <p className="text-xs text-gray-500 mb-4">{help}</p>
-      <div className="flex items-baseline gap-1 mb-6">
-        <span className="text-3xl font-black text-white tabular-nums">{price}</span>
-        <span className="text-sm text-gray-500">{cadence}</span>
-      </div>
-      <ul className="space-y-2 mb-6">
-        {features.map((f) => (
-          <li key={f} className="text-sm text-gray-300 flex gap-2">
-            <span className="text-violet-400 mt-0.5">✓</span>
-            <span>{f}</span>
-          </li>
-        ))}
-      </ul>
-      <Link
-        href="/signup"
-        className={`block text-center text-sm font-medium rounded-lg px-4 py-2.5 transition-colors ${
-          featured
-            ? "bg-violet-500 hover:bg-violet-400 text-white"
-            : "border border-white/15 hover:border-violet-400/40 text-white"
-        }`}
-      >
-        Start free trial
-      </Link>
+      <p className="font-mono text-[9px] uppercase tracking-[0.3em] text-[var(--color-tertiary)] mt-2">
+        {name}
+      </p>
     </div>
   );
 }

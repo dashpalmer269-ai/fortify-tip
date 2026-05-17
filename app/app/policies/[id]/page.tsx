@@ -1,5 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import { marked } from "marked";
 import { getCurrentUserAndPractice, createAuthedServerClient } from "@/lib/supabase/server-auth";
 
 export const dynamic = "force-dynamic";
@@ -47,12 +48,22 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
         </p>
       </div>
 
-      <article className="glass-card rounded-2xl p-8 prose-invert text-gray-200 leading-relaxed whitespace-pre-wrap">
-        {policy.content_markdown}
-      </article>
+      <article
+        className="glass-card rounded-2xl p-8 text-gray-200 leading-relaxed policy-prose"
+        dangerouslySetInnerHTML={{ __html: marked.parse(policy.content_markdown ?? "") }}
+      />
+      <style>{`
+        .policy-prose h2 { font-family: var(--font-display); font-size: 22px; color: var(--color-primary); margin: 24px 0 8px; letter-spacing: -0.01em; }
+        .policy-prose h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-tertiary); margin: 20px 0 6px; font-weight: 500; }
+        .policy-prose p { font-size: 15px; color: var(--color-secondary); margin-bottom: 14px; }
+        .policy-prose ol, .policy-prose ul { margin: 10px 0 16px 20px; color: var(--color-secondary); }
+        .policy-prose li { margin-bottom: 6px; font-size: 14px; }
+        .policy-prose strong { color: var(--color-primary); font-weight: 500; }
+        .policy-prose code { font-family: var(--font-mono); font-size: 13px; background: var(--color-surface); padding: 1px 6px; border-radius: 4px; }
+      `}</style>
 
-      <div className="mt-6 rounded-xl bg-violet-500/5 border border-violet-500/20 px-4 py-3 text-xs text-gray-500">
-        Markdown rendering and acknowledgment tracking land in the next iteration. For now, this view shows the raw draft so a compliance officer can copy it into Word, edit, and re-import.
+      <div className="mt-6 rounded-xl surface px-4 py-3 text-xs text-[var(--color-tertiary)]">
+        Acknowledgment tracking lands in the next iteration. Copy and export to Word still works for now.
       </div>
     </div>
   );

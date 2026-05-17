@@ -1,5 +1,9 @@
 "use client";
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
+import Badge from "@/components/ui/Badge";
+import PageHeader from "@/components/ui/PageHeader";
+import { ButtonLink } from "@/components/ui/Button";
 
 interface ReadinessRow {
   framework_code: string;
@@ -17,11 +21,11 @@ interface ActivityRow {
   actor_service: string | null;
 }
 
-const FRAMEWORK_LABELS: Record<string, { name: string; color: string }> = {
-  HIPAA: { name: "HIPAA", color: "#8b5cf6" },
-  SOC2: { name: "SOC 2", color: "#3b82f6" },
-  ISO27001: { name: "ISO 27001", color: "#10b981" },
-  GDPR: { name: "GDPR", color: "#f97316" },
+const FRAMEWORK_META: Record<string, { name: string; tone: string }> = {
+  HIPAA:    { name: "HIPAA Security Rule",     tone: "var(--color-fw-hipaa)" },
+  SOC2:     { name: "SOC 2 Trust Services",    tone: "var(--color-fw-soc2)" },
+  ISO27001: { name: "ISO/IEC 27001:2022",      tone: "var(--color-fw-iso)" },
+  GDPR:     { name: "GDPR Article 32",         tone: "var(--color-fw-gdpr)" },
 };
 
 export default function DashboardClient({
@@ -43,156 +47,169 @@ export default function DashboardClient({
       : 0;
 
   return (
-    <div className="px-8 py-8 max-w-6xl mx-auto">
-      {/* Greeting */}
-      <div className="mb-8">
-        <p className="text-xs uppercase tracking-[0.25em] text-gray-600 mb-1">Compliance dashboard</p>
-        <h1 className="text-3xl font-bold text-white">{practiceName}</h1>
-      </div>
+    <div className="px-8 py-10 max-w-6xl mx-auto">
+      <PageHeader
+        eyebrow={practiceName}
+        title="Audit readiness"
+        description="A live view of how your controls map across every enabled framework. Marking one control compliant updates every framework score it satisfies."
+      />
 
-      {/* Overall + critical strip */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div
-          className="glass-card rounded-2xl p-6 col-span-1 md:col-span-2"
-          style={{ boxShadow: "0 0 28px rgba(139,92,246,0.18)" }}
-        >
-          <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Overall audit readiness</p>
-          <div className="flex items-end gap-4">
-            <p
-              className="text-5xl font-black text-white tabular-nums"
-              style={{ textShadow: "0 0 20px rgba(139,92,246,0.6)" }}
+      {/* Hero stats — two columns: overall + critical findings */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-10">
+        <Card className="lg:col-span-2 p-8 animate-fade-in">
+          <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-[var(--color-tertiary)] mb-4">
+            Weighted across {readiness.length} {readiness.length === 1 ? "framework" : "frameworks"}
+          </p>
+          <div className="flex items-baseline gap-2 mb-6">
+            <span
+              className="font-display text-[var(--text-display-1)] leading-none text-[var(--color-primary)] tabular-nums"
+              style={{ letterSpacing: "-0.04em" }}
             >
-              {overallPct}%
-            </p>
-            <p className="text-sm text-gray-500 pb-2">
-              weighted across {readiness.length} {readiness.length === 1 ? "framework" : "frameworks"}
-            </p>
+              {overallPct}
+            </span>
+            <span className="font-display text-3xl text-[var(--color-tertiary)]">%</span>
           </div>
-          <div className="mt-4 h-2 bg-white/[0.05] rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-700"
-              style={{
-                width: `${Math.min(overallPct, 100)}%`,
-                background: "linear-gradient(90deg, #8b5cf6, #6366f1)",
-                boxShadow: "0 0 12px rgba(139,92,246,0.6)",
-              }}
-            />
-          </div>
-        </div>
+          <ProgressBar pct={overallPct} tone="var(--color-accent)" />
+        </Card>
 
-        <div className="glass-card rounded-2xl p-6">
-          <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Critical findings</p>
+        <Card className="p-8 animate-fade-in" variant={criticalCount > 0 ? "raised" : "default"}>
+          <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-[var(--color-tertiary)] mb-4">
+            Critical findings
+          </p>
           <p
-            className={`text-5xl font-black tabular-nums ${
-              criticalCount > 0 ? "text-red-400" : "text-emerald-400"
+            className={`font-display text-[var(--text-display-2)] leading-none tabular-nums ${
+              criticalCount > 0 ? "text-[var(--color-danger)]" : "text-[var(--color-success)]"
             }`}
-            style={{
-              textShadow: criticalCount > 0 ? "0 0 18px rgba(239,68,68,0.5)" : "0 0 18px rgba(16,185,129,0.5)",
-            }}
+            style={{ letterSpacing: "-0.04em" }}
           >
             {criticalCount}
           </p>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-sm text-[var(--color-tertiary)] mt-3 leading-snug">
             {criticalCount === 0
-              ? "All critical controls compliant"
+              ? "All critical controls compliant."
               : criticalCount === 1
-              ? "Open critical issue"
-              : "Open critical issues"}
+              ? "Open critical issue."
+              : "Open critical issues."}
           </p>
-        </div>
+          {criticalCount > 0 && (
+            <Link
+              href="/app/compliance?status=non_compliant"
+              className="inline-block mt-4 text-[12px] text-[var(--color-accent)] hover:underline"
+            >
+              Review →
+            </Link>
+          )}
+        </Card>
       </div>
 
       {/* Per-framework scorecards */}
-      <div className="mb-8">
-        <h2 className="text-sm uppercase tracking-wider text-gray-500 mb-3">By framework</h2>
+      <section className="mb-10">
+        <div className="flex items-baseline justify-between mb-4">
+          <h2 className="font-display text-xl text-[var(--color-primary)]" style={{ letterSpacing: "-0.02em" }}>
+            By framework
+          </h2>
+          <Link href="/app/compliance" className="font-mono text-[11px] uppercase tracking-wider text-[var(--color-tertiary)] hover:text-[var(--color-primary)]">
+            All controls →
+          </Link>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {readiness.map((r) => {
-            const meta = FRAMEWORK_LABELS[r.framework_code] ?? { name: r.framework_code, color: "#a78bfa" };
+            const meta = FRAMEWORK_META[r.framework_code] ?? { name: r.framework_code, tone: "var(--color-accent)" };
             const pct = Math.round(Number(r.weighted_pct) || 0);
             return (
-              <Link
-                key={r.framework_code}
-                href={`/app/compliance?framework=${r.framework_code}`}
-                className="glass-card rounded-xl p-5 hover:bg-white/[0.02] transition-colors block"
-              >
-                <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">{meta.name}</p>
-                <p className="text-3xl font-bold tabular-nums" style={{ color: meta.color }}>
-                  {pct}%
-                </p>
-                <p className="text-xs text-gray-600 mt-1">
-                  {r.satisfied}/{r.total} requirements satisfied
-                </p>
-                <div className="mt-3 h-1 bg-white/[0.05] rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${Math.min(pct, 100)}%`,
-                      background: meta.color,
-                      boxShadow: `0 0 8px ${meta.color}`,
-                    }}
-                  />
-                </div>
+              <Link key={r.framework_code} href={`/app/compliance?framework=${r.framework_code}`}>
+                <Card variant="interactive" className="p-5 h-full">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--color-tertiary)] mb-3">
+                    {r.framework_code}
+                  </p>
+                  <div className="flex items-baseline gap-1 mb-1">
+                    <span className="font-display text-3xl text-[var(--color-primary)] tabular-nums" style={{ letterSpacing: "-0.03em" }}>
+                      {pct}
+                    </span>
+                    <span className="text-[var(--color-tertiary)]">%</span>
+                  </div>
+                  <p className="text-[11px] text-[var(--color-quaternary)] tabular-nums mb-3">
+                    {r.satisfied} of {r.total} satisfied
+                  </p>
+                  <ProgressBar pct={pct} tone={meta.tone} thin />
+                </Card>
               </Link>
             );
           })}
         </div>
-      </div>
+      </section>
 
       {/* Quick actions */}
-      <div className="mb-8">
-        <h2 className="text-sm uppercase tracking-wider text-gray-500 mb-3">Quick actions</h2>
+      <section className="mb-10">
+        <h2 className="font-display text-xl text-[var(--color-primary)] mb-4" style={{ letterSpacing: "-0.02em" }}>
+          Move the needle
+        </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Link
-            href="/app/compliance"
-            className="glass-card rounded-xl p-4 hover:bg-white/[0.02] transition-colors block"
-          >
-            <p className="text-sm font-medium text-white">Review controls</p>
-            <p className="text-xs text-gray-500 mt-1">Mark compliant, upload evidence</p>
-          </Link>
-          <Link
-            href="/app/vendors"
-            className="glass-card rounded-xl p-4 hover:bg-white/[0.02] transition-colors block"
-          >
-            <p className="text-sm font-medium text-white">Vendors & BAAs</p>
-            <p className="text-xs text-gray-500 mt-1">Track expirations, add new BAAs</p>
-          </Link>
-          <Link
-            href="/app/threats"
-            className="glass-card rounded-xl p-4 hover:bg-white/[0.02] transition-colors block"
-          >
-            <p className="text-sm font-medium text-white">Threat intelligence</p>
-            <p className="text-xs text-gray-500 mt-1">Live CVE + breach feed</p>
-          </Link>
+          <QuickAction href="/app/risk-assessment/new" label="Run risk assessment" hint="5 min · AI executive summary" />
+          <QuickAction href="/app/vendors" label="Add a vendor" hint="Track BAA status" />
+          <QuickAction href="/app/reports" label="Generate report" hint="Auditor-ready snapshot" />
         </div>
-      </div>
+      </section>
 
       {/* Recent activity */}
-      <div>
-        <h2 className="text-sm uppercase tracking-wider text-gray-500 mb-3">Recent activity</h2>
+      <section>
+        <h2 className="font-display text-xl text-[var(--color-primary)] mb-4" style={{ letterSpacing: "-0.02em" }}>
+          Activity
+        </h2>
         {recentActivity.length === 0 ? (
-          <div className="glass-card rounded-xl p-8 text-center text-sm text-gray-500">
-            No activity yet. As you and your team make changes, an audit trail will appear here.
-          </div>
+          <Card className="py-12 px-6 text-center">
+            <p className="text-sm text-[var(--color-tertiary)]">
+              No activity yet. Every change you and your team make appears here for SOC 2 evidence.
+            </p>
+          </Card>
         ) : (
-          <div className="glass-card rounded-xl divide-y divide-white/[0.05]">
+          <Card className="divide-y divide-[var(--color-border-subtle)] overflow-hidden">
             {recentActivity.map((a) => (
-              <div key={a.id} className="px-4 py-3 flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="text-sm text-white">{formatAction(a.action)}</p>
-                  <p className="text-xs text-gray-600">
+              <div key={a.id} className="px-5 py-3.5 flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-[var(--color-primary)]">{formatAction(a.action)}</p>
+                  <p className="text-[11px] text-[var(--color-quaternary)] font-mono mt-0.5">
                     {a.actor_service ? `system · ${a.actor_service}` : "user action"} ·{" "}
                     {new Date(a.occurred_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
                   </p>
                 </div>
-                <span className="text-[10px] uppercase tracking-wider text-gray-600 shrink-0">
-                  {a.resource_type}
-                </span>
+                <Badge variant="muted">{a.resource_type.replace(/_/g, " ")}</Badge>
               </div>
             ))}
-          </div>
+          </Card>
         )}
-      </div>
+      </section>
     </div>
+  );
+}
+
+/* ── Local components ─────────────────────────────────────────── */
+
+function ProgressBar({ pct, tone, thin = false }: { pct: number; tone: string; thin?: boolean }) {
+  return (
+    <div
+      className={`bg-[var(--color-border-subtle)] rounded-full overflow-hidden ${thin ? "h-1" : "h-1.5"}`}
+      role="progressbar"
+      aria-valuenow={pct}
+      aria-valuemin={0}
+      aria-valuemax={100}
+    >
+      <div
+        className="h-full rounded-full transition-all duration-700"
+        style={{ width: `${Math.min(Math.max(pct, 0), 100)}%`, background: tone }}
+      />
+    </div>
+  );
+}
+
+function QuickAction({ href, label, hint }: { href: string; label: string; hint: string }) {
+  return (
+    <Link href={href}>
+      <Card variant="interactive" className="p-5 h-full">
+        <p className="text-[var(--color-primary)] text-sm font-medium mb-1">{label} →</p>
+        <p className="text-xs text-[var(--color-tertiary)]">{hint}</p>
+      </Card>
+    </Link>
   );
 }
 
