@@ -33,24 +33,24 @@ export default function LandingPage() {
         </Link>
       </header>
 
-      {/* Hero */}
-      <section className="relative z-10 mx-auto max-w-7xl px-8 pt-16 pb-32 grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-16 lg:gap-12 items-center">
+      {/* ────────────────── HERO ────────────────── */}
+      <section className="relative z-10 mx-auto max-w-7xl px-8 pt-24 pb-48 lg:pt-32 lg:pb-56 grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-20 lg:gap-16 items-center min-h-[88vh]">
         <div className="max-w-xl">
-          <p className="font-mono text-[10px] uppercase tracking-[0.45em] text-violet-300/80 mb-7">
+          <p className="font-mono text-[10px] uppercase tracking-[0.45em] text-violet-300/80 mb-8">
             Healthcare compliance · simplified
           </p>
           <h1
-            className="font-display text-[clamp(44px,5.8vw,76px)] text-white leading-[1.02] mb-7"
+            className="font-display text-[clamp(44px,5.8vw,76px)] text-white leading-[1.02] mb-8"
             style={{ letterSpacing: "-0.025em" }}
           >
             Healthcare <span className="text-violet-300">compliance</span>, made simple.<br />
             <span className="text-white/70">Security</span>, made strong.
           </h1>
-          <p className="text-[15px] text-white/65 leading-relaxed mb-10 max-w-lg">
+          <p className="text-[15px] text-white/65 leading-relaxed mb-12 max-w-lg">
             One platform for HIPAA, SOC 2, ISO 27001, and GDPR. Continuous monitoring, automated evidence, and AI-assisted remediation — so your practice stays audit-ready twenty-four hours a day.
           </p>
 
-          <ul className="space-y-3.5 mb-10">
+          <ul className="space-y-4 mb-12">
             <Bullet>24/7 security monitoring</Bullet>
             <Bullet>Automated evidence collection</Bullet>
             <Bullet>Policies, training, risk &amp; more</Bullet>
@@ -69,33 +69,32 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="relative h-[440px] lg:h-[600px] -mx-8 lg:mx-0">
+        <div className="relative h-[440px] lg:h-[640px] -mx-8 lg:mx-0">
           <MedicalSphere />
         </div>
       </section>
 
-      {/* Soft transition into trust strip */}
-      <div className="relative z-10 mx-auto max-w-5xl px-8">
-        <div className="border-t border-white/[0.06]" />
-      </div>
+      <SectionDivider />
 
-      {/* Trust strip — restrained, just three pillars on a line */}
-      <section className="relative z-10 mx-auto max-w-5xl px-8 py-10">
-        <div className="grid grid-cols-3 gap-6 text-center">
+      {/* ────────────────── TRUST STRIP ────────────────── */}
+      <section className="relative z-10 mx-auto max-w-5xl px-8 py-24">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 text-center">
           <Trust icon={<ShieldIcon />} label="Secure" />
           <Trust icon={<CheckSealIcon />} label="Compliant" />
           <Trust icon={<HubIcon />} label="Reliable" />
         </div>
       </section>
 
-      {/* Section: Everything you need */}
-      <section id="features" className="relative z-10 mx-auto max-w-6xl px-8 py-28">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <p className="font-mono text-[10px] uppercase tracking-[0.45em] text-violet-300/80 mb-4">
+      <SectionDivider />
+
+      {/* ────────────────── FEATURES ────────────────── */}
+      <section id="features" className="relative z-10 mx-auto max-w-6xl px-8 py-40">
+        <div className="text-center max-w-3xl mx-auto mb-24">
+          <p className="font-mono text-[10px] uppercase tracking-[0.45em] text-violet-300/80 mb-6">
             One platform
           </p>
           <h2
-            className="font-display text-[clamp(36px,4.4vw,56px)] text-white leading-[1.02]"
+            className="font-display text-[clamp(36px,4.4vw,56px)] text-white leading-[1.02] mb-8"
             style={{ letterSpacing: "-0.025em" }}
           >
             Everything you need.{" "}
@@ -111,7 +110,7 @@ export default function LandingPage() {
               In one place.
             </span>
           </h2>
-          <p className="text-[15px] text-white/60 leading-relaxed mt-6 max-w-xl mx-auto">
+          <p className="text-[15px] text-white/60 leading-relaxed max-w-xl mx-auto">
             Fortify brings compliance, security, and IT operations under a single instrument so your team can focus on patients — not paperwork.
           </p>
         </div>
@@ -126,25 +125,27 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* CTA banner — feels like a return to the hero, with sphere echo */}
+      <SectionDivider />
+
+      {/* ────────────────── CTA BANNER ────────────────── */}
       <section
         id="about"
-        className="relative z-10 mx-auto max-w-4xl px-8 py-24 text-center"
+        className="relative z-10 mx-auto max-w-4xl px-8 py-40 text-center"
         style={{
           background:
             "radial-gradient(ellipse 70% 60% at 50% 50%, rgba(139,92,246,0.12) 0%, transparent 70%)",
         }}
       >
-        <p className="font-mono text-[10px] uppercase tracking-[0.45em] text-violet-300/80 mb-4">
+        <p className="font-mono text-[10px] uppercase tracking-[0.45em] text-violet-300/80 mb-6">
           Begin
         </p>
         <h2
-          className="font-display text-[clamp(32px,4vw,48px)] text-white leading-[1.05] mb-5"
+          className="font-display text-[clamp(32px,4vw,48px)] text-white leading-[1.05] mb-7"
           style={{ letterSpacing: "-0.025em" }}
         >
           Ready to <span className="italic text-violet-200">secure</span> your practice?
         </h2>
-        <p className="text-[15px] text-white/60 leading-relaxed mb-8 max-w-xl mx-auto">
+        <p className="text-[15px] text-white/60 leading-relaxed mb-12 max-w-xl mx-auto">
           Join a growing community of healthcare practices automating compliance, reducing risk, and protecting patient data — in days, not months.
         </p>
         <ButtonLink href="/signup" variant="primary" size="lg">
@@ -152,9 +153,9 @@ export default function LandingPage() {
         </ButtonLink>
       </section>
 
-      {/* Footer */}
-      <footer className="relative z-10 border-t border-white/[0.06]">
-        <div className="mx-auto max-w-7xl px-8 py-14 grid grid-cols-2 sm:grid-cols-4 gap-10">
+      {/* ────────────────── FOOTER ────────────────── */}
+      <footer className="relative z-10 border-t border-white/[0.06] mt-24">
+        <div className="mx-auto max-w-7xl px-8 py-20 grid grid-cols-2 sm:grid-cols-4 gap-12">
           <div className="col-span-2 sm:col-span-1">
             <p className="font-mono text-[11px] font-semibold tracking-[0.4em] text-white uppercase mb-4">
               Fortify
@@ -162,7 +163,7 @@ export default function LandingPage() {
             <p className="text-xs text-white/55 leading-relaxed max-w-xs">
               Compliance, security, and IT operations — unified for healthcare.
             </p>
-            <div className="flex items-center gap-3 mt-5 text-white/45">
+            <div className="flex items-center gap-3 mt-6 text-white/45">
               <a href="#" aria-label="LinkedIn" className="hover:text-white transition-colors"><SocialIcon kind="linkedin" /></a>
               <a href="#" aria-label="X" className="hover:text-white transition-colors"><SocialIcon kind="x" /></a>
               <a href="#" aria-label="GitHub" className="hover:text-white transition-colors"><SocialIcon kind="github" /></a>
@@ -189,7 +190,7 @@ export default function LandingPage() {
           ]} />
         </div>
         <div className="border-t border-white/[0.06]">
-          <div className="mx-auto max-w-7xl px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-white/45">
+          <div className="mx-auto max-w-7xl px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-white/45">
             <p>© 2026 Fortify. All rights reserved.</p>
             <p className="inline-flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -206,6 +207,19 @@ export default function LandingPage() {
    Local presentation components
    ────────────────────────────────────────────────────────────────────────── */
 
+function SectionDivider() {
+  return (
+    <div className="relative z-10 mx-auto max-w-3xl px-8 py-2 flex items-center justify-center" aria-hidden>
+      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
+      <div
+        className="mx-4 w-1.5 h-1.5 rounded-full bg-violet-400/40"
+        style={{ boxShadow: "0 0 12px rgba(139,92,246,0.55)" }}
+      />
+      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
+    </div>
+  );
+}
+
 function Bullet({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex items-center gap-3 text-[14px] text-white/85">
@@ -221,8 +235,10 @@ function Bullet({ children }: { children: React.ReactNode }) {
 
 function Trust({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-      <span className="text-violet-300">{icon}</span>
+    <div className="flex flex-col items-center gap-4">
+      <span className="text-violet-300 w-10 h-10 rounded-full bg-violet-500/8 border border-violet-500/20 flex items-center justify-center">
+        {icon}
+      </span>
       <span className="font-mono text-[11px] font-medium tracking-[0.3em] text-white/70 uppercase">
         {label}
       </span>
@@ -232,14 +248,14 @@ function Trust({ icon, label }: { icon: React.ReactNode; label: string }) {
 
 function FeatureTile({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
-    <div className="bg-[#04031a] p-6 hover:bg-white/[0.02] transition-colors">
-      <span className="inline-flex w-9 h-9 rounded-md bg-violet-500/12 items-center justify-center text-violet-300 mb-5">
+    <div className="bg-[#04031a] p-8 hover:bg-white/[0.02] transition-colors">
+      <span className="inline-flex w-10 h-10 rounded-md bg-violet-500/12 items-center justify-center text-violet-300 mb-6">
         {icon}
       </span>
-      <h3 className="font-display text-[17px] text-white mb-2" style={{ letterSpacing: "-0.015em" }}>
+      <h3 className="font-display text-[18px] text-white mb-3" style={{ letterSpacing: "-0.015em" }}>
         {title}
       </h3>
-      <p className="text-xs text-white/55 leading-relaxed">{body}</p>
+      <p className="text-xs text-white/55 leading-[1.7]">{body}</p>
     </div>
   );
 }
@@ -247,8 +263,8 @@ function FeatureTile({ icon, title, body }: { icon: React.ReactNode; title: stri
 function FooterCol({ title, links }: { title: string; links: [string, string][] }) {
   return (
     <div>
-      <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.3em] text-white mb-4">{title}</p>
-      <ul className="space-y-2.5">
+      <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.3em] text-white mb-5">{title}</p>
+      <ul className="space-y-3">
         {links.map(([label, href]) => (
           <li key={label}>
             <Link href={href} className="text-[13px] text-white/55 hover:text-white transition-colors">

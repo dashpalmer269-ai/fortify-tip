@@ -56,12 +56,12 @@ export default async function IntelPage() {
   return (
     <div className="mx-auto max-w-6xl px-8">
       {/* Hero */}
-      <section className="pt-12 pb-16 max-w-3xl">
-        <p className="font-mono text-[10px] uppercase tracking-[0.45em] text-violet-300/80 mb-5">
+      <section className="pt-24 pb-32 max-w-3xl">
+        <p className="font-mono text-[10px] uppercase tracking-[0.45em] text-violet-300/80 mb-7">
           Continuously ingested · {totalCount} briefings
         </p>
         <h1
-          className="font-display text-[clamp(40px,5vw,68px)] text-white leading-[1.02] mb-5"
+          className="font-display text-[clamp(40px,5vw,68px)] text-white leading-[1.02] mb-7"
           style={{ letterSpacing: "-0.025em" }}
         >
           Threat intelligence,{" "}
@@ -72,10 +72,22 @@ export default async function IntelPage() {
         </p>
       </section>
 
-      {/* Sections — stacked, with a soft accent strip per feed */}
-      <div className="space-y-20 pb-16">
-        {SECTIONS.map((s) => (
-          <Section key={s.key} meta={s} items={sections[s.key]} />
+      {/* Sections — stacked, generous spacing, soft divider between feeds */}
+      <div className="pb-32">
+        {SECTIONS.map((s, idx) => (
+          <div key={s.key}>
+            {idx > 0 && (
+              <div className="flex items-center justify-center py-20" aria-hidden>
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
+                <div
+                  className="mx-4 w-1.5 h-1.5 rounded-full bg-violet-400/40"
+                  style={{ boxShadow: "0 0 12px rgba(139,92,246,0.55)" }}
+                />
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
+              </div>
+            )}
+            <Section meta={s} items={sections[s.key]} />
+          </div>
         ))}
       </div>
     </div>
@@ -91,15 +103,15 @@ function Section({
 }) {
   return (
     <section>
-      <div className="flex items-end justify-between gap-6 mb-6 pb-4 border-b border-white/[0.06]">
+      <div className="flex items-end justify-between gap-6 mb-10 pb-6 border-b border-white/[0.06]">
         <div>
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3 mb-3">
             <span
               className="w-2 h-2 rounded-full"
               style={{ background: meta.accent, boxShadow: `0 0 10px ${meta.accent}` }}
             />
             <h2
-              className="font-display text-3xl text-white"
+              className="font-display text-4xl text-white"
               style={{ letterSpacing: "-0.02em" }}
             >
               {meta.label}
@@ -115,11 +127,11 @@ function Section({
       </div>
 
       {items.length === 0 ? (
-        <div className="rounded-xl border border-white/[0.06] py-12 text-center text-sm text-white/40">
+        <div className="rounded-xl border border-white/[0.06] py-16 text-center text-sm text-white/40">
           No briefings in this feed yet.
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {items.map((t) => (
             <ThreatCard key={t.id} threat={t} hrefPrefix="/intel" />
           ))}
