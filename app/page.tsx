@@ -40,23 +40,24 @@ export default function LandingPage() {
       <MarketingNav active="features" />
 
       {/* ────────────────── HERO ─ full viewport ────────────────── */}
-      <section className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 min-h-[88vh] flex items-center">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.05fr] gap-16 lg:gap-12 items-center w-full pt-4 pb-16 lg:pb-0">
+      <section className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 min-h-[88vh] flex items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.05fr] gap-16 lg:gap-12 items-center w-full pt-10 lg:pt-16 pb-16 lg:pb-0">
           <div className="max-w-xl">
             <h1
-              className="font-marketing text-[clamp(48px,6.5vw,88px)] text-white mb-10"
+              className="font-marketing text-[clamp(48px,6.5vw,88px)] text-white mb-20"
               style={{
                 letterSpacing: "-0.035em",
                 fontWeight: 700,
-                lineHeight: "1.02",
+                lineHeight: "1.06",
+                paddingBottom: "0.12em",  /* descender breathing room */
                 fontVariationSettings: '"SOFT" 35, "opsz" 144',
               }}
             >
               <span className="block">Healthcare</span>
-              <span className="block italic text-violet-200 mt-1" style={{ fontWeight: 500 }}>
+              <span className="block italic text-violet-200 mt-2" style={{ fontWeight: 500 }}>
                 compliance,
               </span>
-              <span className="block mt-1">
+              <span className="block mt-2">
                 <span className="text-white/85">made</span> simple.
               </span>
             </h1>
