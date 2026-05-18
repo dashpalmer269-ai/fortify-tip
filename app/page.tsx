@@ -1,6 +1,7 @@
 import Link from "next/link";
 import CosmicOrb from "@/components/CosmicOrb";
 import StarfieldBackground from "@/components/StarfieldBackground";
+import MarketingNav from "@/components/marketing/MarketingNav";
 import { ButtonLink } from "@/components/ui/Button";
 
 export const dynamic = "force-dynamic";
@@ -8,14 +9,14 @@ export const dynamic = "force-dynamic";
 export default function LandingPage() {
   return (
     <div className="relative min-h-screen bg-[#04031a] text-white overflow-hidden font-marketing">
-      {/* ── Atmospheric backdrop — layered radial washes + drifting ambient ── */}
+      {/* ── Atmospheric backdrop — three layered radial washes ── */}
       <div
         className="absolute inset-0 pointer-events-none z-0"
         style={{
           background: `
-            radial-gradient(ellipse 70% 55% at 75% 28%, rgba(139,92,246,0.32) 0%, transparent 60%),
-            radial-gradient(ellipse 50% 40% at 12% 85%, rgba(80,40,180,0.22) 0%, transparent 60%),
-            radial-gradient(ellipse 90% 60% at 50% 110%, rgba(76,29,149,0.28) 0%, transparent 70%)
+            radial-gradient(ellipse 70% 55% at 78% 26%, rgba(139,92,246,0.28) 0%, transparent 60%),
+            radial-gradient(ellipse 55% 40% at 12% 80%, rgba(80,40,180,0.18) 0%, transparent 60%),
+            radial-gradient(ellipse 110% 60% at 50% 110%, rgba(76,29,149,0.26) 0%, transparent 70%)
           `,
         }}
       />
@@ -23,12 +24,12 @@ export default function LandingPage() {
         className="absolute inset-0 pointer-events-none z-0"
         style={{
           background:
-            "radial-gradient(ellipse 50% 30% at 30% 50%, rgba(167,139,250,0.10) 0%, transparent 65%)",
-          animation: "ambient-shift 18s ease-in-out infinite",
+            "radial-gradient(ellipse 50% 30% at 30% 50%, rgba(167,139,250,0.09) 0%, transparent 65%)",
+          animation: "ambient-shift 20s ease-in-out infinite",
         }}
       />
       <StarfieldBackground />
-      {/* Grain overlay — texture, almost invisible */}
+      {/* Grain — barely-there texture */}
       <div
         className="absolute inset-0 pointer-events-none z-[2] opacity-[0.025] mix-blend-overlay"
         style={{
@@ -36,33 +37,11 @@ export default function LandingPage() {
         }}
       />
 
-      {/* ── NAV ──────────────────────────────────────────────────────────── */}
-      <header className="relative z-30 mx-auto max-w-7xl px-8 py-7 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5" aria-label="Fortify">
-          <span className="relative w-[18px] h-[18px] flex items-center justify-center">
-            <span className="absolute inset-0 rounded-full bg-violet-500/30 blur-md" />
-            <span className="relative w-2.5 h-2.5 rounded-full bg-violet-300" />
-          </span>
-          <span className="font-mono text-[12px] font-semibold tracking-[0.45em] text-white uppercase">
-            Fortify
-          </span>
-        </Link>
-        <nav className="hidden md:flex items-center gap-10 text-[13px] text-white/65 font-sans">
-          <Link href="#features" className="hover:text-white transition-colors">Features</Link>
-          <Link href="/intel" className="hover:text-white transition-colors">Intel</Link>
-          <Link href="#about" className="hover:text-white transition-colors">About</Link>
-        </nav>
-        <Link
-          href="/login"
-          className="text-[13px] text-white/80 hover:text-white transition-colors font-sans"
-        >
-          Login
-        </Link>
-      </header>
+      <MarketingNav active="features" />
 
       {/* ────────────────── HERO ─ full viewport ────────────────── */}
-      <section className="relative z-10 mx-auto max-w-7xl px-8 min-h-[88vh] flex items-center">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.05fr] gap-16 lg:gap-12 items-center w-full">
+      <section className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 min-h-[88vh] flex items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.05fr] gap-16 lg:gap-12 items-center w-full pt-4 pb-16 lg:pb-0">
           <div className="max-w-xl">
             <p className="font-mono text-[10px] uppercase tracking-[0.5em] text-violet-300/70 mb-9">
               For healthcare · est. 2026
@@ -89,42 +68,50 @@ export default function LandingPage() {
               <Bullet>Policies, training, risk &amp; more</Bullet>
             </ul>
 
-            <div className="flex flex-wrap items-center gap-4">
+            {/* Single primary CTA + subtle secondary as text link */}
+            <div className="flex flex-wrap items-center gap-6">
               <ButtonLink href="/signup" variant="primary" size="lg">
-                Get started →
+                Begin a 14-day trial →
               </ButtonLink>
               <Link
                 href="#about"
-                className="inline-flex items-center h-12 px-5 text-[14px] text-white/85 hover:text-white border border-white/15 hover:border-white/30 rounded-lg transition-all font-sans"
+                className="text-[14px] text-white/65 hover:text-white transition-colors font-sans border-b border-white/15 hover:border-white/40 pb-0.5"
               >
-                Contact us
+                or talk to us
               </Link>
             </div>
 
-            {/* Trust markers — integrated under CTAs */}
-            <div className="flex items-center gap-6 mt-10 font-mono text-[10px] uppercase tracking-[0.3em] text-white/35">
-              <span className="flex items-center gap-2"><Pip /> Secure</span>
-              <span className="flex items-center gap-2"><Pip /> Compliant</span>
-              <span className="flex items-center gap-2"><Pip /> Reliable</span>
-            </div>
+            <p className="mt-7 font-mono text-[10px] uppercase tracking-[0.3em] text-white/35">
+              No credit card · cancel any time
+            </p>
           </div>
 
-          <div className="relative h-[480px] lg:h-[720px] -mx-8 lg:mx-0">
+          <div className="relative h-[440px] sm:h-[520px] lg:h-[700px] -mx-6 sm:-mx-8 lg:mx-0">
             <CosmicOrb />
           </div>
         </div>
       </section>
 
-      {/* ────────────────── FEATURES ─ numbered editorial grid ────────────────── */}
-      <section id="features" className="relative z-10 mx-auto max-w-7xl px-8 py-44">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.6fr] gap-16 lg:gap-20 mb-24">
+      {/* ────────────────── STATS STRIP ─ instrument-panel proof ────────────────── */}
+      <section className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 py-20 sm:py-28">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-white/[0.08] rounded-2xl overflow-hidden">
+          <Stat value="4" unit="Frameworks" detail="HIPAA · SOC 2 · ISO · GDPR" />
+          <Stat value="200+" unit="Controls" detail="One library, every mapping" />
+          <Stat value="24 / 7" unit="Monitoring" detail="Drift caught in minutes" />
+          <Stat value="0" unit="Spreadsheets" detail="Evidence captured live" />
+        </div>
+      </section>
+
+      {/* ────────────────── FEATURES ─ editorial 3+2 grid ────────────────── */}
+      <section id="features" className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 py-24 sm:py-36">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.6fr] gap-12 lg:gap-20 mb-20">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-[0.5em] text-violet-300/70 mb-6">
               Capabilities
             </p>
             <h2
-              className="font-marketing text-[clamp(40px,5vw,68px)] leading-[0.98] text-white"
-              style={{ letterSpacing: "-0.035em", fontWeight: 700 }}
+              className="font-marketing text-[clamp(36px,4.4vw,58px)] leading-[1] text-white"
+              style={{ letterSpacing: "-0.03em", fontWeight: 700 }}
             >
               Five jobs.<br />
               <span className="italic text-violet-200" style={{ fontWeight: 500 }}>
@@ -134,57 +121,103 @@ export default function LandingPage() {
           </div>
           <div className="flex items-end">
             <p className="text-[16px] text-white/60 leading-[1.7] max-w-lg font-sans">
-              Compliance, security, and IT operations united under a single instrument. Built for the practices that can&apos;t afford a full security team and shouldn&apos;t need to.
+              Compliance, security, and IT operations united under a single instrument. Built for practices that can&apos;t afford a security team — and shouldn&apos;t need to.
             </p>
           </div>
         </div>
 
-        {/* Five borderless tiles separated by hairline dividers */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-px bg-white/[0.08] rounded-2xl overflow-hidden">
+        {/* 3-up on top row */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-white/[0.08] rounded-t-2xl overflow-hidden">
           <NumberedFeature n="01" title="Automated Compliance" body="One control verified once satisfies many requirements across all four frameworks." />
           <NumberedFeature n="02" title="24/7 Monitoring" body="Drift alerts the moment encryption, MFA, or backup posture changes." />
           <NumberedFeature n="03" title="Risk Management" body="Guided risk analysis with AI executive summary and remediation plan." />
+        </div>
+        {/* 2-up on bottom row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-white/[0.08] rounded-b-2xl overflow-hidden border-t border-white/[0.08]">
           <NumberedFeature n="04" title="Policies & Training" body="AI-drafted policies for your practice, with acknowledgment tracking." />
           <NumberedFeature n="05" title="Backup & Recovery" body="Validate backups, attest restores, and prove continuity automatically." />
         </div>
       </section>
 
-      {/* ────────────────── CTA ─ atmospheric closing moment ────────────────── */}
+      {/* ────────────────── HOW IT WORKS ─ 3 steps ────────────────── */}
+      <section className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 py-24 sm:py-36">
+        <div className="text-center max-w-2xl mx-auto mb-20">
+          <p className="font-mono text-[10px] uppercase tracking-[0.5em] text-violet-300/70 mb-5">
+            How it works
+          </p>
+          <h2
+            className="font-marketing text-[clamp(34px,4vw,52px)] leading-[1.03] text-white"
+            style={{ letterSpacing: "-0.03em", fontWeight: 700 }}
+          >
+            Three steps to{" "}
+            <span className="italic text-violet-200" style={{ fontWeight: 500 }}>
+              audit-ready
+            </span>.
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-16">
+          <Step
+            n="01"
+            title="Connect"
+            body="Sign in once and link Microsoft 365, your backup provider, and any other system. Fortify maps your environment to the control library automatically."
+          />
+          <Step
+            n="02"
+            title="Verify"
+            body="Hourly checks run quietly in the background — verifying MFA, encryption, audit logs, backup health. Drift becomes a notification, not a discovery during an audit."
+          />
+          <Step
+            n="03"
+            title="Export"
+            body="When the auditor knocks, you export the evidence packet — policies, attestations, drift history, executive summary. Audit-ready in seconds."
+          />
+        </div>
+      </section>
+
+      {/* ────────────────── CTA ─ the closing event ────────────────── */}
       <section
         id="about"
-        className="relative z-10 mx-auto max-w-5xl px-8 py-48 text-center"
-        style={{
-          background:
-            "radial-gradient(ellipse 70% 60% at 50% 50%, rgba(139,92,246,0.16) 0%, transparent 75%)",
-        }}
+        className="relative z-10 mx-auto max-w-5xl px-6 sm:px-8 py-32 sm:py-44 text-center"
       >
-        <p className="font-mono text-[10px] uppercase tracking-[0.5em] text-violet-300/70 mb-7">
-          Begin
-        </p>
-        <h2
-          className="font-marketing text-[clamp(40px,5.5vw,76px)] leading-[0.96] text-white mb-9"
-          style={{ letterSpacing: "-0.04em", fontWeight: 700 }}
+        <div
+          className="relative rounded-[28px] py-20 sm:py-28 px-8 overflow-hidden"
+          style={{
+            background:
+              "radial-gradient(ellipse 70% 80% at 50% 40%, rgba(139,92,246,0.22) 0%, transparent 75%), linear-gradient(180deg, rgba(20,8,52,0.5) 0%, rgba(10,4,30,0.2) 100%)",
+            border: "1px solid rgba(167,139,250,0.18)",
+            boxShadow:
+              "0 0 80px rgba(139,92,246,0.15), inset 0 1px 0 rgba(255,255,255,0.05)",
+          }}
         >
-          Ready to{" "}
-          <span className="italic text-violet-200" style={{ fontWeight: 500 }}>
-            secure
-          </span>{" "}
-          your practice?
-        </h2>
-        <p className="text-[16px] text-white/60 leading-[1.7] mb-12 max-w-xl mx-auto font-sans">
-          Join a growing community of healthcare practices automating compliance, reducing risk, and protecting patient data — in days, not months.
-        </p>
-        <ButtonLink href="/signup" variant="primary" size="lg">
-          Begin a 14-day trial →
-        </ButtonLink>
-        <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-white/35 mt-5">
-          No credit card · cancel any time
-        </p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.5em] text-violet-300/70 mb-7">
+            Begin
+          </p>
+          <h2
+            className="font-marketing text-[clamp(40px,5.5vw,76px)] leading-[0.96] text-white mb-9"
+            style={{ letterSpacing: "-0.04em", fontWeight: 700 }}
+          >
+            Ready to{" "}
+            <span className="italic text-violet-200" style={{ fontWeight: 500 }}>
+              secure
+            </span>{" "}
+            your practice?
+          </h2>
+          <p className="text-[16px] text-white/65 leading-[1.7] mb-12 max-w-xl mx-auto font-sans">
+            Join a growing community of healthcare practices automating compliance, reducing risk, and protecting patient data — in days, not months.
+          </p>
+          <ButtonLink href="/signup" variant="primary" size="lg">
+            Begin a 14-day trial →
+          </ButtonLink>
+          <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-white/35 mt-6">
+            No credit card · cancel any time
+          </p>
+        </div>
       </section>
 
       {/* ────────────────── FOOTER ────────────────── */}
-      <footer className="relative z-10 border-t border-white/[0.08] mt-32">
-        <div className="mx-auto max-w-7xl px-8 py-20 grid grid-cols-2 sm:grid-cols-4 gap-12 font-sans">
+      <footer className="relative z-10 border-t border-white/[0.08] mt-12">
+        <div className="mx-auto max-w-7xl px-6 sm:px-8 py-16 sm:py-20 grid grid-cols-2 sm:grid-cols-4 gap-10 sm:gap-12 font-sans">
           <div className="col-span-2 sm:col-span-1">
             <div className="flex items-center gap-2.5 mb-5">
               <span className="relative w-[18px] h-[18px] flex items-center justify-center">
@@ -200,7 +233,7 @@ export default function LandingPage() {
             </p>
             <div className="flex items-center gap-3 mt-7 text-white/40">
               <a href="#" aria-label="LinkedIn" className="hover:text-white transition-colors"><SocialIcon kind="linkedin" /></a>
-              <a href="#" aria-label="X" className="hover:text-white transition-colors"><SocialIcon kind="x" /></a>
+              <a href="#" aria-label="X (Twitter)" className="hover:text-white transition-colors"><SocialIcon kind="x" /></a>
               <a href="#" aria-label="GitHub" className="hover:text-white transition-colors"><SocialIcon kind="github" /></a>
             </div>
           </div>
@@ -225,7 +258,7 @@ export default function LandingPage() {
           ]} />
         </div>
         <div className="border-t border-white/[0.06]">
-          <div className="mx-auto max-w-7xl px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-white/40 font-sans">
+          <div className="mx-auto max-w-7xl px-6 sm:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-white/40 font-sans">
             <p>© 2026 Fortify. All rights reserved.</p>
             <p className="inline-flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 6px rgba(16,185,129,0.7)" }} />
@@ -255,18 +288,26 @@ function Bullet({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Pip() {
+function Stat({ value, unit, detail }: { value: string; unit: string; detail: string }) {
   return (
-    <span
-      className="w-1 h-1 rounded-full bg-violet-300/70"
-      style={{ boxShadow: "0 0 6px rgba(167,139,250,0.7)" }}
-    />
+    <div className="bg-[#04031a] px-6 py-8 sm:px-8 sm:py-10">
+      <p
+        className="font-marketing text-[clamp(36px,5vw,56px)] tabular-nums text-white leading-none mb-3"
+        style={{ letterSpacing: "-0.03em", fontWeight: 700 }}
+      >
+        {value}
+      </p>
+      <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-violet-300/80 mb-1.5">
+        {unit}
+      </p>
+      <p className="text-[12px] text-white/45 font-sans leading-relaxed">{detail}</p>
+    </div>
   );
 }
 
 function NumberedFeature({ n, title, body }: { n: string; title: string; body: string }) {
   return (
-    <div className="bg-[#04031a] p-8 hover:bg-white/[0.025] transition-colors flex flex-col h-full">
+    <div className="bg-[#04031a] p-8 sm:p-10 hover:bg-white/[0.025] transition-colors flex flex-col h-full">
       <p
         className="font-marketing text-2xl text-violet-300/55 mb-8"
         style={{ letterSpacing: "-0.02em", fontWeight: 500 }}
@@ -274,12 +315,35 @@ function NumberedFeature({ n, title, body }: { n: string; title: string; body: s
         {n}
       </p>
       <h3
-        className="font-marketing text-[19px] text-white mb-3"
+        className="font-marketing text-[20px] text-white mb-3"
         style={{ letterSpacing: "-0.015em", fontWeight: 600 }}
       >
         {title}
       </h3>
-      <p className="text-xs text-white/55 leading-[1.7] font-sans">{body}</p>
+      <p className="text-[13px] text-white/55 leading-[1.75] font-sans">{body}</p>
+    </div>
+  );
+}
+
+function Step({ n, title, body }: { n: string; title: string; body: string }) {
+  return (
+    <div className="relative">
+      <div className="flex items-baseline gap-4 mb-5">
+        <span
+          className="font-marketing text-2xl text-violet-300/60"
+          style={{ letterSpacing: "-0.02em", fontWeight: 500 }}
+        >
+          {n}
+        </span>
+        <span className="flex-1 h-px bg-white/[0.08]" />
+      </div>
+      <h3
+        className="font-marketing text-[24px] text-white mb-3"
+        style={{ letterSpacing: "-0.02em", fontWeight: 600 }}
+      >
+        {title}
+      </h3>
+      <p className="text-[14px] text-white/60 leading-[1.7] font-sans max-w-sm">{body}</p>
     </div>
   );
 }

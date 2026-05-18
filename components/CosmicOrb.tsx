@@ -56,26 +56,18 @@ export default function CosmicOrb() {
           }}
         />
 
-        {/* Slowly rotating wireframe latitudes — gives subtle 3D motion */}
-        <div
-          className="absolute inset-0 rounded-full overflow-hidden pointer-events-none"
-          style={{
-            animation: "orb-rotate 80s linear infinite",
-            transformOrigin: "center",
-          }}
-        >
+        {/* Static wireframe latitudes — gives subtle 3D depth without motion noise */}
+        <div className="absolute inset-0 rounded-full overflow-hidden pointer-events-none">
           <svg viewBox="0 0 100 100" className="w-full h-full">
-            <g fill="none" stroke="rgba(196,181,253,0.22)" strokeWidth="0.15">
-              <ellipse cx="50" cy="50" rx="49" ry="6" />
-              <ellipse cx="50" cy="50" rx="49" ry="18" />
-              <ellipse cx="50" cy="50" rx="49" ry="32" />
-              <ellipse cx="50" cy="50" rx="49" ry="44" />
+            <g fill="none" stroke="rgba(196,181,253,0.2)" strokeWidth="0.15">
+              <ellipse cx="50" cy="50" rx="49" ry="8" />
+              <ellipse cx="50" cy="50" rx="49" ry="22" />
+              <ellipse cx="50" cy="50" rx="49" ry="36" />
             </g>
-            <g fill="none" stroke="rgba(196,181,253,0.13)" strokeWidth="0.12">
-              <ellipse cx="50" cy="50" rx="6" ry="49" />
-              <ellipse cx="50" cy="50" rx="18" ry="49" />
-              <ellipse cx="50" cy="50" rx="32" ry="49" />
-              <ellipse cx="50" cy="50" rx="44" ry="49" />
+            <g fill="none" stroke="rgba(196,181,253,0.12)" strokeWidth="0.12">
+              <ellipse cx="50" cy="50" rx="8" ry="49" />
+              <ellipse cx="50" cy="50" rx="22" ry="49" />
+              <ellipse cx="50" cy="50" rx="36" ry="49" />
             </g>
           </svg>
         </div>
@@ -147,16 +139,16 @@ export default function CosmicOrb() {
         </div>
       </div>
 
-      {/* ── Floating particles around the orb ─────────────────────────── */}
+      {/* ── A small constellation of particles around the orb (8, not 18) ── */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden>
-        {Array.from({ length: 18 }).map((_, i) => {
-          const angle = (i * 360) / 18;
-          const radius = 48 + (i % 4) * 5;
+        {Array.from({ length: 8 }).map((_, i) => {
+          const angle = (i * 360) / 8 + 22;
+          const radius = 52 + (i % 2) * 6;
           const rad = (angle * Math.PI) / 180;
           const x = 50 + Math.cos(rad) * radius;
           const y = 50 + Math.sin(rad) * radius;
-          const size = 1 + (i % 4) * 0.6;
-          const delay = (i * 0.35) % 6;
+          const size = 1.4 + (i % 3) * 0.6;
+          const delay = (i * 0.6) % 4;
           return (
             <span
               key={i}
@@ -167,8 +159,8 @@ export default function CosmicOrb() {
                 width: `${size}px`,
                 height: `${size}px`,
                 background: "rgba(196,181,253,0.85)",
-                boxShadow: "0 0 5px rgba(196,181,253,0.9)",
-                animation: `particle-drift 7s ease-in-out infinite`,
+                boxShadow: "0 0 6px rgba(196,181,253,0.9)",
+                animation: `particle-drift 9s ease-in-out infinite`,
                 animationDelay: `${delay}s`,
               }}
             />
