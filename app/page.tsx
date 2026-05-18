@@ -43,29 +43,32 @@ export default function LandingPage() {
       <section className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 min-h-[88vh] flex items-center">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.05fr] gap-16 lg:gap-12 items-center w-full pt-4 pb-16 lg:pb-0">
           <div className="max-w-xl">
-            <p className="font-mono text-[10px] uppercase tracking-[0.5em] text-violet-300/70 mb-9">
-              For healthcare · est. 2026
-            </p>
             <h1
-              className="font-marketing text-[clamp(52px,7vw,96px)] leading-[0.93] text-white mb-9"
+              className="font-marketing text-[clamp(48px,6.5vw,88px)] text-white mb-10"
               style={{
-                letterSpacing: "-0.04em",
+                letterSpacing: "-0.035em",
                 fontWeight: 700,
+                lineHeight: "1.02",
                 fontVariationSettings: '"SOFT" 35, "opsz" 144',
               }}
             >
-              Healthcare<br />
-              <span className="italic text-violet-200" style={{ fontWeight: 500 }}>compliance</span>,<br />
-              <span className="text-white/85">made</span> simple.
+              <span className="block">Healthcare</span>
+              <span className="block italic text-violet-200 mt-1" style={{ fontWeight: 500 }}>
+                compliance,
+              </span>
+              <span className="block mt-1">
+                <span className="text-white/85">made</span> simple.
+              </span>
             </h1>
-            <p className="text-[16px] text-white/60 leading-[1.65] mb-10 max-w-md font-sans">
-              One instrument for HIPAA, SOC 2, ISO 27001, and GDPR. Continuous monitoring, automated evidence, AI-assisted remediation. Your practice stays audit-ready twenty-four hours a day.
+
+            <p className="text-[16px] text-white/65 leading-[1.7] mb-10 max-w-md font-sans">
+              Verified instrument for HIPAA, SOC 2, ISO 27001, and GDPR. Continuous monitoring. Remediation automation. Verifiable evidence. Your practice stays audit-ready.
             </p>
 
             <ul className="space-y-3.5 mb-10 font-sans">
-              <Bullet>24/7 security monitoring</Bullet>
-              <Bullet>Automated evidence collection</Bullet>
-              <Bullet>Policies, training, risk &amp; more</Bullet>
+              <Bullet>24/7 Security Assurance</Bullet>
+              <Bullet>Automated Compliance Monitoring</Bullet>
+              <Bullet>Policies, Training, More</Bullet>
             </ul>
 
             {/* Single primary CTA + subtle secondary as text link */}
@@ -219,15 +222,12 @@ export default function LandingPage() {
       <footer className="relative z-10 border-t border-white/[0.08] mt-12">
         <div className="mx-auto max-w-7xl px-6 sm:px-8 py-16 sm:py-20 grid grid-cols-2 sm:grid-cols-4 gap-10 sm:gap-12 font-sans">
           <div className="col-span-2 sm:col-span-1">
-            <div className="flex items-center gap-2.5 mb-5">
-              <span className="relative w-[18px] h-[18px] flex items-center justify-center">
-                <span className="absolute inset-0 rounded-full bg-violet-500/30 blur-md" />
-                <span className="relative w-2.5 h-2.5 rounded-full bg-violet-300" />
-              </span>
-              <span className="font-mono text-[11px] font-semibold tracking-[0.45em] text-white uppercase">
-                Fortify
-              </span>
-            </div>
+            <Link
+              href="/"
+              className="font-mono text-[13px] font-bold tracking-[0.45em] text-white uppercase hover:text-violet-200 transition-colors block mb-5"
+            >
+              Fortify
+            </Link>
             <p className="text-xs text-white/55 leading-[1.7] max-w-xs">
               Compliance, security, and IT operations — unified for healthcare.
             </p>

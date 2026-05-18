@@ -45,18 +45,16 @@ export default function MarketingNav({ active }: { active?: "features" | "intel"
   return (
     <>
       <header className="relative z-30 mx-auto max-w-7xl px-6 sm:px-8 py-6 sm:py-7 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5" aria-label="Fortify home">
-          <span className="relative w-[18px] h-[18px] flex items-center justify-center">
-            <span className="absolute inset-0 rounded-full bg-violet-500/30 blur-md" />
-            <span className="relative w-2.5 h-2.5 rounded-full bg-violet-300" />
-          </span>
-          <span className="font-mono text-[12px] font-semibold tracking-[0.45em] text-white uppercase">
-            Fortify
-          </span>
+        <Link
+          href="/"
+          aria-label="Fortify — home"
+          className="font-mono text-[14px] font-bold tracking-[0.45em] text-white uppercase hover:text-violet-200 transition-colors"
+        >
+          Fortify
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-10 text-[13px] font-sans">
+        <nav className="hidden md:flex items-center gap-10 text-[15px] font-medium font-sans">
           {navLink("/#features", "Features", "features")}
           {navLink("/intel", "Intel", "intel")}
           {navLink("/#about", "About", "about")}
@@ -66,7 +64,7 @@ export default function MarketingNav({ active }: { active?: "features" | "intel"
         <div className="flex items-center gap-3">
           <Link
             href="/login"
-            className="hidden md:block text-[13px] text-white/80 hover:text-white transition-colors font-sans"
+            className="hidden md:block text-[15px] font-medium text-white/80 hover:text-white transition-colors font-sans"
           >
             Login
           </Link>
@@ -93,14 +91,12 @@ export default function MarketingNav({ active }: { active?: "features" | "intel"
           aria-modal="true"
         >
           <div className="px-6 py-6 flex items-center justify-between">
-            <Link href="/" onClick={() => setOpen(false)} className="flex items-center gap-2.5">
-              <span className="relative w-[18px] h-[18px] flex items-center justify-center">
-                <span className="absolute inset-0 rounded-full bg-violet-500/30 blur-md" />
-                <span className="relative w-2.5 h-2.5 rounded-full bg-violet-300" />
-              </span>
-              <span className="font-mono text-[12px] font-semibold tracking-[0.45em] text-white uppercase">
-                Fortify
-              </span>
+            <Link
+              href="/"
+              onClick={() => setOpen(false)}
+              className="font-mono text-[14px] font-bold tracking-[0.45em] text-white uppercase"
+            >
+              Fortify
             </Link>
             <button
               onClick={() => setOpen(false)}
