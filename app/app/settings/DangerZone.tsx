@@ -40,7 +40,7 @@ export default function DangerZone({
         setLeaveError(body.error ?? "Failed to leave");
         return;
       }
-      router.push("/app/onboarding/new-practice");
+      router.push("/app/onboarding");
       router.refresh();
     } finally {
       setLeaving(false);
@@ -61,7 +61,7 @@ export default function DangerZone({
         setDeleteError(body.error ?? "Failed to delete");
         return;
       }
-      router.push("/app/onboarding/new-practice");
+      router.push("/app/onboarding");
       router.refresh();
     } finally {
       setDeleting(false);

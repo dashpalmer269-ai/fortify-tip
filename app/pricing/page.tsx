@@ -21,7 +21,7 @@ export default function PricingPage() {
         </Link>
         <nav className="flex items-center gap-6 text-sm">
           <Link href="/login" className="text-[var(--color-secondary)] hover:text-[var(--color-primary)] transition-colors">Sign in</Link>
-          <ButtonLink href="/signup" size="sm" variant="primary">Begin trial</ButtonLink>
+          <ButtonLink href="/signup" size="sm" variant="primary">Sign Up</ButtonLink>
         </nav>
       </header>
 

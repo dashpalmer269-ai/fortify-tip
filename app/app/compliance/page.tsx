@@ -11,7 +11,7 @@ export default async function CompliancePage({
 }) {
   const session = await getCurrentUserAndPractice();
   if (!session) redirect("/login");
-  if (!session.membership) redirect("/app/onboarding/new-practice");
+  if (!session.membership) redirect("/app/onboarding");
 
   const supabase = await createAuthedServerClient();
   const params = await searchParams;

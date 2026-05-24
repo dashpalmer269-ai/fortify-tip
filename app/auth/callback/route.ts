@@ -4,14 +4,14 @@ import { sendEmail } from "@/lib/email/provider";
 import { welcomeEmail } from "@/lib/email/templates";
 
 /**
- * Email-verification + magic-link callback.
- * Supabase redirects here with ?code=… after the user clicks the email link.
- * On first verification we fire a welcome email (no-ops if RESEND_API_KEY is unset).
+ * Post-verification + magic-link + OAuth callback.
+ * Exchanges code → session, fires welcome email (no-op without RESEND key),
+ * routes the user into onboarding or the dashboard depending on practice state.
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/app/onboarding/new-practice";
+  const next = searchParams.get("next");
 
   if (!code) return NextResponse.redirect(`${origin}/login?error=missing_code`);
 
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=callback_failed`);
   }
 
-  // Fire welcome email (best-effort, no await blocking the redirect for too long)
+  // Fire welcome email (best-effort)
   if (data.user.email) {
     try {
       await sendEmail({
@@ -31,9 +31,27 @@ export async function GET(request: NextRequest) {
         tag: "welcome",
       });
     } catch {
-      // Swallow — email failure must not block sign-up
+      /* email failure must not block sign-up */
     }
   }
 
-  return NextResponse.redirect(`${origin}${next}`);
+  // Honor explicit `?next=` redirect when present
+  if (next) return NextResponse.redirect(`${origin}${next}`);
+
+  // Otherwise route based on practice/onboarding state
+  const { data: membership } = await supabase
+    .from("practice_users")
+    .select("practice_id, practices(onboarding_step)")
+    .eq("user_id", data.user.id)
+    .limit(1)
+    .maybeSingle();
+
+  if (!membership) {
+    return NextResponse.redirect(`${origin}/app/onboarding`);
+  }
+  const step = (membership.practices as unknown as { onboarding_step?: string } | null)?.onboarding_step;
+  if (!step || step === "completed") {
+    return NextResponse.redirect(`${origin}/app`);
+  }
+  return NextResponse.redirect(`${origin}/app/onboarding`);
 }

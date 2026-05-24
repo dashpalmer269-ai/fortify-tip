@@ -75,13 +75,13 @@ export default function LandingPage() {
             {/* Single primary CTA + subtle secondary as text link */}
             <div className="flex flex-wrap items-center gap-6">
               <ButtonLink href="/signup" variant="primary" size="lg">
-                Begin a 14-day trial →
+                Sign Up →
               </ButtonLink>
               <Link
                 href="#about"
                 className="text-[14px] text-white/65 hover:text-white transition-colors font-sans border-b border-white/15 hover:border-white/40 pb-0.5"
               >
-                or talk to us
+                Contact Us
               </Link>
             </div>
 
@@ -211,7 +211,7 @@ export default function LandingPage() {
             Join a growing community of healthcare practices automating compliance, reducing risk, and protecting patient data — in days, not months.
           </p>
           <ButtonLink href="/signup" variant="primary" size="lg">
-            Begin a 14-day trial →
+            Sign Up →
           </ButtonLink>
           <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-white/35 mt-6">
             No credit card · cancel any time

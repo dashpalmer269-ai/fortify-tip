@@ -19,7 +19,7 @@ interface ReportRow {
 export default async function ReportsPage() {
   const session = await getCurrentUserAndPractice();
   if (!session) redirect("/login");
-  if (!session.membership) redirect("/app/onboarding/new-practice");
+  if (!session.membership) redirect("/app/onboarding");
 
   const supabase = await createAuthedServerClient();
   const { data: reports } = await supabase

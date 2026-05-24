@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const session = await getCurrentUserAndPractice();
   if (!session) redirect("/login");
-  if (!session.membership) redirect("/app/onboarding/new-practice");
+  if (!session.membership) redirect("/app/onboarding");
 
   const practice = session.membership.practices as unknown as {
     id: string;

@@ -25,7 +25,7 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const session = await getCurrentUserAndPractice();
   if (!session) redirect("/login");
-  if (!session.membership) redirect("/app/onboarding/new-practice");
+  if (!session.membership) redirect("/app/onboarding");
 
   const supabase = await createAuthedServerClient();
   const { data } = await supabase

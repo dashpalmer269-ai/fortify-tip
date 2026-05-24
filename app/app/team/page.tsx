@@ -18,7 +18,7 @@ export interface TeamMember {
 export default async function TeamPage() {
   const session = await getCurrentUserAndPractice();
   if (!session) redirect("/login");
-  if (!session.membership) redirect("/app/onboarding/new-practice");
+  if (!session.membership) redirect("/app/onboarding");
 
   const supabase = await createAuthedServerClient();
   const { data: members } = await supabase

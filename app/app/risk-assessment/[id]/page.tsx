@@ -30,7 +30,7 @@ export default async function AssessmentDetailPage({ params }: { params: Promise
   const { id } = await params;
   const session = await getCurrentUserAndPractice();
   if (!session) redirect("/login");
-  if (!session.membership) redirect("/app/onboarding/new-practice");
+  if (!session.membership) redirect("/app/onboarding");
 
   const supabase = await createAuthedServerClient();
   const { data } = await supabase

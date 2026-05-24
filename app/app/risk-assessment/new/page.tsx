@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function NewRiskAssessmentPage() {
   const session = await getCurrentUserAndPractice();
   if (!session) redirect("/login");
-  if (!session.membership) redirect("/app/onboarding/new-practice");
+  if (!session.membership) redirect("/app/onboarding");
 
   return (
     <div className="px-8 py-10 max-w-2xl mx-auto">

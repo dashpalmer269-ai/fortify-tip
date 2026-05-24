@@ -69,7 +69,7 @@ export default function PricingCard({ plan, featured }: { plan: Plan; featured?:
         size="md"
         className="w-full"
       >
-        Start free trial
+        Sign Up
       </Button>
       {error && <p className="text-xs text-[var(--color-danger)] mt-2 text-center">{error}</p>}
     </Card>

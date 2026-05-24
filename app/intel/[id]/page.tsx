@@ -191,7 +191,7 @@ export default async function PublicThreatDetail({ params }: { params: Promise<{
             href="/signup"
             className="inline-flex items-center h-11 px-5 text-sm font-medium rounded-lg bg-violet-500 hover:bg-violet-400 text-white transition-colors shadow-[0_0_24px_rgba(139,92,246,0.45)]"
           >
-            Begin trial →
+            Sign Up →
           </Link>
         </div>
       </article>

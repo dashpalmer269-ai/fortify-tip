@@ -33,7 +33,7 @@ export default function IntelLayout({ children }: { children: React.ReactNode })
         <div className="mx-auto max-w-7xl px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-white/45">
           <p className="font-mono uppercase tracking-[0.3em]">Fortify · Intel</p>
           <div className="flex items-center gap-6">
-            <Link href="/signup" className="hover:text-white transition-colors">Begin trial</Link>
+            <Link href="/signup" className="hover:text-white transition-colors">Sign Up</Link>
             <Link href="/" className="hover:text-white transition-colors">Home</Link>
           </div>
         </div>

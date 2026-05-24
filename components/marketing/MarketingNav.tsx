@@ -121,7 +121,7 @@ export default function MarketingNav({ active }: { active?: "features" | "intel"
               onClick={() => setOpen(false)}
               className="text-violet-300 hover:text-violet-200 text-2xl"
             >
-              Begin trial →
+              Sign Up →
             </Link>
           </nav>
         </div>

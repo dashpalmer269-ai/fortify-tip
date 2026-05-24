@@ -45,7 +45,7 @@ export default async function IntegrationsPage({
 }) {
   const session = await getCurrentUserAndPractice();
   if (!session) redirect("/login");
-  if (!session.membership) redirect("/app/onboarding/new-practice");
+  if (!session.membership) redirect("/app/onboarding");
   const params = await searchParams;
 
   const supabase = await createAuthedServerClient();
