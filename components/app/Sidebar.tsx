@@ -25,12 +25,24 @@ export default function Sidebar({ practiceName }: { practiceName: string }) {
 
   return (
     <aside className="w-60 shrink-0 border-r border-[var(--color-border-subtle)] flex flex-col bg-[var(--color-canvas)]">
-      {/* Practice identity */}
-      <div className="px-5 py-6 border-b border-[var(--color-border-subtle)]">
+      {/* Brand mark — home button to the marketing site */}
+      <div className="px-5 pt-5 pb-4 border-b border-[var(--color-border-subtle)]">
+        <Link
+          href="/"
+          aria-label="Fortify — home"
+          className="font-mono text-[12px] font-bold tracking-[0.45em] text-[var(--color-primary)] uppercase hover:text-violet-300 transition-colors block mb-4"
+        >
+          Fortify
+        </Link>
         <p className="font-mono text-[9px] uppercase tracking-[0.35em] text-[var(--color-quaternary)] mb-1.5">
           Practice
         </p>
-        <Link href="/app" className="font-display text-lg text-[var(--color-primary)] block leading-tight truncate" style={{ letterSpacing: "-0.01em" }} title={practiceName}>
+        <Link
+          href="/app"
+          className="font-display text-base text-[var(--color-primary)] block leading-tight truncate hover:text-violet-300 transition-colors"
+          style={{ letterSpacing: "-0.01em" }}
+          title={practiceName}
+        >
           {practiceName}
         </Link>
       </div>

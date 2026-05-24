@@ -23,9 +23,12 @@ export default function TopBar({ userEmail, role }: Props) {
 
   return (
     <header className="h-14 shrink-0 border-b border-[var(--color-border-subtle)] flex items-center justify-between px-8 bg-[var(--color-canvas)]">
-      <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-[var(--color-quaternary)]">
-        Fortify ·  <span className="text-[var(--color-tertiary)]">Workspace</span>
-      </p>
+      <Link
+        href="/app"
+        className="font-mono text-[10px] uppercase tracking-[0.4em] text-[var(--color-quaternary)] hover:text-[var(--color-primary)] transition-colors"
+      >
+        Workspace
+      </Link>
 
       <div className="relative" ref={ref}>
         <button

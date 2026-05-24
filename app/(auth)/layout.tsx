@@ -9,8 +9,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="px-8 py-6">
           <Link
             href="/"
-            className="font-display text-xl italic text-[var(--color-primary)]"
-            style={{ letterSpacing: "-0.01em" }}
+            aria-label="Fortify — home"
+            className="font-mono text-[14px] font-bold tracking-[0.45em] text-[var(--color-primary)] uppercase hover:text-violet-300 transition-colors"
           >
             Fortify
           </Link>
