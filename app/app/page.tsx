@@ -26,9 +26,9 @@ export default async function DashboardPage() {
 
     const { data: openPolicies } = await supabase
       .from("policies")
-      .select("id, title, status, requires_acknowledgement, updated_at")
+      .select("id, title, framework, policy_type, status, updated_at")
       .eq("practice_id", session.membership.practice_id)
-      .eq("status", "published")
+      .eq("status", "active")
       .order("updated_at", { ascending: false })
       .limit(5);
 

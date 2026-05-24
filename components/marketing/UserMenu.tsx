@@ -67,7 +67,7 @@ export default function UserMenu({ viewer }: { viewer: UserMenuViewer }) {
   const primaryHref = viewer.hasMembership
     ? "/app"
     : viewer.accountType === "employee"
-    ? "/app/pending"
+    ? "/pending"
     : "/app/onboarding";
   const primaryLabel = viewer.hasMembership
     ? "Open dashboard"

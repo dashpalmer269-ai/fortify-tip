@@ -6,12 +6,13 @@ import { welcomeEmail } from "@/lib/email/templates";
 /**
  * Post-verification + magic-link + OAuth callback.
  * Exchanges code → session, fires welcome email (no-op without RESEND key),
- * routes the user into onboarding or the dashboard depending on practice state.
+ * routes the user into onboarding / pending / dashboard based on state.
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
   const next = searchParams.get("next");
+  const accountTypeParam = searchParams.get("account_type");
 
   if (!code) return NextResponse.redirect(`${origin}/login?error=missing_code`);
 
@@ -21,7 +22,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=callback_failed`);
   }
 
-  // Fire welcome email (best-effort)
+  // For OAuth signups, the account_type came via query param, not signUp().
+  // Persist it to user_metadata if not already set.
+  const existingMeta = data.user.user_metadata?.account_type;
+  if (!existingMeta && (accountTypeParam === "admin" || accountTypeParam === "employee")) {
+    try {
+      await supabase.auth.updateUser({ data: { account_type: accountTypeParam } });
+    } catch {
+      /* don't block sign-in if metadata write fails */
+    }
+  }
+  const accountType: "admin" | "employee" =
+    (existingMeta as "admin" | "employee" | undefined) ??
+    (accountTypeParam === "employee" ? "employee" : "admin");
+
   if (data.user.email) {
     try {
       await sendEmail({
@@ -38,7 +52,6 @@ export async function GET(request: NextRequest) {
   // Honor explicit `?next=` redirect when present
   if (next) return NextResponse.redirect(`${origin}${next}`);
 
-  // Otherwise route based on practice/onboarding state
   const { data: membership } = await supabase
     .from("practice_users")
     .select("practice_id, practices(onboarding_step)")
@@ -46,12 +59,25 @@ export async function GET(request: NextRequest) {
     .limit(1)
     .maybeSingle();
 
-  if (!membership) {
+  if (membership) {
+    const step = (membership.practices as unknown as { onboarding_step?: string } | null)?.onboarding_step;
+    if (!step || step === "completed") {
+      return NextResponse.redirect(`${origin}/app`);
+    }
     return NextResponse.redirect(`${origin}/app/onboarding`);
   }
-  const step = (membership.practices as unknown as { onboarding_step?: string } | null)?.onboarding_step;
-  if (!step || step === "completed") {
-    return NextResponse.redirect(`${origin}/app`);
+
+  // No membership yet — split on account_type for employees who already submitted.
+  if (accountType === "employee") {
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("onboarded_at")
+      .eq("user_id", data.user.id)
+      .maybeSingle();
+    if (profile?.onboarded_at) {
+      return NextResponse.redirect(`${origin}/pending`);
+    }
   }
+
   return NextResponse.redirect(`${origin}/app/onboarding`);
 }

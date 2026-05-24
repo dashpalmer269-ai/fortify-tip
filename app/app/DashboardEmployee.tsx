@@ -7,8 +7,9 @@ import { ROLE_LABELS, type Role } from "@/lib/auth/permissions";
 interface PolicyRow {
   id: string;
   title: string;
+  framework: string | null;
+  policy_type: string;
   status: string;
-  requires_acknowledgement: boolean | null;
   updated_at: string | null;
 }
 
@@ -115,7 +116,7 @@ export default function DashboardEmployee({
                   <div>
                     <p className="text-sm text-[var(--color-primary)] font-medium mb-1">{p.title}</p>
                     <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-tertiary)]">
-                      {p.requires_acknowledgement ? "Acknowledgement requested" : "Reference"}
+                      {[p.framework, p.policy_type.replace(/_/g, " ")].filter(Boolean).join(" · ")}
                     </p>
                   </div>
                   <span className="text-[var(--color-tertiary)]">→</span>

@@ -56,7 +56,7 @@ export default async function OnboardingHubPage() {
       .select("user_id, full_name, onboarded_at, pending_practice_name, job_title, primary_address, phone")
       .eq("user_id", session.user.id)
       .maybeSingle();
-    if (profile?.onboarded_at) redirect("/app/pending");
+    if (profile?.onboarded_at) redirect("/pending");
 
     return (
       <EmployeeOnboarding

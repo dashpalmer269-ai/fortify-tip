@@ -74,7 +74,7 @@ export default function EmployeeOnboarding({ userEmail, existingProfile }: Props
         setError(body.error ?? "Failed to save");
         return;
       }
-      router.push("/app/pending");
+      router.push("/pending");
       router.refresh();
     } finally {
       setSubmitting(false);
