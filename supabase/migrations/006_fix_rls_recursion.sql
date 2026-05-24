@@ -111,6 +111,8 @@ create policy practice_users_delete on practice_users for delete
   );
 
 -- ── All other tenant tables: use the helpers ─────────────────────────────────
+-- Tolerant: silently skip tables that haven't been created yet
+-- (e.g. if 003/004/005 migrations haven't been run).
 do $$
 declare t text;
 begin
@@ -121,8 +123,17 @@ begin
     'risk_assessments','policies','policy_acknowledgments',
     'training_completions','reports'
   ] loop
-    execute format('drop policy if exists "%1$s_member_read"    on %1$s', t);
-    execute format('drop policy if exists "%1$s_officer_write"  on %1$s', t);
+    -- Skip table if it doesn't exist in this database
+    if not exists (
+      select 1 from information_schema.tables
+      where table_schema = 'public' and table_name = t
+    ) then
+      raise notice 'Skipping % (table does not exist yet)', t;
+      continue;
+    end if;
+
+    execute format('drop policy if exists "%1$s_member_read"   on %1$s', t);
+    execute format('drop policy if exists "%1$s_officer_write" on %1$s', t);
 
     execute format(
       'create policy "%1$s_member_read" on %1$s for select using (user_is_practice_member(practice_id))',
