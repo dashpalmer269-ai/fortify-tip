@@ -1,97 +1,174 @@
-# Fortify — Threat Intelligence Platform
+# Fortify
 
-Real-time cybersecurity threat intelligence powered by AI. Aggregates CVEs, CISA KEV, OTX pulses, and security news, enriched by Claude.
+AI-native compliance and cybersecurity for healthcare practices. One workspace that unifies **HIPAA, SOC 2, ISO 27001, and GDPR** through a single control library — mark a safeguard compliant once, every framework score it satisfies updates automatically.
+
+Built to do what Vanta and Drata do, for healthcare specifically, at roughly **one-tenth the price**.
+
+## What's in the box
+
+| Module | Purpose |
+|---|---|
+| **Dashboard** | Live audit-readiness per framework, critical findings, recent activity |
+| **Compliance** | The unified control library + per-framework coverage views |
+| **Risk Assessment** | Guided 5-minute wizard with Claude-generated executive summaries |
+| **Policies** | Versioned policy documents; AI drafts + acknowledgement tracking |
+| **Vendors / BAAs** | Business Associate Agreements, vendor risk register |
+| **Threat Intel** | NVD CVEs, CISA KEV, OTX pulses, community/forum signals — enriched by Claude |
+| **Reports** | Generated audit-ready PDFs with AI executive summaries |
+| **Audit Log** | Append-only record of every meaningful change |
+| **Team** | Member management with five roles (owner → admin → officer → staff → auditor) |
+| **Billing** | Stripe checkout + plan management |
 
 ## Stack
 
-- **Next.js 16** (App Router) — full-stack framework
-- **Supabase** — PostgreSQL database + service client
-- **Anthropic Claude** (claude-sonnet-4-6) — AI enrichment + search synthesis
-- **Vercel** — hosting + cron jobs (2x daily ingestion)
+- **Next.js 16** (App Router) — full-stack, server components
+- **Supabase** — PostgreSQL + Auth + Row Level Security (multi-tenancy)
+- **Anthropic Claude** — `claude-opus-4-7` for hard reasoning, `claude-sonnet-4-6` for enrichment
+- **Stripe** — billing & checkout
+- **Vercel** — hosting + cron (threat-intel ingestion runs 2× daily)
 - **Tailwind CSS v4** — styling
+- **IBM Plex Serif + Geist + JetBrains Mono + Fraunces** — typography
+
+## Account flows
+
+Sign-up branches at the first step. The user picks **Admin** or **Employee**:
+
+```
+Admin path                       Employee path
+─────────────────                ─────────────────
+1. Information                   1. Information (minimal — name, role,
+   (practice profile,               work address, practice they work at)
+    employees, locations)
+2. Fortification                 2. Submit → /pending
+   (framework selection)            (admin must approve)
+3. Safeguards                    3. Admin adds them to Team
+4. Payment                       4. Dashboard (role-aware)
+5. Welcome → Dashboard
+```
+
+`user_profiles.account_type` (admin|employee) drives the routing. Dashboards diverge by role: **owner/admin/compliance_officer** see the full readiness/findings dashboard; **staff/auditor_readonly** see the simplified employee dashboard.
+
+## Architecture highlights
+
+- **Unified Control Mapping Engine** — one row in `controls` maps to N `framework_requirements` via `framework_mappings`. Compliance percentage is computed by a Postgres function (`audit_readiness_summary`) so the UI never has to re-derive scores.
+- **Multi-tenant by default** — every tenant table is RLS-gated. `SECURITY DEFINER` helpers (`user_is_practice_member`, `user_is_practice_admin`) prevent the policy-recursion footguns common to this pattern.
+- **AI is plumbed throughout, not bolted on** — risk-assessment summaries, policy drafts, report exec summaries, and threat-intel headlines all flow through `lib/ai/`.
 
 ## Setup
 
 ### 1. Supabase
 
-```bash
-# Create a new Supabase project at supabase.com
-# Run the migration in the SQL editor:
-cat supabase/migrations/001_initial.sql
+Create a project at [supabase.com](https://supabase.com), then run each migration in order via the SQL editor:
+
+```
+supabase/migrations/
+  001_initial.sql              threats + ingestion_logs
+  002_compliance_schema.sql    practices, controls, framework_mappings, RLS scaffolding
+  003_vendors_baas.sql         vendor + BAA tables
+  004_risk_policies_reports.sql  risk assessments, policies, reports
+  005_integrations.sql         onboarding integration choices
+  006_fix_rls_recursion.sql    SECURITY DEFINER helpers — MUST run before 008
+  007_onboarding_v2.sql        4-step wizard state fields
+  008_user_profiles.sql        admin/employee account type + employee profile
 ```
 
-### 2. Environment Variables
+After running, update **Authentication → URL Configuration** in the Supabase dashboard to point Site URL at your deployed origin (not `localhost`) — otherwise email verification links will land on `localhost`.
 
-Copy `.env.local` and fill in your keys:
+### 2. Environment variables
+
+Create `.env.local`:
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-...          # Anthropic console
-NEXT_PUBLIC_SUPABASE_URL=https://...  # Supabase project URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...     # Supabase anon key
-SUPABASE_SERVICE_ROLE_KEY=...         # Supabase service role key
-NVD_API_KEY=...                       # nvd.nist.gov/developers (free, optional but raises rate limits)
-OTX_API_KEY=...                       # otx.alienvault.com account
-CRON_SECRET=...                       # Any random secret string
+# Anthropic
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+
+# Stripe (sandbox keys for dev)
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+
+# Threat-intel sources
+NVD_API_KEY=...          # nvd.nist.gov/developers — free, raises rate limits
+OTX_API_KEY=...          # otx.alienvault.com account
+
+# Email (optional — Resend; silently no-ops if absent)
+RESEND_API_KEY=re_...
+
+# Cron auth
+CRON_SECRET=<any random string>
 ```
 
-### 3. Local Development
+### 3. Run it
 
 ```bash
 npm install
-npm run dev
+npm run dev          # localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
-
-### 4. Trigger Ingestion Manually
+Manually trigger threat-intel ingestion:
 
 ```bash
-curl "http://localhost:3000/api/cron/ingest?secret=YOUR_CRON_SECRET"
+curl "http://localhost:3000/api/cron/ingest?secret=$CRON_SECRET"
 ```
 
-### 5. Deploy
+### 4. Deploy
 
 ```bash
-npm install -g vercel
 vercel --prod
 ```
 
-Set all environment variables in the Vercel dashboard (Project → Settings → Environment Variables). Also add `CRON_SECRET` so Vercel's cron can authenticate.
+Add every env var to **Project → Settings → Environment Variables** in Vercel. Vercel cron is already configured (`vercel.json`) to hit `/api/cron/ingest` at 06:00 and 18:00 UTC daily.
 
-Vercel crons run at **06:00 UTC** and **18:00 UTC** daily, automatically hitting `/api/cron/ingest`.
-
-## Project Structure
+## Project structure
 
 ```
 app/
-  page.tsx                  Home — animated sphere, tab cards, search
-  registry/page.tsx         NVD + CISA KEV vulnerabilities
-  community/page.tsx        AlienVault OTX pulses
-  forums/page.tsx           HN + BleepingComputer + Krebs
-  search/page.tsx           AI-powered search results
-  threat/[id]/page.tsx      Full threat detail
-  api/cron/ingest/route.ts  Cron ingestion handler
-  api/search/route.ts       Search endpoint
+  (auth)/login,signup              auth pages (route group keeps them outside /app)
+  app/                             authenticated workspace (sidebar + topbar)
+    page.tsx                       dashboard — branches admin vs employee
+    DashboardClient.tsx            admin/officer dashboard
+    DashboardEmployee.tsx          staff/auditor dashboard
+    onboarding/                    4-step admin wizard + employee verification form
+    compliance, risk-assessment, policies, vendors, threats, reports,
+    audit-log, settings, team, billing, integrations
+  pending/                         employee waiting-for-approval screen
+  auth/callback                    OAuth + email-verify exchange
+  api/                             route handlers (onboarding, billing, cron, etc.)
+  pricing, intel, page.tsx         marketing surface
 
 components/
-  AnimatedSphere.tsx        Canvas particle-network sphere
-  StarfieldBackground.tsx   Canvas starfield
-  PerspectiveGrid.tsx       SVG floor grid
-  ThreatCard.tsx            Threat list card
+  app/                             Sidebar, TopBar (authenticated chrome)
+  marketing/                       MarketingNav, UserMenu (signed-in hamburger)
+  ui/                              Card, Button, PageHeader, Badge — design primitives
 
 lib/
-  types.ts                  TypeScript interfaces
-  supabase/client.ts        Browser Supabase client
-  supabase/server.ts        Server Supabase client (service role)
-  sources/nvd.ts            NVD/NIST CVE adapter
-  sources/cisa.ts           CISA KEV adapter
-  sources/otx.ts            AlienVault OTX adapter
-  sources/hackernews.ts     Hacker News adapter
-  sources/bleepingcomputer.ts  BleepingComputer RSS adapter
-  sources/krebs.ts          Krebs on Security RSS adapter
-  ai/processor.ts           Claude enrichment + search synthesis
+  ai/                              Claude wrappers (risk, policy, report, threat)
+  auth/                            permissions, viewer helpers
+  billing/                         Stripe + plans
+  email/                           Resend templates
+  sources/                         threat-intel adapters (NVD, CISA, OTX, HN, etc.)
+  supabase/                        browser, server, server-auth, middleware clients
 
-supabase/migrations/
-  001_initial.sql           threats + ingestion_logs schema
+supabase/migrations/               see Setup → step 1
 ```
-# fortifydefense
+
+## Roles
+
+| Role | Can do |
+|---|---|
+| `owner` | Everything, including billing and deleting the practice |
+| `admin` | Everything except deleting the practice |
+| `compliance_officer` | Manage controls, evidence, policies, reports |
+| `staff` | Read most of the workspace; acknowledge policies |
+| `auditor_readonly` | Read-only access for external auditors |
+
+Defined in `lib/auth/permissions.ts`. Database RLS is the real gate — the UI just mirrors it.
+
+## Status
+
+Active development. Schema is stabilizing but still evolving — treat the migration list as load-bearing and run them in order on a fresh project.
