@@ -3,10 +3,12 @@ import CosmicOrb from "@/components/CosmicOrb";
 import StarfieldBackground from "@/components/StarfieldBackground";
 import MarketingNav from "@/components/marketing/MarketingNav";
 import { ButtonLink } from "@/components/ui/Button";
+import { getMarketingViewer } from "@/lib/auth/viewer";
 
 export const dynamic = "force-dynamic";
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const viewer = await getMarketingViewer();
   return (
     <div className="relative min-h-screen bg-[#04031a] text-white overflow-hidden font-marketing">
       {/* ── Atmospheric backdrop — three layered radial washes ── */}
@@ -37,7 +39,7 @@ export default function LandingPage() {
         }}
       />
 
-      <MarketingNav active="features" />
+      <MarketingNav active="features" viewer={viewer} />
 
       {/* ────────────────── HERO ─ full viewport ────────────────── */}
       <section className="relative z-10 mx-auto max-w-7xl px-6 sm:px-8 min-h-[88vh] flex items-start">

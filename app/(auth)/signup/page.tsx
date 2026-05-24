@@ -8,9 +8,11 @@ import { Card, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
 const MIN_PASSWORD_LENGTH = 12;
+type AccountType = "admin" | "employee";
 
 export default function SignupPage() {
   const router = useRouter();
+  const [accountType, setAccountType] = useState<AccountType>("admin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [verifyPassword, setVerifyPassword] = useState("");
@@ -19,18 +21,11 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
 
   const validation = useMemo(() => {
-    const issues: string[] = [];
-    if (!email || !email.includes("@")) issues.push("Enter a valid email.");
-    if (password.length < MIN_PASSWORD_LENGTH)
-      issues.push(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
-    if (verifyPassword && password !== verifyPassword)
-      issues.push("Passwords do not match.");
-    if (!verifyPassword && password.length >= MIN_PASSWORD_LENGTH)
-      issues.push("Re-enter your password to confirm.");
-    return {
-      ok: email.includes("@") && password.length >= MIN_PASSWORD_LENGTH && password === verifyPassword,
-      issues,
-    };
+    const ok =
+      email.includes("@") &&
+      password.length >= MIN_PASSWORD_LENGTH &&
+      password === verifyPassword;
+    return { ok };
   }, [email, password, verifyPassword]);
 
   async function handleEmailSignup(e: React.FormEvent) {
@@ -46,6 +41,7 @@ export default function SignupPage() {
         options: {
           emailRedirectTo:
             typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined,
+          data: { account_type: accountType },
         },
       });
       if (error) {
@@ -56,7 +52,6 @@ export default function SignupPage() {
         router.push("/app/onboarding");
         router.refresh();
       } else {
-        // Verification email sent — pass the email through so the next page can show it
         router.push(`/auth/verify-sent?email=${encodeURIComponent(email)}`);
       }
     } finally {
@@ -73,11 +68,13 @@ export default function SignupPage() {
         provider: "google",
         options: {
           redirectTo:
-            typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined,
+            typeof window !== "undefined"
+              ? `${window.location.origin}/auth/callback?account_type=${accountType}`
+              : undefined,
+          queryParams: { account_type: accountType },
         },
       });
       if (error) setError(error.message);
-      // Supabase redirects on success; no further action here
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -97,6 +94,27 @@ export default function SignupPage() {
         <p className="text-[13px] text-[var(--color-tertiary)] mb-7">
           Five-minute onboarding · cancel any time
         </p>
+
+        {/* Account type selector */}
+        <div className="mb-6">
+          <label className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--color-tertiary)] mb-2 block">
+            I am signing up as
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <AccountTypeCard
+              selected={accountType === "admin"}
+              onClick={() => setAccountType("admin")}
+              title="Admin"
+              body="Owner, manager, or compliance lead setting up a practice."
+            />
+            <AccountTypeCard
+              selected={accountType === "employee"}
+              onClick={() => setAccountType("employee")}
+              title="Employee"
+              body="Joining a practice that already uses Fortify."
+            />
+          </div>
+        </div>
 
         {/* Google SSO */}
         <button
@@ -148,7 +166,7 @@ export default function SignupPage() {
             label="Verify password"
             hint={
               verifyPassword && password !== verifyPassword
-                ? "Doesn’t match"
+                ? "Doesn't match"
                 : verifyPassword && password === verifyPassword
                 ? "Match ✓"
                 : ""
@@ -208,6 +226,34 @@ export default function SignupPage() {
         `}</style>
       </CardBody>
     </Card>
+  );
+}
+
+function AccountTypeCard({
+  selected,
+  onClick,
+  title,
+  body,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  title: string;
+  body: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`text-left px-4 py-3 rounded-lg border transition-all ${
+        selected
+          ? "border-violet-400/60 bg-violet-500/10"
+          : "border-[var(--color-border-default)] hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface)]"
+      }`}
+      style={selected ? { boxShadow: "0 0 16px rgba(139,92,246,0.25)" } : undefined}
+    >
+      <p className="text-sm font-semibold text-[var(--color-primary)] mb-1">{title}</p>
+      <p className="text-[11px] text-[var(--color-tertiary)] leading-relaxed">{body}</p>
+    </button>
   );
 }
 

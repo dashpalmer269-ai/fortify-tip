@@ -1,29 +1,20 @@
 import Link from "next/link";
 import StarfieldBackground from "@/components/StarfieldBackground";
+import MarketingNav from "@/components/marketing/MarketingNav";
 import { PLANS } from "@/lib/billing/plans";
-import { ButtonLink } from "@/components/ui/Button";
+import { getMarketingViewer } from "@/lib/auth/viewer";
 import PricingCard from "./PricingCard";
 
 export const dynamic = "force-dynamic";
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const viewer = await getMarketingViewer();
+
   return (
     <div className="relative min-h-screen bg-[var(--color-canvas)] text-[var(--color-primary)] overflow-hidden grain">
       <StarfieldBackground />
 
-      <header className="relative z-20 mx-auto max-w-7xl px-8 py-6 flex items-center justify-between">
-        <Link
-          href="/"
-          className="font-display text-xl text-[var(--color-primary)]"
-          style={{ letterSpacing: "-0.01em" }}
-        >
-          Fortify
-        </Link>
-        <nav className="flex items-center gap-6 text-sm">
-          <Link href="/login" className="text-[var(--color-secondary)] hover:text-[var(--color-primary)] transition-colors">Sign in</Link>
-          <ButtonLink href="/signup" size="sm" variant="primary">Sign Up</ButtonLink>
-        </nav>
-      </header>
+      <MarketingNav viewer={viewer} />
 
       <main className="relative z-10 mx-auto max-w-6xl px-8 py-16">
         <div className="text-center mb-14">

@@ -2,15 +2,22 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import UserMenu, { type UserMenuViewer } from "./UserMenu";
 
 /**
  * Public marketing top-nav. Used on /, /pricing, /intel.
  * Mobile-first: hamburger opens a full-screen overlay on small viewports.
+ * When `viewer` is provided (signed-in user), shows a profile menu instead of "Login".
  */
-export default function MarketingNav({ active }: { active?: "features" | "intel" | "about" }) {
+export default function MarketingNav({
+  active,
+  viewer,
+}: {
+  active?: "features" | "intel" | "about";
+  viewer?: UserMenuViewer | null;
+}) {
   const [open, setOpen] = useState(false);
 
-  // Lock body scroll when overlay is open
   useEffect(() => {
     if (typeof document === "undefined") return;
     document.body.style.overflow = open ? "hidden" : "";
@@ -19,7 +26,6 @@ export default function MarketingNav({ active }: { active?: "features" | "intel"
     };
   }, [open]);
 
-  // Close on Escape
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -42,6 +48,8 @@ export default function MarketingNav({ active }: { active?: "features" | "intel"
       </Link>
     ) : null;
 
+  const signedIn = !!viewer;
+
   return (
     <>
       <header className="relative z-30 mx-auto max-w-7xl px-6 sm:px-8 py-6 sm:py-7 flex items-center justify-between">
@@ -60,31 +68,37 @@ export default function MarketingNav({ active }: { active?: "features" | "intel"
           {navLink("/#about", "About", "about")}
         </nav>
 
-        {/* Desktop login + mobile hamburger */}
+        {/* Signed-in: hamburger profile menu. Signed-out: Login + mobile hamburger. */}
         <div className="flex items-center gap-3">
-          <Link
-            href="/login"
-            className="hidden md:block text-[15px] font-medium text-white/80 hover:text-white transition-colors font-sans"
-          >
-            Login
-          </Link>
-          <button
-            onClick={() => setOpen(true)}
-            className="md:hidden w-10 h-10 -mr-2 flex items-center justify-center rounded-md hover:bg-white/[0.06] transition-colors"
-            aria-label="Open menu"
-            aria-expanded={open}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <line x1="4" y1="7" x2="20" y2="7" />
-              <line x1="4" y1="12" x2="20" y2="12" />
-              <line x1="4" y1="17" x2="20" y2="17" />
-            </svg>
-          </button>
+          {signedIn ? (
+            <UserMenu viewer={viewer!} />
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="hidden md:block text-[15px] font-medium text-white/80 hover:text-white transition-colors font-sans"
+              >
+                Login
+              </Link>
+              <button
+                onClick={() => setOpen(true)}
+                className="md:hidden w-10 h-10 -mr-2 flex items-center justify-center rounded-md hover:bg-white/[0.06] transition-colors"
+                aria-label="Open menu"
+                aria-expanded={open}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <line x1="4" y1="7" x2="20" y2="7" />
+                  <line x1="4" y1="12" x2="20" y2="12" />
+                  <line x1="4" y1="17" x2="20" y2="17" />
+                </svg>
+              </button>
+            </>
+          )}
         </div>
       </header>
 
-      {/* Mobile overlay menu */}
-      {open && (
+      {/* Mobile overlay menu — only used for signed-out viewers */}
+      {open && !signedIn && (
         <div
           className="fixed inset-0 z-50 bg-[#04031a]/96 backdrop-blur-md flex flex-col"
           role="dialog"

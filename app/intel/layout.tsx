@@ -1,7 +1,11 @@
 import Link from "next/link";
 import StarfieldBackground from "@/components/StarfieldBackground";
+import MarketingNav from "@/components/marketing/MarketingNav";
+import { getMarketingViewer } from "@/lib/auth/viewer";
 
-export default function IntelLayout({ children }: { children: React.ReactNode }) {
+export default async function IntelLayout({ children }: { children: React.ReactNode }) {
+  const viewer = await getMarketingViewer();
+
   return (
     <div className="relative min-h-screen bg-[#04031a] text-white overflow-hidden">
       <div
@@ -13,19 +17,7 @@ export default function IntelLayout({ children }: { children: React.ReactNode })
       />
       <StarfieldBackground />
 
-      <header className="relative z-20 mx-auto max-w-7xl px-8 py-7 flex items-center justify-between">
-        <Link href="/" className="font-mono text-[12px] font-semibold tracking-[0.4em] text-white uppercase">
-          Fortify
-        </Link>
-        <nav className="hidden md:flex items-center gap-10 text-[13px] text-white/65">
-          <Link href="/#features" className="hover:text-white transition-colors">Features</Link>
-          <Link href="/intel" className="text-white">Intel</Link>
-          <Link href="/#about" className="hover:text-white transition-colors">About</Link>
-        </nav>
-        <Link href="/login" className="text-[13px] text-white/80 hover:text-white transition-colors">
-          Login
-        </Link>
-      </header>
+      <MarketingNav active="intel" viewer={viewer} />
 
       <main className="relative z-10">{children}</main>
 
@@ -33,7 +25,9 @@ export default function IntelLayout({ children }: { children: React.ReactNode })
         <div className="mx-auto max-w-7xl px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-white/45">
           <p className="font-mono uppercase tracking-[0.3em]">Fortify · Intel</p>
           <div className="flex items-center gap-6">
-            <Link href="/signup" className="hover:text-white transition-colors">Sign Up</Link>
+            {!viewer && (
+              <Link href="/signup" className="hover:text-white transition-colors">Sign Up</Link>
+            )}
             <Link href="/" className="hover:text-white transition-colors">Home</Link>
           </div>
         </div>
