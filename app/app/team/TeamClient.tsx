@@ -1,0 +1,364 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardBody } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import Badge from "@/components/ui/Badge";
+import {
+  ASSIGNABLE_ROLES,
+  ROLE_LABELS,
+  ROLE_DESCRIPTIONS,
+  isAdmin,
+  isOwner,
+  type Role,
+} from "@/lib/auth/permissions";
+import type { TeamMember } from "./page";
+
+interface Props {
+  practiceId: string;
+  currentRole: Role;
+  members: TeamMember[];
+}
+
+const ROLE_VARIANT: Record<Role, "accent" | "info" | "success" | "warning" | "muted"> = {
+  owner: "accent",
+  admin: "info",
+  compliance_officer: "success",
+  staff: "muted",
+  auditor_readonly: "warning",
+};
+
+export default function TeamClient({ practiceId, currentRole, members }: Props) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  const canManage = isAdmin(currentRole);
+  const canPromoteToOwner = isOwner(currentRole);
+
+  const [addOpen, setAddOpen] = useState(false);
+
+  return (
+    <div className="space-y-6">
+      {canManage && (
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <p className="text-sm text-[var(--color-tertiary)]">
+            {members.length} {members.length === 1 ? "member" : "members"} ·{" "}
+            <span className="text-[var(--color-secondary)]">
+              You are a {ROLE_LABELS[currentRole]}
+            </span>
+          </p>
+          <Button onClick={() => setAddOpen(!addOpen)} variant="primary" size="md">
+            {addOpen ? "Close" : "Add member"}
+          </Button>
+        </div>
+      )}
+
+      {canManage && addOpen && (
+        <AddMemberForm
+          practiceId={practiceId}
+          onAdded={() => {
+            setAddOpen(false);
+            startTransition(() => router.refresh());
+          }}
+        />
+      )}
+
+      <Card className="overflow-hidden">
+        <div
+          className="grid items-center gap-4 px-5 py-3 border-b border-[var(--color-border-subtle)] font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-quaternary)]"
+          style={{ gridTemplateColumns: "1.5fr 1.2fr 100px 140px" }}
+        >
+          <div>Member</div>
+          <div>Role</div>
+          <div>Joined</div>
+          <div className="text-right">Actions</div>
+        </div>
+        <div className="divide-y divide-[var(--color-border-subtle)]">
+          {members.map((m) => (
+            <MemberRow
+              key={m.user_id}
+              member={m}
+              practiceId={practiceId}
+              canManage={canManage}
+              canPromoteToOwner={canPromoteToOwner}
+              onChange={() => startTransition(() => router.refresh())}
+            />
+          ))}
+        </div>
+      </Card>
+
+      {!canManage && (
+        <p className="text-xs text-[var(--color-tertiary)] px-1">
+          Only the practice Owner or an Admin can add, remove, or change member roles.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ─────────── Add member form ─────────── */
+
+function AddMemberForm({
+  practiceId,
+  onAdded,
+}: {
+  practiceId: string;
+  onAdded: () => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<Role>("staff");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setHint(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/team/add", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ practice_id: practiceId, email: email.trim(), role }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        if (body.signup_required) {
+          setHint(
+            `${email.trim()} doesn't have a Fortify account yet. Share this signup link with them, then come back and add them: ${window.location.origin}/signup`
+          );
+        } else {
+          setError(body.error ?? "Failed to add member");
+        }
+        return;
+      }
+      setEmail("");
+      onAdded();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card variant="raised">
+      <CardBody>
+        <h3
+          className="font-display text-lg text-[var(--color-primary)] mb-1"
+          style={{ letterSpacing: "-0.015em" }}
+        >
+          Add a member
+        </h3>
+        <p className="text-xs text-[var(--color-tertiary)] mb-5">
+          The person must already have a Fortify account. They&apos;ll get access on their next sign-in.
+        </p>
+
+        <form onSubmit={submit} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-3">
+            <Field label="Email">
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="teammate@practice.com"
+                className="team-input"
+              />
+            </Field>
+            <Field label="Role">
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value as Role)}
+                className="team-input"
+              >
+                {ASSIGNABLE_ROLES.map((r) => (
+                  <option key={r} value={r} className="bg-black">
+                    {ROLE_LABELS[r]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <p className="text-xs text-[var(--color-tertiary)] leading-relaxed">
+            {ROLE_DESCRIPTIONS[role]}
+          </p>
+
+          {error && (
+            <div className="text-sm text-[var(--color-danger)] bg-[var(--color-danger-soft)] border border-[var(--color-danger)]/30 rounded-md px-3 py-2">
+              {error}
+            </div>
+          )}
+          {hint && (
+            <div className="text-sm text-[var(--color-accent)] bg-[var(--color-accent-soft)] border border-[var(--color-accent)]/30 rounded-md px-3 py-2">
+              {hint}
+            </div>
+          )}
+
+          <Button type="submit" loading={submitting} variant="primary" size="md">
+            Add to practice
+          </Button>
+        </form>
+
+        <style>{`
+          .team-input {
+            width: 100%; height: 36px; background: transparent;
+            border: 1px solid var(--color-border-default); border-radius: 6px;
+            padding: 0 10px; color: var(--color-primary); font-size: 13px;
+            transition: border-color 150ms ease;
+          }
+          .team-input:focus { border-color: var(--color-accent); outline: none; }
+        `}</style>
+      </CardBody>
+    </Card>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-tertiary)] mb-1.5 block">
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+/* ─────────── Member row with inline actions ─────────── */
+
+function MemberRow({
+  member,
+  practiceId,
+  canManage,
+  canPromoteToOwner,
+  onChange,
+}: {
+  member: TeamMember;
+  practiceId: string;
+  canManage: boolean;
+  canPromoteToOwner: boolean;
+  onChange: () => void;
+}) {
+  const [editingRole, setEditingRole] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function changeRole(newRole: Role) {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/team/role", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          practice_id: practiceId,
+          target_user_id: member.user_id,
+          new_role: newRole,
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) setError(body.error ?? "Failed to change role");
+      else {
+        setEditingRole(false);
+        onChange();
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    if (
+      !confirm(
+        `Remove ${member.email} from the practice? They will lose all access immediately.`
+      )
+    )
+      return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/team/remove", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ practice_id: practiceId, target_user_id: member.user_id }),
+      });
+      const body = await res.json();
+      if (!res.ok) setError(body.error ?? "Failed to remove");
+      else onChange();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const roleOptions: Role[] = canPromoteToOwner
+    ? ["owner", "admin", "compliance_officer", "staff", "auditor_readonly"]
+    : ["admin", "compliance_officer", "staff", "auditor_readonly"];
+
+  return (
+    <div
+      className="grid items-center gap-4 px-5 py-3 hover:bg-[var(--color-surface-raised)] transition-colors"
+      style={{ gridTemplateColumns: "1.5fr 1.2fr 100px 140px" }}
+    >
+      <div className="min-w-0">
+        <p className="text-sm text-[var(--color-primary)] truncate">
+          {member.email}
+          {member.is_self && <span className="ml-2 text-xs text-[var(--color-tertiary)]">(you)</span>}
+        </p>
+        <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--color-quaternary)] mt-0.5 truncate">
+          {member.user_id.slice(0, 12)}…
+        </p>
+      </div>
+
+      <div>
+        {editingRole ? (
+          <select
+            defaultValue={member.role}
+            onChange={(e) => changeRole(e.target.value as Role)}
+            disabled={busy}
+            className="bg-transparent border border-[var(--color-border-default)] rounded-md px-2 py-1 text-xs text-[var(--color-primary)]"
+          >
+            {roleOptions.map((r) => (
+              <option key={r} value={r} className="bg-black">
+                {ROLE_LABELS[r]}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <Badge variant={ROLE_VARIANT[member.role]}>{ROLE_LABELS[member.role]}</Badge>
+        )}
+        {error && <p className="text-[10px] text-[var(--color-danger)] mt-1">{error}</p>}
+      </div>
+
+      <span className="font-mono text-[11px] text-[var(--color-tertiary)]">
+        {new Date(member.joined_at).toLocaleDateString("en-US", { dateStyle: "medium" })}
+      </span>
+
+      <div className="flex items-center gap-2 justify-end">
+        {canManage && !member.is_self && (
+          <>
+            <button
+              onClick={() => setEditingRole((s) => !s)}
+              disabled={busy}
+              className="text-[11px] text-[var(--color-tertiary)] hover:text-[var(--color-primary)] transition-colors disabled:opacity-50"
+            >
+              {editingRole ? "Cancel" : "Change role"}
+            </button>
+            <span className="text-[var(--color-quaternary)]">·</span>
+            <button
+              onClick={remove}
+              disabled={busy}
+              className="text-[11px] text-[var(--color-tertiary)] hover:text-[var(--color-danger)] transition-colors disabled:opacity-50"
+            >
+              Remove
+            </button>
+          </>
+        )}
+        {member.is_self && (
+          <span className="text-[11px] text-[var(--color-quaternary)]">—</span>
+        )}
+      </div>
+    </div>
+  );
+}

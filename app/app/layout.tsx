@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUserAndPractice } from "@/lib/supabase/server-auth";
 import Sidebar from "@/components/app/Sidebar";
 import TopBar from "@/components/app/TopBar";
+import type { Role } from "@/lib/auth/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -9,8 +10,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await getCurrentUserAndPractice();
   if (!session) redirect("/login");
 
-  // Workspace is a calm, content-first environment.
-  // Starfield and grain stay on marketing + auth; not here.
   return (
     <div className="min-h-screen bg-[var(--color-canvas)] text-[var(--color-primary)] flex">
       {session.membership && (
@@ -18,6 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           practiceName={
             (session.membership.practices as unknown as { name: string } | null)?.name ?? "Practice"
           }
+          role={session.membership.role as Role}
         />
       )}
       <div className="flex-1 flex flex-col min-w-0">

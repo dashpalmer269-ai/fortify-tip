@@ -1,15 +1,18 @@
 import { redirect } from "next/navigation";
 import { getCurrentUserAndPractice, createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { createServerClient as createServiceClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/ui/PageHeader";
-import { Card } from "@/components/ui/Card";
-import Badge from "@/components/ui/Badge";
+import TeamClient from "./TeamClient";
+import type { Role } from "@/lib/auth/permissions";
 
 export const dynamic = "force-dynamic";
 
-interface TeamRow {
+export interface TeamMember {
   user_id: string;
-  role: string;
-  created_at: string;
+  email: string;
+  role: Role;
+  joined_at: string;
+  is_self: boolean;
 }
 
 export default async function TeamPage() {
@@ -24,49 +27,37 @@ export default async function TeamPage() {
     .eq("practice_id", session.membership.practice_id)
     .order("created_at", { ascending: true });
 
+  // Resolve user_id → email via service role
+  const service = createServiceClient();
+  const emailByUserId = new Map<string, string>();
+  if (service && members?.length) {
+    const { data: list } = await service.auth.admin.listUsers({ page: 1, perPage: 200 });
+    for (const u of list?.users ?? []) {
+      emailByUserId.set(u.id, u.email ?? "—");
+    }
+  }
+
+  const teamMembers: TeamMember[] = (members ?? []).map((m) => ({
+    user_id: m.user_id,
+    email: emailByUserId.get(m.user_id) ?? "—",
+    role: m.role as Role,
+    joined_at: m.created_at,
+    is_self: m.user_id === session.user.id,
+  }));
+
   return (
-    <div className="px-8 py-10 max-w-3xl mx-auto">
+    <div className="px-8 py-10 max-w-4xl mx-auto">
       <PageHeader
         eyebrow="People"
         title="Team"
-        description="Practice members and their compliance access roles."
+        description="Members of this practice and their compliance access roles. Owner and Admin can add, remove, or change roles."
       />
 
-      <Card className="overflow-hidden">
-        <div className="grid items-center gap-4 px-5 py-3 border-b border-[var(--color-border-subtle)] font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-quaternary)]"
-             style={{ gridTemplateColumns: "1fr 1fr 100px" }}>
-          <div>User</div>
-          <div>Role</div>
-          <div className="text-right">Joined</div>
-        </div>
-        <div className="divide-y divide-[var(--color-border-subtle)]">
-          {(members as TeamRow[] | null ?? []).map((m) => (
-            <div
-              key={m.user_id}
-              className="grid items-center gap-4 px-5 py-3 hover:bg-[var(--color-surface-raised)] transition-colors"
-              style={{ gridTemplateColumns: "1fr 1fr 100px" }}
-            >
-              <span className="font-mono text-xs text-[var(--color-tertiary)]">
-                {m.user_id === session.user.id ? (
-                  <span className="text-[var(--color-primary)]">{m.user_id.slice(0, 8)}… <Badge variant="accent">you</Badge></span>
-                ) : (
-                  `${m.user_id.slice(0, 8)}…`
-                )}
-              </span>
-              <span className="text-sm text-[var(--color-primary)] capitalize">
-                {m.role.replace("_", " ")}
-              </span>
-              <span className="font-mono text-xs text-[var(--color-tertiary)] text-right">
-                {new Date(m.created_at).toLocaleDateString("en-US", { dateStyle: "medium" })}
-              </span>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <p className="mt-6 text-xs text-[var(--color-quaternary)] font-mono">
-        Email-based team invitations activate when the Resend API key is configured.
-      </p>
+      <TeamClient
+        practiceId={session.membership.practice_id}
+        currentRole={session.membership.role as Role}
+        members={teamMembers}
+      />
     </div>
   );
 }
