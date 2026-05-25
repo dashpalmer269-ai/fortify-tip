@@ -12,6 +12,7 @@ interface ExistingProfile {
   job_title: string | null;
   phone: string | null;
   pending_practice_name: string | null;
+  claimed_admin_name: string | null;
   primary_address: Record<string, string> | null;
 }
 
@@ -29,6 +30,7 @@ export default function EmployeeOnboarding({ userEmail, existingProfile }: Props
   const [jobTitle, setJobTitle] = useState(ex?.job_title ?? "");
   const [phone, setPhone] = useState(ex?.phone ?? "");
   const [practiceName, setPracticeName] = useState(ex?.pending_practice_name ?? "");
+  const [adminName, setAdminName] = useState(ex?.claimed_admin_name ?? "");
   const [addr, setAddr] = useState({
     street_1: exAddr.street_1 ?? "",
     street_2: exAddr.street_2 ?? "",
@@ -43,6 +45,7 @@ export default function EmployeeOnboarding({ userEmail, existingProfile }: Props
     fullName.trim() &&
     jobTitle.trim() &&
     practiceName.trim() &&
+    adminName.trim() &&
     addr.street_1.trim() &&
     addr.city.trim() &&
     addr.region.trim() &&
@@ -60,6 +63,7 @@ export default function EmployeeOnboarding({ userEmail, existingProfile }: Props
           job_title: jobTitle.trim(),
           phone: phone.trim() || null,
           pending_practice_name: practiceName.trim(),
+          claimed_admin_name: adminName.trim(),
           primary_address: {
             street_1: addr.street_1.trim(),
             street_2: addr.street_2.trim() || null,
@@ -162,28 +166,42 @@ export default function EmployeeOnboarding({ userEmail, existingProfile }: Props
                 Practice you work at
               </h2>
               <p className="text-xs text-[var(--color-tertiary)] mb-5">
-                Helps your admin confirm you&apos;re the right person.
+                We&apos;ll route your request to the administrator at this practice.
               </p>
 
-              <Field label="Practice name" required>
-                <input
-                  value={practiceName}
-                  onChange={(e) => setPracticeName(e.target.value)}
-                  placeholder="e.g. Cedar Park Family Medicine"
-                  className="emp-input"
-                />
-              </Field>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <Field label="Practice name" required>
+                    <input
+                      value={practiceName}
+                      onChange={(e) => setPracticeName(e.target.value)}
+                      placeholder="e.g. Cedar Park Family Medicine"
+                      className="emp-input"
+                    />
+                  </Field>
+                </div>
+                <div className="sm:col-span-2">
+                  <Field label="Administrator's name" required hint="The person who set up Fortify">
+                    <input
+                      value={adminName}
+                      onChange={(e) => setAdminName(e.target.value)}
+                      placeholder="e.g. Dr. Sarah Chen"
+                      className="emp-input"
+                    />
+                  </Field>
+                </div>
+              </div>
             </CardBody>
           </Card>
 
-          {/* Primary work address */}
+          {/* Practice address */}
           <Card className="mb-8">
             <CardBody>
               <h2 className="font-display text-lg text-[var(--color-primary)] mb-1" style={{ letterSpacing: "-0.015em" }}>
-                Primary work address
+                Practice address
               </h2>
               <p className="text-xs text-[var(--color-tertiary)] mb-5">
-                The location you&apos;re physically based at most of the time.
+                The location you&apos;re based at most of the time.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

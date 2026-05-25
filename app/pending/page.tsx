@@ -17,11 +17,13 @@ export default async function PendingApprovalPage() {
   const supabase = await createAuthedServerClient();
   const { data: profile } = await supabase
     .from("user_profiles")
-    .select("full_name, job_title, pending_practice_name, primary_address, account_type")
+    .select("full_name, job_title, pending_practice_name, primary_address, account_type, status, matched_practice_id, claimed_admin_name")
     .eq("user_id", session.user.id)
     .maybeSingle();
 
   if (profile?.account_type !== "employee") redirect("/app/onboarding");
+  if (profile?.status === "denied") redirect("/denied");
+  if (profile?.status === "approved") redirect("/app");
 
   const addr = (profile?.primary_address ?? {}) as Record<string, string>;
   const addrLine = [addr.street_1, addr.city, addr.region].filter(Boolean).join(", ");
@@ -77,11 +79,24 @@ export default async function PendingApprovalPage() {
               You&apos;re in the queue.
             </h1>
             <p className="text-[15px] text-[var(--color-secondary)] leading-[1.7] max-w-md mx-auto">
-              We&apos;ve sent your details to the admin at{" "}
-              <span className="text-[var(--color-primary)] font-medium">
-                {profile?.pending_practice_name ?? "your practice"}
-              </span>
-              . You&apos;ll get email + dashboard access the moment they approve you.
+              {profile?.matched_practice_id ? (
+                <>
+                  We&apos;ve sent your details to the admin at{" "}
+                  <span className="text-[var(--color-primary)] font-medium">
+                    {profile?.pending_practice_name ?? "your practice"}
+                  </span>
+                  . You&apos;ll get access the moment they approve you.
+                </>
+              ) : (
+                <>
+                  We couldn&apos;t find a workspace named{" "}
+                  <span className="text-[var(--color-primary)] font-medium">
+                    &quot;{profile?.pending_practice_name}&quot;
+                  </span>
+                  . Double-check the spelling with your administrator, or wait for them to set up Fortify
+                  before requesting access.
+                </>
+              )}
             </p>
           </div>
 
@@ -94,6 +109,7 @@ export default async function PendingApprovalPage() {
                 <Row label="Name" value={profile?.full_name} />
                 <Row label="Role" value={profile?.job_title} />
                 <Row label="Practice" value={profile?.pending_practice_name} />
+                <Row label="Administrator" value={profile?.claimed_admin_name} />
                 <Row label="Work address" value={addrLine || "—"} />
                 <Row label="Email" value={session.user.email ?? "—"} />
               </dl>

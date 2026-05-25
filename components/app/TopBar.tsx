@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import NotificationsBell from "./NotificationsBell";
 
 interface Props {
   userEmail: string;
@@ -30,6 +31,8 @@ export default function TopBar({ userEmail, role }: Props) {
         Workspace
       </Link>
 
+      <div className="flex items-center gap-1">
+        <NotificationsBell />
       <div className="relative" ref={ref}>
         <button
           onClick={() => setOpen((s) => !s)}
@@ -80,6 +83,7 @@ export default function TopBar({ userEmail, role }: Props) {
             </form>
           </div>
         )}
+      </div>
       </div>
     </header>
   );

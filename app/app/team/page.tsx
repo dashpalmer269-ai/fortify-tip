@@ -3,7 +3,9 @@ import { getCurrentUserAndPractice, createAuthedServerClient } from "@/lib/supab
 import { createServerClient as createServiceClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/ui/PageHeader";
 import TeamClient from "./TeamClient";
+import RequestsQueue, { type PendingRequest } from "./RequestsQueue";
 import type { Role } from "@/lib/auth/permissions";
+import { isAdmin } from "@/lib/auth/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +47,30 @@ export default async function TeamPage() {
     is_self: m.user_id === session.user.id,
   }));
 
+  // Pending join requests matched to this practice
+  const role = session.membership.role as Role;
+  let pendingRequests: PendingRequest[] = [];
+  if (isAdmin(role) && service) {
+    const { data: reqRows } = await service
+      .from("user_profiles")
+      .select("user_id, full_name, job_title, phone, claimed_admin_name, primary_address, onboarded_at, status, account_type")
+      .eq("matched_practice_id", session.membership.practice_id)
+      .eq("status", "pending")
+      .eq("account_type", "employee")
+      .order("onboarded_at", { ascending: true });
+
+    pendingRequests = (reqRows ?? []).map((r) => ({
+      user_id: r.user_id,
+      email: emailByUserId.get(r.user_id) ?? "—",
+      full_name: r.full_name ?? "Unknown",
+      job_title: r.job_title ?? "—",
+      phone: r.phone,
+      claimed_admin_name: r.claimed_admin_name,
+      primary_address: (r.primary_address ?? {}) as Record<string, string>,
+      requested_at: r.onboarded_at as string,
+    }));
+  }
+
   return (
     <div className="px-8 py-10 max-w-4xl mx-auto">
       <PageHeader
@@ -53,9 +79,18 @@ export default async function TeamPage() {
         description="Members of this practice and their compliance access roles. Owner and Admin can add, remove, or change roles."
       />
 
+      {isAdmin(role) && (
+        <RequestsQueue
+          practiceName={
+            (session.membership.practices as unknown as { name?: string } | null)?.name ?? ""
+          }
+          requests={pendingRequests}
+        />
+      )}
+
       <TeamClient
         practiceId={session.membership.practice_id}
-        currentRole={session.membership.role as Role}
+        currentRole={role}
         members={teamMembers}
       />
     </div>
