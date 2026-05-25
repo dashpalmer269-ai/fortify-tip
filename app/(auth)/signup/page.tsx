@@ -104,13 +104,13 @@ export default function SignupPage() {
             <AccountTypeCard
               selected={accountType === "admin"}
               onClick={() => setAccountType("admin")}
-              title="Admin"
+              title="Administrator"
               body="Owner, manager, or compliance lead setting up a practice."
             />
             <AccountTypeCard
               selected={accountType === "employee"}
               onClick={() => setAccountType("employee")}
-              title="Employee"
+              title="Standard"
               body="Joining a practice that already uses Fortify."
             />
           </div>

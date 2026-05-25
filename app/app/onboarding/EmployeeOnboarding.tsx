@@ -104,7 +104,7 @@ export default function EmployeeOnboarding({ userEmail, existingProfile }: Props
         <main className="flex-1 px-6 sm:px-10 py-10 max-w-2xl w-full mx-auto">
           <div className="mb-10">
             <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-violet-300/80 mb-3">
-              Employee onboarding
+              Standard onboarding
             </p>
             <h1
               className="font-display text-[clamp(36px,4.5vw,56px)] text-[var(--color-primary)] leading-[1.02]"
