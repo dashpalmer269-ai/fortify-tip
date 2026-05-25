@@ -1,21 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { createServerClient } from "@/lib/supabase/server";
 import type { OnboardingState } from "@/app/app/onboarding/types";
 
 /**
- * Finalize onboarding:
- *  - upserts the practices row
- *  - upserts the practice_users row (caller becomes owner if new)
- *  - replaces practice_locations
- *  - replaces onboarding_integration_choices
- *  - inserts assistance_request if schedule mode
- *  - pre-seeds healthcare_baseline practice_controls
- *  - marks onboarding_step = 'completed' and onboarding_completed_at = now
+ * Finalize onboarding.
+ *
+ * DEMO WORKAROUND (TODO: revisit after beta):
+ * We authenticate the caller with the user-cookie client (gets user.id) and
+ * then perform the writes with the service-role client. This bypasses the
+ * RLS-policy bug we hit during admin-flow testing where `auth.uid()` was
+ * resolving to null inside the practices INSERT check despite a valid JWT
+ * (Supabase JWKS / ES256 signing key quirk). The user-id check below ensures
+ * we still tie every write to the authenticated caller — service-role is NOT
+ * being trusted blindly. Once the RLS issue is fixed in Supabase, switch the
+ * `db` variable back to the user-authed client.
  */
 export async function POST(req: NextRequest) {
-  const supabase = await createAuthedServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const userClient = await createAuthedServerClient();
+  const { data: { user } } = await userClient.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const db = createServerClient();
+  if (!db) return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
 
   const body = (await req.json().catch(() => null)) as
     | { state: OnboardingState; existing_practice_id?: string | null }
@@ -50,8 +57,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: issues.join(" · ") }, { status: 400 });
   }
 
-  // ── Upsert practice ───────────────────────────────────────────────────────
+  // If the caller claims to be updating an existing practice, verify they
+  // actually belong to it before letting service-role touch the row.
   let practiceId = body.existing_practice_id ?? null;
+  if (practiceId) {
+    const { data: membership } = await db
+      .from("practice_users")
+      .select("role")
+      .eq("practice_id", practiceId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!membership || !["owner", "admin"].includes(membership.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+
+  // ── Upsert practice ───────────────────────────────────────────────────────
   const practiceFields = {
     name: info.practice_name.trim(),
     description: info.description.trim(),
@@ -67,13 +88,13 @@ export async function POST(req: NextRequest) {
   };
 
   if (practiceId) {
-    const { error: updErr } = await supabase
+    const { error: updErr } = await db
       .from("practices")
       .update(practiceFields)
       .eq("id", practiceId);
     if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 });
   } else {
-    const { data: created, error: insErr } = await supabase
+    const { data: created, error: insErr } = await db
       .from("practices")
       .insert(practiceFields)
       .select("id")
@@ -83,8 +104,8 @@ export async function POST(req: NextRequest) {
     }
     practiceId = created.id;
 
-    // Make this user the owner
-    const { error: puErr } = await supabase.from("practice_users").insert({
+    // Make this user the owner — pinned to their authenticated id, not trusted from body.
+    const { error: puErr } = await db.from("practice_users").insert({
       practice_id: practiceId,
       user_id: user.id,
       role: "owner",
@@ -93,9 +114,9 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Replace locations ─────────────────────────────────────────────────────
-  await supabase.from("practice_locations").delete().eq("practice_id", practiceId);
+  await db.from("practice_locations").delete().eq("practice_id", practiceId);
   if (validLocations.length > 0) {
-    const { error: locErr } = await supabase.from("practice_locations").insert(
+    const { error: locErr } = await db.from("practice_locations").insert(
       validLocations.map((l) => ({
         practice_id: practiceId,
         label: l.label?.trim() || null,
@@ -110,16 +131,16 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Replace integration choices ───────────────────────────────────────────
-  await supabase.from("onboarding_integration_choices").delete().eq("practice_id", practiceId);
+  await db.from("onboarding_integration_choices").delete().eq("practice_id", practiceId);
   if (safe.mode === "manual" && safe.integrations.length > 0) {
-    await supabase.from("onboarding_integration_choices").insert(
+    await db.from("onboarding_integration_choices").insert(
       safe.integrations.map((t) => ({ practice_id: practiceId, integration_type: t }))
     );
   }
 
   // ── Assistance request (if scheduled) ─────────────────────────────────────
   if (safe.mode === "schedule") {
-    await supabase.from("assistance_requests").insert({
+    await db.from("assistance_requests").insert({
       practice_id: practiceId,
       preferred_date: safe.assistance_date || null,
       preferred_time_window: safe.assistance_window || null,
@@ -130,17 +151,17 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Pre-seed healthcare baseline controls (if not already) ───────────────
-  const { data: existingPC } = await supabase
+  const { data: existingPC } = await db
     .from("practice_controls")
     .select("id", { count: "exact", head: true })
     .eq("practice_id", practiceId);
   if (!existingPC || (existingPC as unknown as { length: number }).length === 0) {
-    const { data: baseline } = await supabase
+    const { data: baseline } = await db
       .from("controls")
       .select("id")
       .eq("healthcare_baseline", true);
     if (baseline?.length) {
-      await supabase.from("practice_controls").insert(
+      await db.from("practice_controls").insert(
         baseline.map((c) => ({
           practice_id: practiceId,
           control_id: c.id,
@@ -151,7 +172,7 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Audit log ─────────────────────────────────────────────────────────────
-  await supabase.from("audit_logs").insert({
+  await db.from("audit_logs").insert({
     practice_id: practiceId,
     actor_user_id: user.id,
     action: "onboarding.completed",

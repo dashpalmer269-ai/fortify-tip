@@ -1,10 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { createServerClient } from "@/lib/supabase/server";
 
+/**
+ * Standard (employee) onboarding: saves the verification info into
+ * user_profiles so an admin can approve them.
+ *
+ * DEMO WORKAROUND (TODO: revisit after beta) — same RLS bypass pattern as
+ * /api/onboarding/finalize. We auth the caller via the user cookie client
+ * (gets user.id) and write with service-role to dodge the auth.uid() = null
+ * issue inside RLS policies. The user_id on the upsert is pinned to the
+ * authenticated user, not trusted from the body.
+ */
 export async function POST(req: NextRequest) {
-  const supabase = await createAuthedServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const userClient = await createAuthedServerClient();
+  const { data: { user } } = await userClient.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const db = createServerClient();
+  if (!db) return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
 
   const body = (await req.json().catch(() => null)) as
     | {
@@ -25,7 +39,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing required profile fields" }, { status: 400 });
   }
 
-  const { error } = await supabase
+  const { error } = await db
     .from("user_profiles")
     .upsert(
       {
