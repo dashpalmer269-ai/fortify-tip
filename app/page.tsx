@@ -181,6 +181,51 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* ────────────────── No PHI ─ architectural stance ────────────────── */}
+      <section
+        id="no-phi"
+        className="relative z-10 mx-auto max-w-5xl px-6 sm:px-8 py-16 sm:py-20"
+      >
+        <div
+          className="relative rounded-[24px] px-8 sm:px-14 py-12 sm:py-14 overflow-hidden"
+          style={{
+            background:
+              "radial-gradient(ellipse 60% 70% at 50% 30%, rgba(16,185,129,0.12) 0%, transparent 70%), linear-gradient(180deg, rgba(8,20,16,0.5) 0%, rgba(6,16,12,0.2) 100%)",
+            border: "1px solid rgba(16,185,129,0.22)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+          }}
+        >
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-400/30 bg-emerald-400/[0.08] text-emerald-300 font-mono text-[10px] uppercase tracking-[0.3em] mb-6">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            Architectural rule
+          </span>
+          <h2
+            className="font-marketing text-[clamp(32px,4vw,52px)] leading-[1.05] text-white mb-5"
+            style={{ letterSpacing: "-0.03em", fontWeight: 700 }}
+          >
+            Fortify never touches{" "}
+            <span className="italic text-emerald-200" style={{ fontWeight: 500 }}>
+              PHI.
+            </span>
+          </h2>
+          <p className="text-[15px] text-white/70 leading-[1.75] max-w-2xl font-sans mb-4">
+            Fortify is built so it cannot create, receive, maintain, transmit, view, or store
+            Protected Health Information. Submissions that look like patient data are blocked
+            at the API boundary and rejected by database CHECK constraints. Every Claude prompt
+            we send carries a non-negotiable instruction to refuse PHI.
+          </p>
+          <p className="text-[13px] text-white/55 leading-[1.7] max-w-2xl font-sans">
+            We operate on the metadata of your compliance program — controls, requirements, vendor
+            risk, threat intel, audit-readiness scoring — not the patient data those controls
+            protect. That keeps Fortify out of Business Associate scope under HIPAA
+            (<span className="font-mono text-white/65">45 CFR §160.103</span>) and removes an
+            entire class of breach exposure from your stack.
+          </p>
+        </div>
+      </section>
+
       {/* ────────────────── CTA ─ the closing event ────────────────── */}
       <section
         id="about"
@@ -263,9 +308,20 @@ export default async function LandingPage() {
         <div className="border-t border-white/[0.06]">
           <div className="mx-auto max-w-7xl px-6 sm:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-white/40 font-sans">
             <p>© 2026 Fortify. All rights reserved.</p>
-            <p className="inline-flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 6px rgba(16,185,129,0.7)" }} />
-              HIPAA-compliant infrastructure
+            <p className="inline-flex items-center gap-4 flex-wrap justify-center">
+              <span className="inline-flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 6px rgba(16,185,129,0.7)" }} />
+                HIPAA-compliant infrastructure
+              </span>
+              <span
+                title="Fortify never creates, receives, maintains, transmits, or stores PHI (45 CFR §160.103)."
+                className="inline-flex items-center gap-2 px-2 py-0.5 rounded-full border border-emerald-400/30 bg-emerald-400/[0.06] text-emerald-300 font-mono text-[10px] uppercase tracking-[0.25em]"
+              >
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                PHI-free by design
+              </span>
             </p>
           </div>
         </div>

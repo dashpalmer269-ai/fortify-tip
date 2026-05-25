@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { createServerClient } from "@/lib/supabase/server";
+import { scanFieldsForPhi } from "@/lib/compliance/no-phi";
 
 /**
  * Update a team member's display name (user_profiles.full_name).
@@ -32,6 +33,8 @@ export async function POST(req: NextRequest) {
   if (fullName.length > 120) {
     return NextResponse.json({ error: "Name too long" }, { status: 400 });
   }
+  const phi = scanFieldsForPhi({ full_name: fullName });
+  if (phi) return NextResponse.json({ error: phi.message }, { status: 422 });
 
   // Caller must be admin of the practice
   const { data: callerMembership } = await db

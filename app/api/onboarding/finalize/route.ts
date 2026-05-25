@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { createServerClient } from "@/lib/supabase/server";
+import { scanFieldsForPhi, sanitizeForAudit } from "@/lib/compliance/no-phi";
 import type { OnboardingState } from "@/app/app/onboarding/types";
 
 /**
@@ -56,6 +57,14 @@ export async function POST(req: NextRequest) {
   if (issues.length > 0) {
     return NextResponse.json({ error: issues.join(" · ") }, { status: 400 });
   }
+
+  // NO PHI guardrail: free-text fields the admin types must not contain patient data.
+  const phi = scanFieldsForPhi({
+    practice_name: info.practice_name,
+    description: info.description,
+    assistance_notes: safe.assistance_notes,
+  });
+  if (phi) return NextResponse.json({ error: phi.message }, { status: 422 });
 
   // If the caller claims to be updating an existing practice, verify they
   // actually belong to it before letting service-role touch the row.
@@ -178,12 +187,12 @@ export async function POST(req: NextRequest) {
     action: "onboarding.completed",
     resource_type: "practice",
     resource_id: practiceId,
-    metadata: {
+    metadata: sanitizeForAudit({
       plan: pay.selected_plan,
       employee_range: info.employee_range,
       location_count: validLocations.length,
       safeguards_mode: safe.mode,
-    },
+    }),
   });
 
   return NextResponse.json({ ok: true, practice_id: practiceId });

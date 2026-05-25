@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { RawThreatInput } from '../types';
+import { NO_PHI_AI_SYSTEM_PROMPT } from '@/lib/compliance/no-phi';
 
 // Lazy init so the SDK reads ANTHROPIC_API_KEY at first call rather than module-load time.
 // Standalone scripts load .env.local AFTER imports run, so module-time init would see undefined.
@@ -182,6 +183,7 @@ export async function generateArticle(ctx: ArticleContext, maxAttempts = 3): Pro
 
     try {
       const msg = await getClient().messages.create({
+        system: NO_PHI_AI_SYSTEM_PROMPT,
         model: 'claude-opus-4-7',
         max_tokens: 2000,
         messages: [{ role: 'user', content: buildPrompt(ctx, correction) }],
@@ -256,6 +258,7 @@ export async function enrichThreat(
 
 export async function searchThreats(query: string, context: string): Promise<string> {
   const message = await getClient().messages.create({
+        system: NO_PHI_AI_SYSTEM_PROMPT,
     model: 'claude-opus-4-7',
     max_tokens: 1024,
     messages: [

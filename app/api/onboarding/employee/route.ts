@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { createServerClient } from "@/lib/supabase/server";
+import { scanFieldsForPhi } from "@/lib/compliance/no-phi";
 
 /**
  * Standard-user onboarding submit.
@@ -41,6 +42,15 @@ export async function POST(req: NextRequest) {
   ) {
     return NextResponse.json({ error: "Missing required profile fields" }, { status: 400 });
   }
+
+  // NO PHI: scan every text field the user typed.
+  const phi = scanFieldsForPhi({
+    full_name: body.full_name,
+    job_title: body.job_title,
+    pending_practice_name: body.pending_practice_name,
+    claimed_admin_name: body.claimed_admin_name,
+  });
+  if (phi) return NextResponse.json({ error: phi.message }, { status: 422 });
 
   // ── Attempt to match a practice by name (case-insensitive trim) ──────────
   const claimedName = body.pending_practice_name.trim();

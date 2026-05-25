@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { createServerClient } from "@/lib/supabase/server";
+import { scanFieldsForPhi } from "@/lib/compliance/no-phi";
 
 /**
  * Approve or deny a pending Standard-user request.
@@ -31,6 +32,11 @@ export async function POST(
     | null;
   if (!body?.action || !["approve", "deny"].includes(body.action)) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  }
+
+  if (body.action === "deny" && body.denial_reason) {
+    const phi = scanFieldsForPhi({ denial_reason: body.denial_reason });
+    if (phi) return NextResponse.json({ error: phi.message }, { status: 422 });
   }
 
   // Load the request

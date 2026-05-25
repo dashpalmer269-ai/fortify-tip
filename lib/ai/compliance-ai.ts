@@ -5,6 +5,7 @@
  * matters most.
  */
 import Anthropic from "@anthropic-ai/sdk";
+import { NO_PHI_AI_SYSTEM_PROMPT } from "@/lib/compliance/no-phi";
 
 let _client: Anthropic | null = null;
 function getClient(): Anthropic {
@@ -60,6 +61,7 @@ Produce a JSON object with:
 Respond with ONLY the JSON object. No markdown fences, no commentary.`;
 
   const message = await getClient().messages.create({
+    system: NO_PHI_AI_SYSTEM_PROMPT,
     model: MODEL,
     max_tokens: 2000,
     messages: [{ role: "user", content: prompt }],
@@ -114,6 +116,7 @@ REQUIREMENTS
 Respond with ONLY the markdown body. No JSON wrapper, no preamble.`;
 
   const message = await getClient().messages.create({
+    system: NO_PHI_AI_SYSTEM_PROMPT,
     model: MODEL,
     max_tokens: 2500,
     messages: [{ role: "user", content: prompt }],
@@ -158,6 +161,7 @@ Paragraph 4: The top 3 priorities for the coming month with brief justification.
 Plain English. No bullet points. No markdown headings. No quotation marks around the summary. Conversational executive tone.`;
 
   const message = await getClient().messages.create({
+    system: NO_PHI_AI_SYSTEM_PROMPT,
     model: MODEL,
     max_tokens: 1200,
     messages: [{ role: "user", content: prompt }],

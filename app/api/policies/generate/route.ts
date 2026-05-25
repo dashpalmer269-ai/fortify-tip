@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { draftPolicy } from "@/lib/ai/compliance-ai";
+import { scanFieldsForPhi } from "@/lib/compliance/no-phi";
 
 export const maxDuration = 60;
 
@@ -20,6 +21,9 @@ export async function POST(req: NextRequest) {
   if (!body?.practice_id || !body.policy_type || !body.title) {
     return NextResponse.json({ error: "practice_id, policy_type, and title required" }, { status: 400 });
   }
+
+  const phi = scanFieldsForPhi({ title: body.title, policy_type: body.policy_type });
+  if (phi) return NextResponse.json({ error: phi.message }, { status: 422 });
 
   const { data: practice } = await supabase
     .from("practices")

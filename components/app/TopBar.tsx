@@ -24,12 +24,23 @@ export default function TopBar({ userEmail, role }: Props) {
 
   return (
     <header className="h-14 shrink-0 border-b border-[var(--color-border-subtle)] flex items-center justify-between px-8 bg-[var(--color-canvas)]">
-      <Link
-        href="/app"
-        className="font-mono text-[10px] uppercase tracking-[0.4em] text-[var(--color-quaternary)] hover:text-[var(--color-primary)] transition-colors"
-      >
-        Workspace
-      </Link>
+      <div className="flex items-center gap-4">
+        <Link
+          href="/app"
+          className="font-mono text-[10px] uppercase tracking-[0.4em] text-[var(--color-quaternary)] hover:text-[var(--color-primary)] transition-colors"
+        >
+          Workspace
+        </Link>
+        <span
+          title="Fortify never creates, receives, maintains, transmits, or stores PHI (45 CFR §160.103). Architectural rule, not a setting."
+          className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 text-emerald-300 font-mono text-[9px] uppercase tracking-[0.25em]"
+        >
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          PHI-free
+        </span>
+      </div>
 
       <div className="flex items-center gap-1">
         <NotificationsBell />

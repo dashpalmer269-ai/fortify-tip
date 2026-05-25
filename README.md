@@ -50,9 +50,11 @@ Admin path                       Employee path
 
 ## Architecture highlights
 
-- **Unified Control Mapping Engine** — one row in `controls` maps to N `framework_requirements` via `framework_mappings`. Compliance percentage is computed by a Postgres function (`audit_readiness_summary`) so the UI never has to re-derive scores.
+- **No PHI — ever.** Fortify is built so it cannot create, receive, maintain, transmit, view, or store Protected Health Information. The rule is hardcoded at four layers: the AI system prompt, the API boundary (`scanFieldsForPhi`), the database (CHECK constraints + `COMMENT ON TABLE`), and the UI (PHI-free badge on every page). See [COMPLIANCE.md](./COMPLIANCE.md).
+- **1-Layer Unified Control Mapping Engine** — a single logical layer: `controls` × `framework_mappings` × `framework_requirements`. One row in `controls` maps to N `framework_requirements` via `framework_mappings`. Marking one safeguard compliant updates HIPAA + SOC 2 + ISO 27001 + GDPR readiness at once. The `audit_readiness_summary` Postgres function computes weighted satisfaction; the UI never re-derives scores.
+- **Continuous compliance operating system** — daily cron checks (`/api/cron/verify-compliance`), 2×/day threat intel ingestion, automated baseline-control pre-seeding on practice creation, AI-drafted policies, drift alerts on control state changes, append-only audit log.
 - **Multi-tenant by default** — every tenant table is RLS-gated. `SECURITY DEFINER` helpers (`user_is_practice_member`, `user_is_practice_admin`) prevent the policy-recursion footguns common to this pattern.
-- **AI is plumbed throughout, not bolted on** — risk-assessment summaries, policy drafts, report exec summaries, and threat-intel headlines all flow through `lib/ai/`.
+- **AI is plumbed throughout, not bolted on** — risk-assessment summaries, policy drafts, report exec summaries, and threat-intel headlines all flow through `lib/ai/`, all gated by the No-PHI system prompt.
 
 ## Setup
 
