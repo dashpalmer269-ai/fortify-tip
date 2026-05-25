@@ -76,8 +76,10 @@ async function main() {
     token_type: "bearer",
     user: session.user,
   };
-  const cookieValue = "base64-" + Buffer.from(JSON.stringify(tokenObj)).toString("base64");
-  // Cookie may need chunking (Supabase splits >3180-byte payloads), but most fit in one.
+  // @supabase/ssr decodes the cookie with base64url (URL-safe alphabet, no padding),
+  // NOT regular base64. Node 16+ supports "base64url" directly.
+  const cookieValue = "base64-" + Buffer.from(JSON.stringify(tokenObj)).toString("base64url");
+  // Chunked when >3180 url-encoded chars; our session token is well under that.
   const cookieHeader = `${cookieName}=${cookieValue}`;
   ok(`cookie ${cookieName} prepared (${cookieValue.length} chars)`);
 
