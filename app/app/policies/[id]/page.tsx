@@ -44,7 +44,7 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
         </div>
         <p className="text-xs text-gray-500">
           Status: <span className="capitalize">{policy.status}</span> · Last updated{" "}
-          {new Date(policy.updated_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+          {policy.updated_at ? new Date(policy.updated_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "—"}
         </p>
       </div>
 

@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
       const last = lastRows?.[0];
 
       const freqHours = check.frequency_hours ?? 24;
-      if (last) {
+      if (last && last.collected_at) {
         const hoursSince = (Date.now() - new Date(last.collected_at).getTime()) / 36e5;
         if (hoursSince < freqHours) {
           counts.checks_skipped_stale++;

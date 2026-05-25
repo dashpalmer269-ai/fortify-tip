@@ -407,7 +407,7 @@ function MemberRow({
       </div>
 
       <span className="font-mono text-[11px] text-[var(--color-tertiary)]">
-        {new Date(member.joined_at).toLocaleDateString("en-US", { dateStyle: "medium" })}
+        {member.joined_at ? new Date(member.joined_at).toLocaleDateString("en-US", { dateStyle: "medium" }) : "—"}
       </span>
 
       <div className="flex items-center gap-2 justify-end">

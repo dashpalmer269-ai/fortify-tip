@@ -8,7 +8,7 @@ export interface VendorWithBaa {
   id: string;
   vendor_name: string;
   vendor_type: string | null;
-  phi_access: boolean;
+  phi_access: boolean | null;
   contact_email: string | null;
   contact_name: string | null;
   baa_status: "active" | "pending" | "expired" | "terminated" | "missing";

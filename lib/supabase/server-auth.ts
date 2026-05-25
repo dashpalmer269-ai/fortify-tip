@@ -1,5 +1,6 @@
 import { createServerClient as create } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import type { Database } from "./database.types";
 
 /**
  * Supabase client for server components and route handlers that need the
@@ -11,7 +12,7 @@ import { cookies } from "next/headers";
 export async function createAuthedServerClient() {
   const cookieStore = await cookies();
 
-  return create(
+  return create<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {

@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     p_practice_id: body.practice_id,
     p_framework_code: framework,
   });
-  const readinessPct = (readiness?.[0]?.weighted_pct as number) ?? null;
+  const readinessPct = readiness?.[0]?.weighted_pct ?? null;
 
   const { data: openCritical } = await supabase
     .from("practice_controls")

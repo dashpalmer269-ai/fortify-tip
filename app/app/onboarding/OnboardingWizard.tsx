@@ -30,7 +30,7 @@ interface ExistingPractice {
   current_status: string | null;
   upcoming_audit_window: string | null;
   selected_plan: string | null;
-  onboarding_step: string;
+  onboarding_step: string | null;
 }
 
 interface Props {

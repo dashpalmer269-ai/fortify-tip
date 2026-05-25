@@ -9,7 +9,7 @@ interface PolicyRow {
   title: string;
   framework: string | null;
   policy_type: string;
-  status: string;
+  status: string | null;
   updated_at: string | null;
 }
 

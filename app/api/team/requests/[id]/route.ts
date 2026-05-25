@@ -70,9 +70,12 @@ export async function POST(
   const now = new Date().toISOString();
 
   if (body.action === "approve") {
-    const role = ["staff", "compliance_officer", "auditor_readonly"].includes(body.role ?? "")
-      ? body.role!
-      : "staff";
+    const ASSIGNABLE = ["staff", "compliance_officer", "auditor_readonly"] as const;
+    type AssignableRole = (typeof ASSIGNABLE)[number];
+    const role: AssignableRole =
+      (ASSIGNABLE as readonly string[]).includes(body.role ?? "")
+        ? (body.role as AssignableRole)
+        : "staff";
 
     // Create membership (idempotent: ignore if already present)
     const { error: muErr } = await db.from("practice_users").upsert(

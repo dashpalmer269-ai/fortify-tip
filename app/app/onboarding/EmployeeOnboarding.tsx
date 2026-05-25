@@ -13,7 +13,8 @@ interface ExistingProfile {
   phone: string | null;
   pending_practice_name: string | null;
   claimed_admin_name: string | null;
-  primary_address: Record<string, string> | null;
+  // JSONB column — typed as unknown at the boundary, narrowed below.
+  primary_address: unknown;
 }
 
 interface Props {

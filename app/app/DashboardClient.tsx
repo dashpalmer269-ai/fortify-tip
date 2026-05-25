@@ -16,8 +16,8 @@ interface ActivityRow {
   id: string;
   action: string;
   resource_type: string;
-  metadata: Record<string, unknown> | null;
-  occurred_at: string;
+  metadata: unknown;
+  occurred_at: string | null;
   actor_service: string | null;
 }
 
@@ -170,7 +170,7 @@ export default function DashboardClient({
                   <p className="text-sm text-[var(--color-primary)]">{formatAction(a.action)}</p>
                   <p className="text-[11px] text-[var(--color-quaternary)] font-mono mt-0.5">
                     {a.actor_service ? `system · ${a.actor_service}` : "user action"} ·{" "}
-                    {new Date(a.occurred_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+                    {a.occurred_at ? new Date(a.occurred_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "—"}
                   </p>
                 </div>
                 <Badge variant="muted">{a.resource_type.replace(/_/g, " ")}</Badge>

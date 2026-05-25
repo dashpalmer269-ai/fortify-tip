@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { exchangeCode, isConfigured } from "@/lib/integrations/microsoft-graph";
+import type { Json } from "@/lib/supabase/database.types";
 
 export async function GET(req: NextRequest) {
   if (!isConfigured()) {
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
         external_account_id: creds.tenant_id,
         display_name: "Microsoft 365",
         scopes: ["User.Read.All", "AuditLog.Read.All", "Reports.Read.All", "DeviceManagementManagedDevices.Read.All"],
-        encrypted_credentials: creds as unknown as Record<string, unknown>,
+        encrypted_credentials: creds as unknown as Json,
         last_synced_at: new Date().toISOString(),
         last_error: null,
       },

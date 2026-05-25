@@ -14,7 +14,7 @@ export interface TeamMember {
   email: string;
   full_name: string | null;
   role: Role;
-  joined_at: string;
+  joined_at: string | null;
   is_self: boolean;
 }
 

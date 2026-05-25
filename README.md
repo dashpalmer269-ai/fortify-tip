@@ -112,6 +112,21 @@ npm install
 npm run dev          # localhost:3000
 ```
 
+### 3a. Database types (one-time setup)
+
+The codebase is typed against the live database schema via `lib/supabase/database.types.ts`. To regenerate after a migration:
+
+```bash
+# One-time setup
+npm install -g supabase                                  # or use the dev-dep version
+export SUPABASE_ACCESS_TOKEN=sbp_...                     # create one at supabase.com/dashboard/account/tokens
+
+# After each migration
+npm run db:types                                         # writes lib/supabase/database.types.ts
+```
+
+The file is committed so PRs without DB access still build; CI should refuse a PR whose migration changes the schema without an accompanying `database.types.ts` update.
+
 Manually trigger threat-intel ingestion:
 
 ```bash

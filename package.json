@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:types": "supabase gen types typescript --project-id cqxvzsbyoeporgyjmrcp > lib/supabase/database.types.ts && echo 'Wrote lib/supabase/database.types.ts. Review the diff and commit.'",
+    "test:no-phi": "tsx scripts/test-no-phi.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",
@@ -29,6 +31,7 @@
     "@types/xml2js": "^0.4.14",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "supabase": "^2.101.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"

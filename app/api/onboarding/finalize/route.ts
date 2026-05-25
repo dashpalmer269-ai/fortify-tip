@@ -3,6 +3,7 @@ import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { createServerClient } from "@/lib/supabase/server";
 import { scanFieldsForPhi, sanitizeForAudit } from "@/lib/compliance/no-phi";
 import type { OnboardingState } from "@/app/app/onboarding/types";
+import type { Inserts } from "@/lib/supabase/types";
 
 /**
  * Finalize onboarding.
@@ -82,15 +83,17 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Upsert practice ───────────────────────────────────────────────────────
-  const practiceFields = {
+  // Cast each enum-bound field to its narrow union; validation above guarantees
+  // they aren't the empty-string placeholder the wizard form uses for "unset".
+  const practiceFields: Inserts<"practices"> = {
     name: info.practice_name.trim(),
     description: info.description.trim(),
-    employee_range: info.employee_range,
-    location_count_range: info.location_count_range,
-    current_status: fort.current_status,
-    upcoming_audit_window: fort.upcoming_audit_window,
-    selected_plan: pay.selected_plan,
-    onboarding_step: "completed" as const,
+    employee_range: info.employee_range as Inserts<"practices">["employee_range"],
+    location_count_range: info.location_count_range as Inserts<"practices">["location_count_range"],
+    current_status: fort.current_status as Inserts<"practices">["current_status"],
+    upcoming_audit_window: fort.upcoming_audit_window as Inserts<"practices">["upcoming_audit_window"],
+    selected_plan: pay.selected_plan as Inserts<"practices">["selected_plan"],
+    onboarding_step: "completed",
     onboarding_completed_at: new Date().toISOString(),
     hipaa_covered_entity: true,
     frameworks_enabled: ["HIPAA"],
