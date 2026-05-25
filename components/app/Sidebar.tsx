@@ -19,6 +19,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/app/threats",         label: "Threat intel",   icon: ThreatIcon },
   { href: "/app/reports",         label: "Reports",        icon: ReportIcon,   minRole: "officer" },
   { href: "/app/audit-log",       label: "Audit log",      icon: AuditIcon },
+  { href: "/app/team",            label: "Edit Staff",     icon: StaffIcon,    minRole: "admin" },
 ];
 
 const SETTINGS_ITEMS: NavItem[] = [
@@ -178,6 +179,16 @@ function ReportIcon({ active }: { active: boolean }) {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={active ? "var(--color-accent)" : "currentColor"} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" />
       <line x1="6" y1="20" x2="6" y2="14" /><line x1="3" y1="20" x2="21" y2="20" />
+    </svg>
+  );
+}
+function StaffIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={active ? "var(--color-accent)" : "currentColor"} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
     </svg>
   );
 }

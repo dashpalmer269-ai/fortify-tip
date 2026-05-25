@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 export interface TeamMember {
   user_id: string;
   email: string;
+  full_name: string | null;
   role: Role;
   joined_at: string;
   is_self: boolean;
@@ -39,9 +40,22 @@ export default async function TeamPage() {
     }
   }
 
+  // Resolve user_id → full_name from user_profiles
+  const nameByUserId = new Map<string, string>();
+  if (service && members?.length) {
+    const { data: profiles } = await service
+      .from("user_profiles")
+      .select("user_id, full_name")
+      .in("user_id", members.map((m) => m.user_id));
+    for (const p of profiles ?? []) {
+      if (p.full_name) nameByUserId.set(p.user_id, p.full_name);
+    }
+  }
+
   const teamMembers: TeamMember[] = (members ?? []).map((m) => ({
     user_id: m.user_id,
     email: emailByUserId.get(m.user_id) ?? "—",
+    full_name: nameByUserId.get(m.user_id) ?? null,
     role: m.role as Role,
     joined_at: m.created_at,
     is_self: m.user_id === session.user.id,
@@ -75,8 +89,12 @@ export default async function TeamPage() {
     <div className="px-8 py-10 max-w-4xl mx-auto">
       <PageHeader
         eyebrow="People"
-        title="Team"
-        description="Members of this practice and their compliance access roles. Owner and Admin can add, remove, or change roles."
+        title={isAdmin(role) ? "Edit Staff" : "Team"}
+        description={
+          isAdmin(role)
+            ? "Approve pending requests, edit names, change roles, or offboard members of this practice."
+            : "Members of this practice and their compliance access roles."
+        }
       />
 
       {isAdmin(role) && (

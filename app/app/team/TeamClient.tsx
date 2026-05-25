@@ -242,8 +242,37 @@ function MemberRow({
   onChange: () => void;
 }) {
   const [editingRole, setEditingRole] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(member.full_name ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function saveName() {
+    const trimmed = nameDraft.trim();
+    if (!trimmed) { setError("Name can't be empty"); return; }
+    if (trimmed === (member.full_name ?? "")) { setEditingName(false); return; }
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/team/name", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          practice_id: practiceId,
+          target_user_id: member.user_id,
+          full_name: trimmed,
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) setError(body.error ?? "Failed to update name");
+      else {
+        setEditingName(false);
+        onChange();
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function changeRole(newRole: Role) {
     setBusy(true);
@@ -302,12 +331,58 @@ function MemberRow({
       style={{ gridTemplateColumns: "1.5fr 1.2fr 100px 140px" }}
     >
       <div className="min-w-0">
-        <p className="text-sm text-[var(--color-primary)] truncate">
+        {editingName ? (
+          <div className="flex items-center gap-1.5">
+            <input
+              autoFocus
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveName();
+                if (e.key === "Escape") { setEditingName(false); setNameDraft(member.full_name ?? ""); }
+              }}
+              disabled={busy}
+              maxLength={120}
+              className="bg-transparent border border-[var(--color-accent)]/60 rounded-md px-2 py-0.5 text-sm text-[var(--color-primary)] focus:outline-none w-full"
+            />
+            <button
+              onClick={saveName}
+              disabled={busy}
+              className="text-[11px] text-[var(--color-accent)] hover:text-[var(--color-primary)] transition-colors disabled:opacity-50 shrink-0"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => { setEditingName(false); setNameDraft(member.full_name ?? ""); setError(null); }}
+              disabled={busy}
+              className="text-[11px] text-[var(--color-quaternary)] hover:text-[var(--color-primary)] transition-colors disabled:opacity-50 shrink-0"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-[var(--color-primary)] truncate">
+              {member.full_name || <span className="italic text-[var(--color-tertiary)]">No name set</span>}
+              {member.is_self && <span className="ml-2 text-xs text-[var(--color-tertiary)]">(you)</span>}
+            </p>
+            {canManage && (
+              <button
+                onClick={() => setEditingName(true)}
+                disabled={busy}
+                aria-label="Edit name"
+                className="text-[var(--color-quaternary)] hover:text-[var(--color-primary)] transition-colors shrink-0"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                </svg>
+              </button>
+            )}
+          </div>
+        )}
+        <p className="font-mono text-[10px] text-[var(--color-quaternary)] mt-0.5 truncate">
           {member.email}
-          {member.is_self && <span className="ml-2 text-xs text-[var(--color-tertiary)]">(you)</span>}
-        </p>
-        <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--color-quaternary)] mt-0.5 truncate">
-          {member.user_id.slice(0, 12)}…
         </p>
       </div>
 

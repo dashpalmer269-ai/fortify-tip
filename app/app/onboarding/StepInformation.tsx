@@ -16,28 +16,36 @@ const EMP_OPTIONS: InformationData["employee_range"][] = ["1-20", "21-50", "51+"
 const LOC_OPTIONS: InformationData["location_count_range"][] = ["1-2", "3-5", "5+"];
 
 export default function StepInformation({ data, onChange, onContinue, isLast }: Props) {
-  // How many location forms to show based on selected range
-  const requiredLocations =
-    data.location_count_range === "1-2" ? 2 :
-    data.location_count_range === "3-5" ? 5 :
-    data.location_count_range === "5+" ? 5 : 1;
+  // Per range: minimum allowed count, and how many forms we auto-populate on first selection.
+  const { minLocations, autoPopulate, allowExtra } =
+    data.location_count_range === "1-2" ? { minLocations: 1, autoPopulate: 2, allowExtra: false } :
+    data.location_count_range === "3-5" ? { minLocations: 3, autoPopulate: 5, allowExtra: false } :
+    data.location_count_range === "5+"  ? { minLocations: 5, autoPopulate: 5, allowExtra: true  } :
+                                          { minLocations: 1, autoPopulate: 1, allowExtra: false };
 
-  // Ensure locations array matches required length
+  // Ensure locations array reaches the auto-populate count when a range is first selected,
+  // but never trims existing entries below it (admin may have added more under 5+).
   const locs = [...data.locations];
-  while (locs.length < requiredLocations) locs.push({ ...EMPTY_LOCATION });
-  if (locs.length > requiredLocations && data.location_count_range !== "5+") {
-    locs.length = requiredLocations;
+  while (locs.length < autoPopulate) locs.push({ ...EMPTY_LOCATION });
+
+  // For the bounded ranges (1-2, 3-5), cap the array at the auto-populate ceiling.
+  if (!allowExtra && locs.length > autoPopulate) {
+    locs.length = autoPopulate;
   }
+
+  const canRemove = locs.length > minLocations;
+  const canAdd = allowExtra;
 
   function updateLocation(idx: number, patch: Partial<OnboardingLocation>) {
     const next = locs.map((l, i) => (i === idx ? { ...l, ...patch } : l));
     onChange({ ...data, locations: next });
   }
   function addLocation() {
+    if (!canAdd) return;
     onChange({ ...data, locations: [...locs, { ...EMPTY_LOCATION }] });
   }
   function removeLocation(idx: number) {
-    if (locs.length <= 1) return;
+    if (!canRemove) return;
     onChange({ ...data, locations: locs.filter((_, i) => i !== idx) });
   }
 
@@ -137,8 +145,11 @@ export default function StepInformation({ data, onChange, onContinue, isLast }: 
                 <p className="text-sm text-[var(--color-tertiary)] mt-1">
                   Each physical location needs an address for compliance scoping.
                 </p>
+                <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-quaternary)] mt-2">
+                  {locs.length} of {data.location_count_range} · minimum {minLocations}
+                </p>
               </div>
-              {data.location_count_range === "5+" && (
+              {canAdd && (
                 <Button onClick={addLocation} variant="secondary" size="sm">+ Add location</Button>
               )}
             </div>
@@ -150,13 +161,20 @@ export default function StepInformation({ data, onChange, onContinue, isLast }: 
                     <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-violet-300/80">
                       Location {idx + 1}
                     </p>
-                    {data.location_count_range === "5+" && locs.length > 1 && (
+                    {canRemove ? (
                       <button
                         onClick={() => removeLocation(idx)}
                         className="text-xs text-[var(--color-tertiary)] hover:text-[var(--color-danger)] transition-colors"
                       >
                         Remove
                       </button>
+                    ) : (
+                      <span
+                        className="text-[10px] font-mono uppercase tracking-[0.25em] text-[var(--color-quaternary)]"
+                        title={`Minimum ${minLocations} location${minLocations === 1 ? "" : "s"} for this range`}
+                      >
+                        Required
+                      </span>
                     )}
                   </div>
 
