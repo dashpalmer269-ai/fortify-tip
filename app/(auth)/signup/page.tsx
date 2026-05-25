@@ -34,26 +34,26 @@ export default function SignupPage() {
     setError(null);
     setLoading(true);
     try {
-      const supabase = createBrowserClient();
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo:
-            typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined,
-          data: { account_type: accountType },
-        },
+      // DEMO: create the user via service-role (auto-confirmed, no email send)
+      // to bypass Supabase's 4/hour email rate limit. Then sign in normally.
+      const createRes = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, password, account_type: accountType }),
       });
-      if (error) {
-        setError(error.message);
+      const createBody = await createRes.json();
+      if (!createRes.ok) {
+        setError(createBody.error ?? "Signup failed");
         return;
       }
-      if (data.session) {
-        router.push("/app/onboarding");
-        router.refresh();
-      } else {
-        router.push(`/auth/verify-sent?email=${encodeURIComponent(email)}`);
+      const supabase = createBrowserClient();
+      const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInErr) {
+        setError(signInErr.message);
+        return;
       }
+      router.push("/app/onboarding");
+      router.refresh();
     } finally {
       setLoading(false);
     }
