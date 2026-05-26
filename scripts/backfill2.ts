@@ -33,7 +33,10 @@ function randomDate(daysAgo: number): string {
   return d.toISOString();
 }
 
-function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
+function pick<T>(arr: T[]): T {
+  if (arr.length === 0) throw new Error("pick: empty array");
+  return arr[Math.floor(Math.random() * arr.length)]!;
+}
 
 // ─── COMMUNITY ────────────────────────────────────────────────────────────────
 
@@ -90,7 +93,7 @@ async function generateCommunity(topic: typeof COMMUNITY_TOPICS[0]) {
 JSON only: { "title": "punchy title under 85 chars, no actor name prefix", "summary": "2-3 plain English sentences: what they're doing, who's at risk, what defenders should do", "tags": ["tag1","tag2","tag3","tag4"] }`
     }]
   });
-  const text = msg.content[0].type === "text" ? msg.content[0].text : "{}";
+  const text = msg.content[0]?.type === "text" ? msg.content[0].text : "{}";
   let p: Record<string, unknown> = {};
   try { p = JSON.parse(text); } catch { /* use fallbacks */ }
 
@@ -123,7 +126,7 @@ async function generateForum(topic: typeof FORUM_TOPICS[0]) {
 JSON only: { "summary": "2-3 sentences covering key findings, who is affected, and what defenders should know", "tags": ["tag1","tag2","tag3"] }`
     }]
   });
-  const text = msg.content[0].type === "text" ? msg.content[0].text : "{}";
+  const text = msg.content[0]?.type === "text" ? msg.content[0].text : "{}";
   let p: Record<string, unknown> = {};
   try { p = JSON.parse(text); } catch { /* use fallbacks */ }
 

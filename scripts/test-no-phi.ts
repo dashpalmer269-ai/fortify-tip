@@ -6,10 +6,10 @@ import { detectPhi, containsPhi, scanFieldsForPhi, sanitizeForAudit, NO_PHI_AI_S
 
 const C = { g: "\x1b[32m", r: "\x1b[31m", y: "\x1b[33m", x: "\x1b[0m" };
 let pass = 0, fail = 0;
-const ok = (m) => { console.log(`  ${C.g}✓${C.x} ${m}`); pass++; };
-const bad = (m) => { console.log(`  ${C.r}✗${C.x} ${m}`); fail++; };
+const ok = (m: string): void => { console.log(`  ${C.g}✓${C.x} ${m}`); pass++; };
+const bad = (m: string): void => { console.log(`  ${C.r}✗${C.x} ${m}`); fail++; };
 
-function expect(label, actual, predicate) {
+function expect<T>(label: string, actual: T, predicate: (v: T) => boolean): void {
   if (predicate(actual)) ok(label);
   else bad(`${label} — got ${JSON.stringify(actual)}`);
 }
@@ -42,11 +42,15 @@ expect("year alone",      detectPhi("Onboarded in 2024"),                  (m) =
 
 console.log(`\n${C.y}5. scanFieldsForPhi returns first match with field name${C.x}`);
 const r1 = scanFieldsForPhi({ title: "Backup policy", notes: "Pt SSN 555-22-3344" });
-expect("returns object", r1, (v) => v && typeof v === "object");
-expect("field is notes", r1.field, (v) => v === "notes");
-expect("categories include SSN", r1.categories, (v) => v.includes("SSN"));
-expect("message mentions notes", r1.message, (v) => v.includes("notes"));
-expect("message mentions PHI",   r1.message, (v) => v.includes("PHI") || v.includes("patient"));
+expect("returns object", r1, (v) => v !== null && typeof v === "object");
+if (r1) {
+  expect("field is notes", r1.field, (v) => v === "notes");
+  expect("categories include SSN", r1.categories, (v) => v.includes("SSN"));
+  expect("message mentions notes", r1.message, (v) => v.includes("notes"));
+  expect("message mentions PHI",   r1.message, (v) => v.includes("PHI") || v.includes("patient"));
+} else {
+  bad("r1 was null — earlier assertions skipped");
+}
 
 const r2 = scanFieldsForPhi({ title: "Backup policy", notes: "Restore weekly." });
 expect("clean input returns null", r2, (v) => v === null);

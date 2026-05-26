@@ -25,13 +25,13 @@ interface ControlRow {
 
 type Variant = "default" | "muted" | "success" | "danger" | "warning" | "info" | "accent";
 
-const STATUS_META: Record<string, { label: string; variant: Variant }> = {
-  compliant:      { label: "Compliant",     variant: "success" },
-  partial:        { label: "Partial",       variant: "warning" },
-  non_compliant:  { label: "Non-compliant", variant: "danger" },
-  not_started:    { label: "Not started",   variant: "muted" },
-  not_applicable: { label: "N/A",           variant: "muted" },
-};
+const STATUS_META = {
+  compliant:      { label: "Compliant",     variant: "success" as Variant },
+  partial:        { label: "Partial",       variant: "warning" as Variant },
+  non_compliant:  { label: "Non-compliant", variant: "danger" as Variant },
+  not_started:    { label: "Not started",   variant: "muted" as Variant },
+  not_applicable: { label: "N/A",           variant: "muted" as Variant },
+} as const;
 
 const PRIORITY_DOT: Record<string, string> = {
   critical: "var(--color-danger)",
@@ -184,7 +184,7 @@ export default function ComplianceBrowser({
           </Card>
         )}
         {filtered.map((c) => {
-          const statusMeta = STATUS_META[c.status] ?? STATUS_META.not_started;
+          const statusMeta = STATUS_META[c.status as keyof typeof STATUS_META] ?? STATUS_META.not_started;
           const priority = c.default_priority ?? "medium";
           const isExpanded = expandedId === c.id;
           const isSaving = savingId === c.id;

@@ -188,7 +188,7 @@ export async function generateArticle(ctx: ArticleContext, maxAttempts = 3): Pro
         max_tokens: 2000,
         messages: [{ role: 'user', content: buildPrompt(ctx, correction) }],
       });
-      rawText = msg.content[0].type === 'text' ? msg.content[0].text : '{}';
+      rawText = msg.content[0]?.type === 'text' ? msg.content[0].text : '{}';
     } catch (err) {
       // API-level failure (auth, billing, rate limit, network). Surface to caller — retrying won't fix.
       throw new Error(`Anthropic API call failed: ${(err as Error).message}`);
@@ -274,5 +274,5 @@ Provide a concise 2-4 sentence synthesis of what these threats have in common, t
     ],
   });
 
-  return message.content[0].type === 'text' ? message.content[0].text : '';
+  return message.content[0]?.type === 'text' ? message.content[0].text : '';
 }

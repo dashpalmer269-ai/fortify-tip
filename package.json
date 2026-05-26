@@ -4,11 +4,19 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "tsc --noEmit",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "db:types": "supabase gen types typescript --project-id cqxvzsbyoeporgyjmrcp > lib/supabase/database.types.ts && echo 'Wrote lib/supabase/database.types.ts. Review the diff and commit.'",
-    "test:no-phi": "tsx scripts/test-no-phi.mjs"
+    "test:no-phi": "tsx scripts/test-no-phi.ts",
+    "test:no-phi-e2e": "tsx scripts/test-no-phi-e2e.ts",
+    "test:admin-flow": "tsx scripts/test-admin-flow.ts",
+    "test:approval-flow": "tsx scripts/test-approval-flow.ts",
+    "test:approval-perms": "tsx scripts/test-approval-perms.ts",
+    "test:edit-staff": "tsx scripts/test-edit-staff.ts",
+    "test:all": "tsx scripts/test-no-phi.ts && tsx scripts/test-no-phi-e2e.ts && tsx scripts/test-approval-flow.ts && tsx scripts/test-approval-perms.ts && tsx scripts/test-edit-staff.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",

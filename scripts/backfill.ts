@@ -36,7 +36,8 @@ function randomDate(daysAgo: number): string {
 }
 
 function pickRandom<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
+  if (arr.length === 0) throw new Error("pickRandom: empty array");
+  return arr[Math.floor(Math.random() * arr.length)]!;
 }
 
 // ─── REGISTRY PROMPTS ────────────────────────────────────────────────────────
@@ -143,7 +144,7 @@ Respond in JSON only (no markdown):
     }]
   });
 
-  const text = msg.content[0].type === "text" ? msg.content[0].text : "{}";
+  const text = msg.content[0]?.type === "text" ? msg.content[0].text : "{}";
   let parsed: Record<string, unknown> = {};
   try { parsed = JSON.parse(text); } catch { parsed = {}; }
 
@@ -185,7 +186,7 @@ Respond in JSON only (no markdown):
     }]
   });
 
-  const text = msg.content[0].type === "text" ? msg.content[0].text : "{}";
+  const text = msg.content[0]?.type === "text" ? msg.content[0].text : "{}";
   let parsed: Record<string, unknown> = {};
   try { parsed = JSON.parse(text); } catch { parsed = {}; }
 
@@ -229,7 +230,7 @@ Respond in JSON only (no markdown):
     }]
   });
 
-  const text = msg.content[0].type === "text" ? msg.content[0].text : "{}";
+  const text = msg.content[0]?.type === "text" ? msg.content[0].text : "{}";
   let parsed: Record<string, unknown> = {};
   try { parsed = JSON.parse(text); } catch { parsed = {}; }
 

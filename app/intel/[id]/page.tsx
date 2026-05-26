@@ -5,12 +5,12 @@ import { Threat } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const SEVERITY_STYLES: Record<string, { color: string; bg: string }> = {
+const SEVERITY_STYLES = {
   critical: { color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
   high:     { color: "#f97316", bg: "rgba(249,115,22,0.12)" },
   medium:   { color: "#eab308", bg: "rgba(234,179,8,0.12)" },
   low:      { color: "#3b82f6", bg: "rgba(59,130,246,0.12)" },
-};
+} as const;
 
 const TAB_TONE: Record<string, string> = {
   registry:  "#8b5cf6",
@@ -26,7 +26,7 @@ export default async function PublicThreatDetail({ params }: { params: Promise<{
   const { data } = await supabase.from("threats").select("*").eq("id", id).single();
   if (!data) notFound();
   const t = data as Threat;
-  const sev = SEVERITY_STYLES[t.severity ?? "low"];
+  const sev = SEVERITY_STYLES[(t.severity as keyof typeof SEVERITY_STYLES) ?? "low"] ?? SEVERITY_STYLES.low;
   const tone = TAB_TONE[t.source_tab ?? "registry"] ?? "#8b5cf6";
 
   let related: Threat[] = [];

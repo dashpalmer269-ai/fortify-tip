@@ -86,7 +86,7 @@ export default function AnimatedSphere() {
       // Draw connections between nearby particles
       for (let i = 0; i < projected.length; i++) {
         for (let j = i + 1; j < projected.length; j++) {
-          const a = projected[i], b = projected[j];
+          const a = projected[i]!, b = projected[j]!;
           const dx = a.px - b.px, dy = a.py - b.py;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < 55) {

@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
 
   const startedAt = Date.now();
-  const counts: Record<string, number> = {
+  const counts = {
     checks_attempted: 0,
     checks_skipped_stale: 0,
     pass: 0,

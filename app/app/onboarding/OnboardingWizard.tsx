@@ -136,11 +136,11 @@ export default function OnboardingWizard({
 
   function nextOf(s: StepKey): StepKey {
     const idx = ORDER.indexOf(s);
-    return ORDER[Math.min(idx + 1, ORDER.length - 1)];
+    return ORDER[Math.min(idx + 1, ORDER.length - 1)] ?? s;
   }
   function prevOf(s: StepKey): StepKey {
     const idx = ORDER.indexOf(s);
-    return ORDER[Math.max(idx - 1, 0)];
+    return ORDER[Math.max(idx - 1, 0)] ?? s;
   }
 
   async function finalSubmit() {

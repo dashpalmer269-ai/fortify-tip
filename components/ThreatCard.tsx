@@ -2,12 +2,12 @@
 import Link from "next/link";
 import { Threat } from "@/lib/types";
 
-const SEVERITY_COLOR: Record<string, { color: string; glow: string }> = {
+const SEVERITY_COLOR = {
   critical: { color: "#ef4444", glow: "rgba(239,68,68,0.7)" },
   high:     { color: "#f97316", glow: "rgba(249,115,22,0.7)" },
   medium:   { color: "#eab308", glow: "rgba(234,179,8,0.7)"  },
   low:      { color: "#3b82f6", glow: "rgba(59,130,246,0.7)" },
-};
+} as const;
 
 const TAB_ACCENT: Record<string, string> = {
   registry:  "#8B5CF6",
@@ -43,7 +43,8 @@ export default function ThreatCard({
   accentColor?: string;
   hrefPrefix?: string;
 }) {
-  const sev = SEVERITY_COLOR[threat.severity ?? "low"] ?? SEVERITY_COLOR.low;
+  const sev =
+    SEVERITY_COLOR[(threat.severity as keyof typeof SEVERITY_COLOR) ?? "low"] ?? SEVERITY_COLOR.low;
   const tabColor = TAB_ACCENT[threat.source_tab ?? "registry"] ?? "#8B5CF6";
 
   return (

@@ -86,7 +86,7 @@ export default async function IntelPage() {
                 <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
               </div>
             )}
-            <Section meta={s} items={sections[s.key]} />
+            <Section meta={s} items={sections[s.key] ?? []} />
           </div>
         ))}
       </div>

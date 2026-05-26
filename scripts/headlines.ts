@@ -74,12 +74,12 @@ async function generateHeadline(row: Row): Promise<string> {
     messages: [{ role: "user", content: `${PROMPT_HEADER}\n\nTHREAT DATA\n${context}\n\nHEADLINE:` }],
   });
 
-  const text = msg.content[0].type === "text" ? msg.content[0].text : "";
+  const text = msg.content[0]?.type === "text" ? msg.content[0].text : "";
   return clean(text);
 }
 
 function clean(raw: string): string {
-  let h = raw.trim().split("\n")[0].trim();
+  let h = (raw.trim().split("\n")[0] ?? "").trim();
   h = h.replace(/^["']|["']$/g, "");
   h = h.replace(/^HEADLINE:\s*/i, "");
   h = h.replace(/^CVE-\d{4}-\d+:\s*/i, "");

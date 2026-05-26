@@ -15,7 +15,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/app/integrations?error=invalid_state", req.url));
   }
 
-  const [practiceId] = stateFromQuery.split(":");
+  const practiceId = stateFromQuery.split(":")[0];
+  if (!practiceId) {
+    return NextResponse.redirect(new URL("/app/integrations?error=invalid_state", req.url));
+  }
   const supabase = await createAuthedServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.redirect(new URL("/login", req.url));

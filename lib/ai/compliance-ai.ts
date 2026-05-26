@@ -67,7 +67,7 @@ Respond with ONLY the JSON object. No markdown fences, no commentary.`;
     messages: [{ role: "user", content: prompt }],
   });
 
-  const text = message.content[0].type === "text" ? message.content[0].text : "{}";
+  const text = message.content[0]?.type === "text" ? message.content[0].text : "{}";
   const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
   const parsed = JSON.parse(cleaned) as Partial<RiskAssessmentAi>;
 
@@ -122,7 +122,7 @@ Respond with ONLY the markdown body. No JSON wrapper, no preamble.`;
     messages: [{ role: "user", content: prompt }],
   });
 
-  const text = message.content[0].type === "text" ? message.content[0].text : "";
+  const text = message.content[0]?.type === "text" ? message.content[0].text : "";
   return text.trim();
 }
 
@@ -167,5 +167,5 @@ Plain English. No bullet points. No markdown headings. No quotation marks around
     messages: [{ role: "user", content: prompt }],
   });
 
-  return (message.content[0].type === "text" ? message.content[0].text : "").trim();
+  return (message.content[0]?.type === "text" ? message.content[0].text : "").trim();
 }
