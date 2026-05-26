@@ -1,0 +1,30 @@
+name: database-types-check
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "lib/supabase/database.types.ts"
+      - ".github/workflows/db-types-check.yml"
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.SUPABASE_ACCESS_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Regenerate database.types.ts
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: npx supabase gen types typescript --project-id cqxvzsbyoeporgyjmrcp > lib/supabase/database.types.fresh.ts
+      - name: Diff committed vs generated
+        run: |
+          if ! diff -u lib/supabase/database.types.ts lib/supabase/database.types.fresh.ts; then
+            echo "::error::Run 'npm run db:types' locally and commit the result."
+            exit 1
+          fi
+      - name: Typecheck
+        run: npx tsc --noEmit
