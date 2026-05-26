@@ -1,59 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { createServerClient } from "@/lib/supabase/server";
-import { scanFieldsForPhi } from "@/lib/compliance/no-phi";
+import { EmployeeOnboardingSchema, parseBody } from "@/lib/schemas/api";
 
 /**
  * Standard-user onboarding submit.
- *  - Writes the user_profiles row with status='pending'
+ *  - Validates body via zod (shape) + scanFieldsForPhi (No-PHI gate)
+ *  - Writes user_profiles with status='pending'
  *  - Attempts to match a practice by claimed name (case-insensitive)
  *  - If matched, stores matched_practice_id and notifies every admin/owner
  *  - Audit log entry
  *
- * DEMO WORKAROUND: writes go through service-role to dodge the RLS bug
- * documented in /api/onboarding/finalize. The user_id is pinned to the
- * authenticated caller so service-role isn't trusted with body data.
+ * DEMO WORKAROUND: writes through service-role to dodge the auth.uid() RLS
+ * issue documented in /api/onboarding/finalize. The user_id is pinned to
+ * the authenticated caller so service-role isn't trusted with body data.
  */
 export async function POST(req: NextRequest) {
   const userClient = await createAuthedServerClient();
-  const { data: { user } } = await userClient.auth.getUser();
+  const {
+    data: { user },
+  } = await userClient.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const db = createServerClient();
   if (!db) return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
 
-  const body = (await req.json().catch(() => null)) as
-    | {
-        full_name?: string;
-        job_title?: string;
-        phone?: string | null;
-        pending_practice_name?: string;
-        claimed_admin_name?: string;
-        primary_address?: Record<string, string | null>;
-      }
-    | null;
-
-  if (
-    !body?.full_name?.trim() ||
-    !body.job_title?.trim() ||
-    !body.pending_practice_name?.trim() ||
-    !body.claimed_admin_name?.trim() ||
-    !body.primary_address
-  ) {
-    return NextResponse.json({ error: "Missing required profile fields" }, { status: 400 });
-  }
-
-  // NO PHI: scan every text field the user typed.
-  const phi = scanFieldsForPhi({
-    full_name: body.full_name,
-    job_title: body.job_title,
-    pending_practice_name: body.pending_practice_name,
-    claimed_admin_name: body.claimed_admin_name,
+  const parsed = await parseBody(EmployeeOnboardingSchema, req, {
+    phiFields: ["full_name", "job_title", "pending_practice_name", "claimed_admin_name"],
   });
-  if (phi) return NextResponse.json({ error: phi.message }, { status: 422 });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
-  // ── Attempt to match a practice by name (case-insensitive trim) ──────────
-  const claimedName = body.pending_practice_name.trim();
+  // ── Match a practice by name (case-insensitive trim) ──────────────────────
+  const claimedName = body.pending_practice_name;
   const { data: practiceMatch } = await db
     .from("practices")
     .select("id, name")
@@ -62,28 +41,24 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
   const matchedPracticeId = practiceMatch?.id ?? null;
 
-  // ── Upsert profile in pending state ──────────────────────────────────────
-  const { error: upsertErr } = await db
-    .from("user_profiles")
-    .upsert(
-      {
-        user_id: user.id,
-        account_type: "employee",
-        full_name: body.full_name.trim(),
-        job_title: body.job_title.trim(),
-        phone: body.phone?.trim() || null,
-        pending_practice_name: claimedName,
-        claimed_admin_name: body.claimed_admin_name.trim(),
-        primary_address: body.primary_address,
-        matched_practice_id: matchedPracticeId,
-        status: "pending",
-        onboarded_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id" }
-    );
+  const { error: upsertErr } = await db.from("user_profiles").upsert(
+    {
+      user_id: user.id,
+      account_type: "employee",
+      full_name: body.full_name,
+      job_title: body.job_title,
+      phone: body.phone?.trim() || null,
+      pending_practice_name: claimedName,
+      claimed_admin_name: body.claimed_admin_name,
+      primary_address: body.primary_address,
+      matched_practice_id: matchedPracticeId,
+      status: "pending",
+      onboarded_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" }
+  );
   if (upsertErr) return NextResponse.json({ error: upsertErr.message }, { status: 500 });
 
-  // ── Notify every admin/owner of the matched practice ─────────────────────
   if (matchedPracticeId) {
     const { data: admins } = await db
       .from("practice_users")
@@ -98,13 +73,12 @@ export async function POST(req: NextRequest) {
           practice_id: matchedPracticeId,
           kind: "request.created",
           title: "New join request",
-          body: `${body.full_name!.trim()} (${body.job_title!.trim()}) is requesting access.`,
+          body: `${body.full_name} (${body.job_title}) is requesting access.`,
           link: "/app/team",
         }))
       );
     }
 
-    // Audit log
     await db.from("audit_logs").insert({
       practice_id: matchedPracticeId,
       actor_user_id: user.id,
@@ -112,9 +86,9 @@ export async function POST(req: NextRequest) {
       resource_type: "user_profile",
       resource_id: user.id,
       metadata: {
-        full_name: body.full_name.trim(),
-        job_title: body.job_title.trim(),
-        claimed_admin_name: body.claimed_admin_name.trim(),
+        full_name: body.full_name,
+        job_title: body.job_title,
+        claimed_admin_name: body.claimed_admin_name,
       },
     });
   }

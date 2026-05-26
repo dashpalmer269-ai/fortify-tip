@@ -1,0 +1,52 @@
+# Verify that lib/supabase/database.types.ts matches the live Supabase schema.
+#
+# Triggered on any PR that touches a migration. Regenerates the types via the
+# Supabase CLI and diffs against the committed file. The PR is blocked if the
+# diff is non-empty — the author needs to run `npm run db:types` and commit
+# the result.
+#
+# Setup: add SUPABASE_ACCESS_TOKEN as a repo secret. Generate one at
+# https://supabase.com/dashboard/account/tokens (Personal access tokens).
+
+name: database-types-check
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "lib/supabase/database.types.ts"
+      - ".github/workflows/db-types-check.yml"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.SUPABASE_ACCESS_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Regenerate database.types.ts
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          npx supabase gen types typescript \
+            --project-id cqxvzsbyoeporgyjmrcp \
+            > lib/supabase/database.types.fresh.ts
+
+      - name: Diff committed vs generated
+        run: |
+          if ! diff -u lib/supabase/database.types.ts lib/supabase/database.types.fresh.ts; then
+            echo ""
+            echo "::error::Committed database.types.ts is out of sync with the live schema."
+            echo "::error::Run 'npm run db:types' locally and commit the result."
+            exit 1
+          fi
+
+      - name: Typecheck
+        run: npx tsc --noEmit

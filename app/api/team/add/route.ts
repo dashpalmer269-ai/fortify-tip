@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { createServerClient as createServiceClient } from "@/lib/supabase/server";
-import { ASSIGNABLE_ROLES, isAdmin, type Role } from "@/lib/auth/permissions";
+import { isAdmin, isAssignableRole, type Role } from "@/lib/auth/permissions";
 
 /**
  * Add an existing Supabase Auth user to the current practice by email.
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
-  if (!ASSIGNABLE_ROLES.includes(body.role)) {
+  if (!isAssignableRole(body.role)) {
     return NextResponse.json({ error: "Role cannot be assigned (use Owner-only path)" }, { status: 400 });
   }
 

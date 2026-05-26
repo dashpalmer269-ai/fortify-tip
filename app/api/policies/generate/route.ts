@@ -1,29 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { draftPolicy } from "@/lib/ai/compliance-ai";
-import { scanFieldsForPhi } from "@/lib/compliance/no-phi";
+import { PolicyGenerateSchema, parseBody } from "@/lib/schemas/api";
 
 export const maxDuration = 60;
 
-interface Body {
-  practice_id?: string;
-  framework?: string;
-  policy_type?: string;
-  title?: string;
-}
-
 export async function POST(req: NextRequest) {
   const supabase = await createAuthedServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = (await req.json().catch(() => null)) as Body | null;
-  if (!body?.practice_id || !body.policy_type || !body.title) {
-    return NextResponse.json({ error: "practice_id, policy_type, and title required" }, { status: 400 });
-  }
-
-  const phi = scanFieldsForPhi({ title: body.title, policy_type: body.policy_type });
-  if (phi) return NextResponse.json({ error: phi.message }, { status: 422 });
+  const parsed = await parseBody(PolicyGenerateSchema, req, {
+    phiFields: ["title", "policy_type"],
+  });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   const { data: practice } = await supabase
     .from("practices")

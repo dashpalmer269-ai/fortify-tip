@@ -1,65 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { createServerClient } from "@/lib/supabase/server";
-import { scanFieldsForPhi, sanitizeForAudit } from "@/lib/compliance/no-phi";
-import type { OnboardingState } from "@/app/app/onboarding/types";
+import { sanitizeForAudit, scanFieldsForPhi } from "@/lib/compliance/no-phi";
+import { OnboardingFinalizeSchema, parseBody } from "@/lib/schemas/api";
 import type { Inserts } from "@/lib/supabase/types";
 
 /**
  * Finalize onboarding.
  *
- * DEMO WORKAROUND (TODO: revisit after beta):
- * We authenticate the caller with the user-cookie client (gets user.id) and
- * then perform the writes with the service-role client. This bypasses the
- * RLS-policy bug we hit during admin-flow testing where `auth.uid()` was
- * resolving to null inside the practices INSERT check despite a valid JWT
- * (Supabase JWKS / ES256 signing key quirk). The user-id check below ensures
- * we still tie every write to the authenticated caller — service-role is NOT
- * being trusted blindly. Once the RLS issue is fixed in Supabase, switch the
- * `db` variable back to the user-authed client.
+ * DEMO WORKAROUND (TODO: revisit after beta): writes via service-role to
+ * dodge the auth.uid() RLS issue on Supabase ES256/JWKS projects. The
+ * authenticated user.id is what we tie membership/audit-log rows to —
+ * service-role isn't trusted with body data.
  */
 export async function POST(req: NextRequest) {
   const userClient = await createAuthedServerClient();
-  const { data: { user } } = await userClient.auth.getUser();
+  const {
+    data: { user },
+  } = await userClient.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const db = createServerClient();
   if (!db) return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
 
-  const body = (await req.json().catch(() => null)) as
-    | { state: OnboardingState; existing_practice_id?: string | null }
-    | null;
-  if (!body?.state) return NextResponse.json({ error: "Missing state" }, { status: 400 });
+  // Body validation + No-PHI scan in one call.
+  const parsed = await parseBody(OnboardingFinalizeSchema, req);
+  if (!parsed.ok) return parsed.response;
+  const { state, existing_practice_id } = parsed.data;
+  const { information: info, fortification: fort, safeguards: safe, payment: pay } = state;
 
-  const { state } = body;
-  const info = state.information;
-  const fort = state.fortification;
-  const safe = state.safeguards;
-  const pay = state.payment;
-
-  // ── Server-side validation ────────────────────────────────────────────────
-  const issues: string[] = [];
-  if (!info.practice_name.trim()) issues.push("Practice name is required");
-  if (!info.description.trim()) issues.push("Practice description is required");
-  if (!info.employee_range) issues.push("Number of employees is required");
-  if (!info.location_count_range) issues.push("Number of locations is required");
+  // Locations need to be complete (zod already enforced min 1, but a row
+  // with blank-only strings would have passed if it were just an array).
   const validLocations = info.locations.filter(
-    (l) => l.street_1.trim() && l.city.trim() && l.region.trim() && l.postal_code.trim()
+    (l) =>
+      l.street_1.trim() && l.city.trim() && l.region.trim() && l.postal_code.trim()
   );
-  if (validLocations.length === 0) issues.push("At least one complete location is required");
-  if (!fort.current_status) issues.push("Current status is required");
-  if (!fort.upcoming_audit_window) issues.push("Upcoming audit selection is required");
-  if (!safe.mode) issues.push("Safeguard setup mode is required");
+  if (validLocations.length === 0) {
+    return NextResponse.json(
+      { error: "At least one complete location is required" },
+      { status: 400 }
+    );
+  }
   if (safe.mode === "schedule" && (!safe.assistance_date || !safe.assistance_window)) {
-    issues.push("Assistance call date and time window are required");
-  }
-  if (!pay.selected_plan) issues.push("Plan selection is required");
-
-  if (issues.length > 0) {
-    return NextResponse.json({ error: issues.join(" · ") }, { status: 400 });
+    return NextResponse.json(
+      { error: "Assistance call date and time window are required" },
+      { status: 400 }
+    );
   }
 
-  // NO PHI guardrail: free-text fields the admin types must not contain patient data.
+  // Free-text No-PHI scan on the wizard's nested fields. parseBody's
+  // phiFields only walks top-level keys, so we scan the nested ones here.
   const phi = scanFieldsForPhi({
     practice_name: info.practice_name,
     description: info.description,
@@ -67,9 +57,8 @@ export async function POST(req: NextRequest) {
   });
   if (phi) return NextResponse.json({ error: phi.message }, { status: 422 });
 
-  // If the caller claims to be updating an existing practice, verify they
-  // actually belong to it before letting service-role touch the row.
-  let practiceId = body.existing_practice_id ?? null;
+  // Verify membership if updating an existing practice
+  let practiceId = existing_practice_id ?? null;
   if (practiceId) {
     const { data: membership } = await db
       .from("practice_users")
@@ -82,17 +71,14 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── Upsert practice ───────────────────────────────────────────────────────
-  // Cast each enum-bound field to its narrow union; validation above guarantees
-  // they aren't the empty-string placeholder the wizard form uses for "unset".
   const practiceFields: Inserts<"practices"> = {
     name: info.practice_name.trim(),
     description: info.description.trim(),
-    employee_range: info.employee_range as Inserts<"practices">["employee_range"],
-    location_count_range: info.location_count_range as Inserts<"practices">["location_count_range"],
-    current_status: fort.current_status as Inserts<"practices">["current_status"],
-    upcoming_audit_window: fort.upcoming_audit_window as Inserts<"practices">["upcoming_audit_window"],
-    selected_plan: pay.selected_plan as Inserts<"practices">["selected_plan"],
+    employee_range: info.employee_range,
+    location_count_range: info.location_count_range,
+    current_status: fort.current_status,
+    upcoming_audit_window: fort.upcoming_audit_window,
+    selected_plan: pay.selected_plan,
     onboarding_step: "completed",
     onboarding_completed_at: new Date().toISOString(),
     hipaa_covered_entity: true,
@@ -100,10 +86,7 @@ export async function POST(req: NextRequest) {
   };
 
   if (practiceId) {
-    const { error: updErr } = await db
-      .from("practices")
-      .update(practiceFields)
-      .eq("id", practiceId);
+    const { error: updErr } = await db.from("practices").update(practiceFields).eq("id", practiceId);
     if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 });
   } else {
     const { data: created, error: insErr } = await db
@@ -116,7 +99,6 @@ export async function POST(req: NextRequest) {
     }
     practiceId = created.id;
 
-    // Make this user the owner — pinned to their authenticated id, not trusted from body.
     const { error: puErr } = await db.from("practice_users").insert({
       practice_id: practiceId,
       user_id: user.id,
@@ -125,12 +107,11 @@ export async function POST(req: NextRequest) {
     if (puErr) return NextResponse.json({ error: puErr.message }, { status: 500 });
   }
 
-  // ── Replace locations ─────────────────────────────────────────────────────
   await db.from("practice_locations").delete().eq("practice_id", practiceId);
   if (validLocations.length > 0) {
     const { error: locErr } = await db.from("practice_locations").insert(
       validLocations.map((l) => ({
-        practice_id: practiceId,
+        practice_id: practiceId!,
         label: l.label?.trim() || null,
         street_1: l.street_1.trim(),
         street_2: l.street_2?.trim() || null,
@@ -142,15 +123,13 @@ export async function POST(req: NextRequest) {
     if (locErr) return NextResponse.json({ error: locErr.message }, { status: 500 });
   }
 
-  // ── Replace integration choices ───────────────────────────────────────────
   await db.from("onboarding_integration_choices").delete().eq("practice_id", practiceId);
   if (safe.mode === "manual" && safe.integrations.length > 0) {
     await db.from("onboarding_integration_choices").insert(
-      safe.integrations.map((t) => ({ practice_id: practiceId, integration_type: t }))
+      safe.integrations.map((t) => ({ practice_id: practiceId!, integration_type: t }))
     );
   }
 
-  // ── Assistance request (if scheduled) ─────────────────────────────────────
   if (safe.mode === "schedule") {
     await db.from("assistance_requests").insert({
       practice_id: practiceId,
@@ -162,7 +141,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // ── Pre-seed healthcare baseline controls (if not already) ───────────────
+  // Pre-seed healthcare baseline controls (idempotent)
   const { data: existingPC } = await db
     .from("practice_controls")
     .select("id", { count: "exact", head: true })
@@ -175,7 +154,7 @@ export async function POST(req: NextRequest) {
     if (baseline?.length) {
       await db.from("practice_controls").insert(
         baseline.map((c) => ({
-          practice_id: practiceId,
+          practice_id: practiceId!,
           control_id: c.id,
           status: "not_started" as const,
         }))
@@ -183,7 +162,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── Audit log ─────────────────────────────────────────────────────────────
   await db.from("audit_logs").insert({
     practice_id: practiceId,
     actor_user_id: user.id,

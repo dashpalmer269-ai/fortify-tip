@@ -1,33 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { SignupSchema, parseBody } from "@/lib/schemas/api";
 
 /**
- * Demo signup: creates an auto-confirmed user via service-role so we skip the
- * Supabase email-confirmation flow (which is rate-limited to 4/hour on free
- * tier and was blocking demos). The client then signs in normally to get a
- * cookie-based session.
+ * Demo signup: creates an auto-confirmed user via service-role so we skip
+ * the Supabase email-confirmation flow (rate-limited to 4/hour on free
+ * tier and was blocking demos). The client signs in normally afterward to
+ * establish a cookie-based session.
  *
- * Pairs with the /api/onboarding/finalize RLS bypass — these are demo-only;
- * post-beta, restore the standard signUp() + email-confirm flow once SMTP is
- * wired through Resend.
+ * Pairs with the /api/onboarding/finalize RLS bypass — these are demo-only.
+ * Post-beta, restore the standard signUp() + email-confirm flow once SMTP
+ * is wired through Resend.
  */
 export async function POST(req: NextRequest) {
-  const body = (await req.json().catch(() => null)) as
-    | { email?: string; password?: string; account_type?: "admin" | "employee" }
-    | null;
-  if (!body?.email || !body.password) {
-    return NextResponse.json({ error: "Missing email or password" }, { status: 400 });
-  }
-  const accountType = body.account_type === "employee" ? "employee" : "admin";
+  const parsed = await parseBody(SignupSchema, req);
+  if (!parsed.ok) return parsed.response;
+  const { email, password, account_type = "admin" } = parsed.data;
 
   const db = createServerClient();
   if (!db) return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
 
   const { data, error } = await db.auth.admin.createUser({
-    email: body.email,
-    password: body.password,
+    email,
+    password,
     email_confirm: true,
-    user_metadata: { account_type: accountType },
+    user_metadata: { account_type },
   });
 
   if (error) {

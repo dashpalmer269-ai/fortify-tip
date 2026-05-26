@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { createServerClient } from "@/lib/supabase/server";
-import { scanFieldsForPhi } from "@/lib/compliance/no-phi";
+import { RequestDecisionSchema, parseBody } from "@/lib/schemas/api";
 
 /**
  * Approve or deny a pending Standard-user request.
  *
  * URL: /api/team/requests/[id]   ([id] = the requesting user_id)
- * Body: { action: 'approve' | 'deny', denial_reason?: string, role?: 'staff'|'compliance_officer'|'auditor_readonly' }
+ * Body: discriminated union — { action: 'approve', role? } | { action: 'deny', denial_reason? }
  *
  * The caller must be an owner/admin of the practice the request was matched to.
  * On approve we create the practice_users row (default role: staff) and flip
- * status to 'approved'. On deny we just flip status to 'denied' with reason.
+ * status to 'approved'. On deny we flip status to 'denied' with reason.
  * Either way we notify the requesting user and write an audit log entry.
  */
 export async function POST(
@@ -21,23 +21,19 @@ export async function POST(
   const { id: requestUserId } = await params;
 
   const userClient = await createAuthedServerClient();
-  const { data: { user } } = await userClient.auth.getUser();
+  const {
+    data: { user },
+  } = await userClient.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const db = createServerClient();
   if (!db) return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
 
-  const body = (await req.json().catch(() => null)) as
-    | { action?: "approve" | "deny"; denial_reason?: string; role?: string }
-    | null;
-  if (!body?.action || !["approve", "deny"].includes(body.action)) {
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
-  }
-
-  if (body.action === "deny" && body.denial_reason) {
-    const phi = scanFieldsForPhi({ denial_reason: body.denial_reason });
-    if (phi) return NextResponse.json({ error: phi.message }, { status: 422 });
-  }
+  const parsed = await parseBody(RequestDecisionSchema, req, {
+    phiFields: ["denial_reason"],
+  });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   // Load the request
   const { data: profile, error: pErr } = await db
@@ -70,14 +66,8 @@ export async function POST(
   const now = new Date().toISOString();
 
   if (body.action === "approve") {
-    const ASSIGNABLE = ["staff", "compliance_officer", "auditor_readonly"] as const;
-    type AssignableRole = (typeof ASSIGNABLE)[number];
-    const role: AssignableRole =
-      (ASSIGNABLE as readonly string[]).includes(body.role ?? "")
-        ? (body.role as AssignableRole)
-        : "staff";
+    const role = body.role ?? "staff";
 
-    // Create membership (idempotent: ignore if already present)
     const { error: muErr } = await db.from("practice_users").upsert(
       { practice_id: profile.matched_practice_id, user_id: profile.user_id, role },
       { onConflict: "practice_id,user_id" }
@@ -117,13 +107,15 @@ export async function POST(
   }
 
   // ── Deny ────────────────────────────────────────────────────────────────
+  const denialReason = body.denial_reason?.trim() || null;
+
   const { error: dErr } = await db
     .from("user_profiles")
     .update({
       status: "denied",
       decided_by: user.id,
       decided_at: now,
-      denial_reason: (body.denial_reason ?? "").trim() || null,
+      denial_reason: denialReason,
     })
     .eq("user_id", profile.user_id);
   if (dErr) return NextResponse.json({ error: dErr.message }, { status: 500 });
@@ -134,7 +126,7 @@ export async function POST(
     kind: "request.denied",
     title: "Access not granted",
     body:
-      (body.denial_reason ?? "").trim() ||
+      denialReason ??
       "An administrator at the practice you requested did not approve your access.",
     link: "/denied",
   });
@@ -145,7 +137,7 @@ export async function POST(
     action: "request.denied",
     resource_type: "user_profile",
     resource_id: profile.user_id,
-    metadata: { reason: body.denial_reason ?? null, requester_name: profile.full_name },
+    metadata: { reason: denialReason, requester_name: profile.full_name },
   });
 
   return NextResponse.json({ ok: true, status: "denied" });
