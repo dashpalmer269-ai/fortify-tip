@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getCurrentUserAndPractice, createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { getAppSession, assertActive } from "@/lib/auth/session";
 import PageHeader from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
@@ -23,9 +23,8 @@ interface PolicyRow {
 }
 
 export default async function PoliciesPage() {
-  const session = await getCurrentUserAndPractice();
-  if (!session) redirect("/login");
-  if (!session.membership) redirect("/app/onboarding");
+  const session = await getAppSession();
+  assertActive(session);
 
   const supabase = await createAuthedServerClient();
   const { data: policies } = await supabase

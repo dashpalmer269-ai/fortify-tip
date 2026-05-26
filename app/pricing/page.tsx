@@ -2,7 +2,7 @@ import Link from "next/link";
 import StarfieldBackground from "@/components/StarfieldBackground";
 import MarketingNav from "@/components/marketing/MarketingNav";
 import { PLANS } from "@/lib/billing/plans";
-import { getMarketingViewer } from "@/lib/auth/viewer";
+import { getMarketingViewer } from "@/lib/auth/session";
 import PricingCard from "./PricingCard";
 
 export const dynamic = "force-dynamic";

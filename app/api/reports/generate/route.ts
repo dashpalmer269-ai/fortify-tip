@@ -37,10 +37,10 @@ export async function POST(req: NextRequest) {
     .from("practice_controls")
     .select("status, controls(default_priority)")
     .eq("practice_id", body.practice_id)
-    .eq("status", "non_compliant");
+    .eq("status", "non_compliant")
+    .returns<Array<{ status: string; controls: { default_priority: string } | null }>>();
   const criticalOpen = (criticalOpenRows ?? [])
-    .map((r) => r.controls as unknown as { default_priority: string } | null)
-    .filter((c) => c?.default_priority === "critical").length;
+    .filter((r) => r.controls?.default_priority === "critical").length;
 
   const { data: recentDrift } = await supabase
     .from("drift_alerts")

@@ -1,133 +1,188 @@
 /**
- * Unified server-side session helper.
+ * Server-side session state.
  *
- * Returns a discriminated union the caller can switch on, eliminating the
- * repeated "if (!session) redirect / if (!session.membership) redirect"
- * dance from every server page in /app/*.
+ * One canonical loader fans out user → membership → profile in parallel, and
+ * two helpers reshape the result for two consumers:
  *
- *   const s = await getAppSession();
- *   switch (s.kind) {
- *     case "unauthenticated":  redirect("/login");
- *     case "denied":           redirect("/denied");
- *     case "pending":          redirect("/pending");
- *     case "no_practice":      redirect("/app/onboarding");
- *     case "active":
- *       // s.membership and s.role are now fully typed and present
- *   }
+ *   getAppSession()       → discriminated union for /app/* server pages
+ *                           (active | pending | denied | no_practice | unauthenticated)
+ *   getMarketingViewer()  → small DTO for the signed-in hamburger menu on
+ *                           marketing pages
  *
- * The existing `getCurrentUserAndPractice()` continues to work; this is an
- * additive helper. Pages can adopt it organically.
+ * Both share one round-trip to Supabase, one set of types, and one truth
+ * about what "signed in" means. The legacy getCurrentUserAndPractice() in
+ * server-auth.ts is gone; everywhere uses one of these two helpers now.
  */
 
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
+import {
+  ROLE_LABELS,
+  isAdmin,
+  type Role,
+  type AccountType,
+  type RequestStatus,
+} from "@/lib/auth/permissions";
+import { asPracticeId, asUserId, type PracticeId, type UserId } from "@/lib/supabase/ids";
 import type { Tables } from "@/lib/supabase/types";
-import type { Role, AccountType, RequestStatus } from "@/lib/auth/permissions";
 import type { User } from "@supabase/supabase-js";
+import type { UserMenuViewer } from "@/components/marketing/UserMenu";
 
-interface ActiveMembership {
-  practice_id: string;
-  role: Role;
-  practice_name: string;
-  frameworks_enabled: string[] | null;
-  hipaa_covered_entity: boolean | null;
+/* ──────────────────────────────────────────────────────────────────────── *
+ * The shared base loader
+ * ──────────────────────────────────────────────────────────────────────── */
+
+interface RawState {
+  user: User | null;
+  membership: {
+    practice_id: PracticeId;
+    role: Role;
+    practice_name: string;
+    frameworks_enabled: string[] | null;
+    hipaa_covered_entity: boolean | null;
+  } | null;
+  profile: Tables<"user_profiles"> | null;
 }
 
-export type AppSession =
-  | { kind: "unauthenticated" }
-  | { kind: "active"; user: User; membership: ActiveMembership }
-  | {
-      kind: "pending";
-      user: User;
-      profile: Tables<"user_profiles">;
-    }
-  | {
-      kind: "denied";
-      user: User;
-      profile: Tables<"user_profiles">;
-    }
-  | {
-      kind: "no_practice";
-      user: User;
-      accountType: AccountType;
-      profile: Tables<"user_profiles"> | null;
-    };
-
 /**
- * Resolve everything you need to render an /app/* page in one round-trip
- * fan-out. Branches are computed server-side so the route handler is just
- * a switch on `s.kind`.
+ * Single Supabase round-trip that resolves everything an authenticated
+ * request might need to render. Branded IDs are minted here so consumers
+ * never deal with raw UUIDs.
  */
-export async function getAppSession(): Promise<AppSession> {
+async function loadRawState(): Promise<RawState> {
   const supabase = await createAuthedServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { kind: "unauthenticated" };
+  if (!user) return { user: null, membership: null, profile: null };
 
-  // Membership + profile in parallel.
   const [{ data: membershipRow }, { data: profile }] = await Promise.all([
     supabase
       .from("practice_users")
       .select("practice_id, role, practices(id, name, frameworks_enabled, hipaa_covered_entity)")
       .eq("user_id", user.id)
       .limit(1)
-      .maybeSingle(),
+      .maybeSingle()
+      .returns<{
+        practice_id: string;
+        role: Role;
+        practices: {
+          id: string;
+          name: string;
+          frameworks_enabled: string[] | null;
+          hipaa_covered_entity: boolean | null;
+        } | null;
+      } | null>(),
     supabase.from("user_profiles").select("*").eq("user_id", user.id).maybeSingle(),
   ]);
 
-  if (membershipRow) {
-    const practiceData = membershipRow.practices as unknown as {
-      id: string;
-      name: string;
-      frameworks_enabled: string[] | null;
-      hipaa_covered_entity: boolean | null;
-    } | null;
+  const membership = membershipRow
+    ? {
+        practice_id: asPracticeId(membershipRow.practice_id),
+        role: membershipRow.role,
+        practice_name: membershipRow.practices?.name ?? "Practice",
+        frameworks_enabled: membershipRow.practices?.frameworks_enabled ?? null,
+        hipaa_covered_entity: membershipRow.practices?.hipaa_covered_entity ?? null,
+      }
+    : null;
 
-    return {
-      kind: "active",
-      user,
-      membership: {
-        practice_id: membershipRow.practice_id,
-        role: membershipRow.role as Role,
-        practice_name: practiceData?.name ?? "Practice",
-        frameworks_enabled: practiceData?.frameworks_enabled ?? null,
-        hipaa_covered_entity: practiceData?.hipaa_covered_entity ?? null,
-      },
+  return { user, membership, profile: profile ?? null };
+}
+
+/* ──────────────────────────────────────────────────────────────────────── *
+ * App-side: discriminated union for server pages
+ * ──────────────────────────────────────────────────────────────────────── */
+
+export type AppSession =
+  | { kind: "unauthenticated" }
+  | {
+      kind: "active";
+      user: User;
+      userId: UserId;
+      membership: NonNullable<RawState["membership"]>;
+    }
+  | { kind: "pending"; user: User; userId: UserId; profile: Tables<"user_profiles"> }
+  | { kind: "denied"; user: User; userId: UserId; profile: Tables<"user_profiles"> }
+  | {
+      kind: "no_practice";
+      user: User;
+      userId: UserId;
+      accountType: AccountType;
+      profile: Tables<"user_profiles"> | null;
     };
+
+/**
+ * The session helper for /app/* server pages. Use with assertActive() if
+ * the route is protected, or switch on `kind` if the route handles multiple
+ * states explicitly.
+ */
+export async function getAppSession(): Promise<AppSession> {
+  const raw = await loadRawState();
+  if (!raw.user) return { kind: "unauthenticated" };
+
+  const userId = asUserId(raw.user.id);
+
+  if (raw.membership) {
+    return { kind: "active", user: raw.user, userId, membership: raw.membership };
   }
 
-  // No membership — branch on the profile's account_type + status
-  const status = (profile?.status ?? "pending") as RequestStatus;
-  const accountType = (profile?.account_type ??
-    (user.user_metadata?.account_type as AccountType | undefined) ??
+  const status = (raw.profile?.status ?? "pending") as RequestStatus;
+  const accountType = (raw.profile?.account_type ??
+    (raw.user.user_metadata?.account_type as AccountType | undefined) ??
     "admin") as AccountType;
 
   if (accountType === "employee") {
     if (status === "denied") {
-      return { kind: "denied", user, profile: profile as Tables<"user_profiles"> };
+      return { kind: "denied", user: raw.user, userId, profile: raw.profile! };
     }
-    if (status === "pending" && profile?.onboarded_at) {
-      return { kind: "pending", user, profile: profile as Tables<"user_profiles"> };
+    if (status === "pending" && raw.profile?.onboarded_at) {
+      return { kind: "pending", user: raw.user, userId, profile: raw.profile };
     }
   }
 
   return {
     kind: "no_practice",
-    user,
+    user: raw.user,
+    userId,
     accountType,
-    profile: (profile ?? null) as Tables<"user_profiles"> | null,
+    profile: raw.profile,
   };
 }
 
 /**
- * Type guard for use inside server components: shorthand to assert "I'm
- * past the redirect tree, I know the session is active."
+ * Narrows an AppSession to the active variant. Throws if the session isn't
+ * active — meant for routes that are gated by app/app/layout.tsx and would
+ * never reach a non-active code path in production.
  */
-export function assertActive(session: AppSession): asserts session is Extract<
-  AppSession,
-  { kind: "active" }
-> {
+export function assertActive(
+  session: AppSession
+): asserts session is Extract<AppSession, { kind: "active" }> {
   if (session.kind !== "active") {
     throw new Error(`Expected active session, got ${session.kind}`);
   }
+}
+
+/* ──────────────────────────────────────────────────────────────────────── *
+ * Marketing-side: viewer DTO for the signed-in hamburger menu
+ * ──────────────────────────────────────────────────────────────────────── */
+
+export async function getMarketingViewer(): Promise<UserMenuViewer | null> {
+  const raw = await loadRawState();
+  if (!raw.user) return null;
+
+  const role: Role | null = raw.membership?.role ?? null;
+  const metaAccountType = raw.user.user_metadata?.account_type as
+    | AccountType
+    | undefined;
+  const accountType: AccountType =
+    raw.profile?.account_type ?? metaAccountType ?? "admin";
+
+  return {
+    email: raw.user.email ?? "",
+    fullName: raw.profile?.full_name ?? null,
+    accountType,
+    hasMembership: !!raw.membership,
+    practiceName: raw.membership?.practice_name ?? null,
+    roleLabel: role ? ROLE_LABELS[role] : null,
+    isAdminLike: isAdmin(role),
+  };
 }

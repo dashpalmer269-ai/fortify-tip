@@ -3,7 +3,7 @@ import CosmicOrb from "@/components/CosmicOrb";
 import StarfieldBackground from "@/components/StarfieldBackground";
 import MarketingNav from "@/components/marketing/MarketingNav";
 import { ButtonLink } from "@/components/ui/Button";
-import { getMarketingViewer } from "@/lib/auth/viewer";
+import { getMarketingViewer } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 

@@ -37,11 +37,12 @@ export async function POST(req: NextRequest) {
     .from("practice_controls")
     .select("controls(title, default_priority)")
     .eq("practice_id", body.practice_id)
-    .eq("status", "non_compliant");
+    .eq("status", "non_compliant")
+    .returns<Array<{ controls: { title: string; default_priority: string } | null }>>();
   const criticalTitles = (openCritical ?? [])
-    .map((p) => p.controls as unknown as { title: string; default_priority: string } | null)
-    .filter((c) => c && c.default_priority === "critical")
-    .map((c) => c!.title);
+    .map((p) => p.controls)
+    .filter((c): c is { title: string; default_priority: string } => !!c && c.default_priority === "critical")
+    .map((c) => c.title);
 
   // Baseline score from answer weights (always works without AI)
   const baselineScore = computeBaselineRiskScore(body.answers);

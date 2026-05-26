@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getCurrentUserAndPractice, createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { getAppSession } from "@/lib/auth/session";
 import StarfieldBackground from "@/components/StarfieldBackground";
 import { Card, CardBody } from "@/components/ui/Card";
 import { ButtonLink } from "@/components/ui/Button";
@@ -8,23 +8,22 @@ import { ButtonLink } from "@/components/ui/Button";
 export const dynamic = "force-dynamic";
 
 export default async function PendingApprovalPage() {
-  const session = await getCurrentUserAndPractice();
-  if (!session) redirect("/login");
+  const session = await getAppSession();
 
-  // If they've already been added to a practice, kick them into the dashboard.
-  if (session.membership) redirect("/app");
+  switch (session.kind) {
+    case "unauthenticated":
+      redirect("/login");
+    case "active":
+      redirect("/app");
+    case "denied":
+      redirect("/denied");
+    case "no_practice":
+      redirect("/app/onboarding");
+    case "pending":
+      break;
+  }
 
-  const supabase = await createAuthedServerClient();
-  const { data: profile } = await supabase
-    .from("user_profiles")
-    .select("full_name, job_title, pending_practice_name, primary_address, account_type, status, matched_practice_id, claimed_admin_name")
-    .eq("user_id", session.user.id)
-    .maybeSingle();
-
-  if (profile?.account_type !== "employee") redirect("/app/onboarding");
-  if (profile?.status === "denied") redirect("/denied");
-  if (profile?.status === "approved") redirect("/app");
-
+  const profile = session.profile;
   const addr = (profile?.primary_address ?? {}) as Record<string, string>;
   const addrLine = [addr.street_1, addr.city, addr.region].filter(Boolean).join(", ");
 

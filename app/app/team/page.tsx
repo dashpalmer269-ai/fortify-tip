@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
-import { getCurrentUserAndPractice, createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { getAppSession, assertActive } from "@/lib/auth/session";
 import { createServerClient as createServiceClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/ui/PageHeader";
 import TeamClient from "./TeamClient";
@@ -19,9 +19,8 @@ export interface TeamMember {
 }
 
 export default async function TeamPage() {
-  const session = await getCurrentUserAndPractice();
-  if (!session) redirect("/login");
-  if (!session.membership) redirect("/app/onboarding");
+  const session = await getAppSession();
+  assertActive(session);
 
   const supabase = await createAuthedServerClient();
   const { data: members } = await supabase
@@ -99,9 +98,7 @@ export default async function TeamPage() {
 
       {isAdmin(role) && (
         <RequestsQueue
-          practiceName={
-            (session.membership.practices as unknown as { name?: string } | null)?.name ?? ""
-          }
+          practiceName={session.membership.practice_name}
           requests={pendingRequests}
         />
       )}

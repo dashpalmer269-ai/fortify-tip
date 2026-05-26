@@ -57,10 +57,11 @@ export async function GET(request: NextRequest) {
     .select("practice_id, practices(onboarding_step)")
     .eq("user_id", data.user.id)
     .limit(1)
-    .maybeSingle();
+    .maybeSingle()
+    .returns<{ practice_id: string; practices: { onboarding_step: string | null } | null } | null>();
 
   if (membership) {
-    const step = (membership.practices as unknown as { onboarding_step?: string } | null)?.onboarding_step;
+    const step = membership.practices?.onboarding_step;
     if (!step || step === "completed") {
       return NextResponse.redirect(`${origin}/app`);
     }

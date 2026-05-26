@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { getCurrentUserAndPractice, createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { getAppSession, assertActive } from "@/lib/auth/session";
 import { Card, CardBody } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 
@@ -23,9 +24,8 @@ interface ReportRow {
 
 export default async function ReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await getCurrentUserAndPractice();
-  if (!session) redirect("/login");
-  if (!session.membership) redirect("/app/onboarding");
+  const session = await getAppSession();
+  assertActive(session);
 
   const supabase = await createAuthedServerClient();
   const { data } = await supabase

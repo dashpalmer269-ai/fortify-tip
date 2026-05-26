@@ -1,15 +1,15 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { marked } from "marked";
-import { getCurrentUserAndPractice, createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { getAppSession, assertActive } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function PolicyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await getCurrentUserAndPractice();
-  if (!session) redirect("/login");
-  if (!session.membership) redirect("/app/onboarding");
+  const session = await getAppSession();
+  assertActive(session);
 
   const supabase = await createAuthedServerClient();
   const { data: policy } = await supabase

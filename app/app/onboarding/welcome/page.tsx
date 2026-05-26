@@ -1,15 +1,14 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getCurrentUserAndPractice, createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { getAppSession, assertActive } from "@/lib/auth/session";
 import StarfieldBackground from "@/components/StarfieldBackground";
 import { ButtonLink } from "@/components/ui/Button";
 
 export const dynamic = "force-dynamic";
 
 export default async function OnboardingWelcomePage() {
-  const session = await getCurrentUserAndPractice();
-  if (!session) redirect("/login");
-  if (!session.membership) redirect("/app/onboarding");
+  const session = await getAppSession();
+  assertActive(session);
 
   const supabase = await createAuthedServerClient();
   const { data: practice } = await supabase

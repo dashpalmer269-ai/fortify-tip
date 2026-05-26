@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
-import { getCurrentUserAndPractice, createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { getAppSession, assertActive } from "@/lib/auth/session";
 import PageHeader from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
@@ -43,9 +43,8 @@ export default async function IntegrationsPage({
 }: {
   searchParams: Promise<{ connected?: string; error?: string }>;
 }) {
-  const session = await getCurrentUserAndPractice();
-  if (!session) redirect("/login");
-  if (!session.membership) redirect("/app/onboarding");
+  const session = await getAppSession();
+  assertActive(session);
   const params = await searchParams;
 
   const supabase = await createAuthedServerClient();

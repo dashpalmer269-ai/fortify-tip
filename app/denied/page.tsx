@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getCurrentUserAndPractice, createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { getAppSession } from "@/lib/auth/session";
 import StarfieldBackground from "@/components/StarfieldBackground";
 import { Card, CardBody } from "@/components/ui/Card";
 import { ButtonLink } from "@/components/ui/Button";
@@ -8,21 +8,22 @@ import { ButtonLink } from "@/components/ui/Button";
 export const dynamic = "force-dynamic";
 
 export default async function DeniedAccessPage() {
-  const session = await getCurrentUserAndPractice();
-  if (!session) redirect("/login");
+  const session = await getAppSession();
 
-  // Approved users go to the dashboard.
-  if (session.membership) redirect("/app");
+  switch (session.kind) {
+    case "unauthenticated":
+      redirect("/login");
+    case "active":
+      redirect("/app");
+    case "pending":
+      redirect("/pending");
+    case "no_practice":
+      redirect("/app/onboarding");
+    case "denied":
+      break;
+  }
 
-  const supabase = await createAuthedServerClient();
-  const { data: profile } = await supabase
-    .from("user_profiles")
-    .select("status, pending_practice_name, claimed_admin_name, denial_reason")
-    .eq("user_id", session.user.id)
-    .maybeSingle();
-
-  // Only denied users see this page.
-  if (profile?.status !== "denied") redirect("/pending");
+  const profile = session.profile;
 
   return (
     <div className="relative min-h-screen bg-[var(--color-canvas)] text-[var(--color-primary)] overflow-hidden">

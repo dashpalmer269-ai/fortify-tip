@@ -6,8 +6,12 @@ import type { Database } from "./database.types";
  * Supabase client for server components and route handlers that need the
  * authenticated user (auth.uid() inside RLS, etc.). Reads the cookie jar.
  *
- * For service-role / cron access without a user, keep using
- * createServerClient() from './server.ts' instead.
+ * For service-role / cron access without a user, use createServerClient()
+ * from './server.ts' instead.
+ *
+ * For session-state with discriminated union (active / pending / denied /
+ * no_practice / unauthenticated), use getAppSession() from
+ * '@/lib/auth/session' — that's the single source of truth across the app.
  */
 export async function createAuthedServerClient() {
   const cookieStore = await cookies();
@@ -26,36 +30,10 @@ export async function createAuthedServerClient() {
               cookieStore.set(name, value, options);
             });
           } catch {
-            // Called from a Server Component — cookies are read-only there.
-            // Session refresh happens in middleware, so this is safe to ignore.
+            // Server Components have read-only cookies; safe to ignore.
           }
         },
       },
     }
   );
-}
-
-/**
- * Resolve the current user + their primary practice in one shot.
- * Returns null if not signed in or not yet attached to a practice.
- */
-export async function getCurrentUserAndPractice() {
-  const supabase = await createAuthedServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: membership } = await supabase
-    .from("practice_users")
-    .select("practice_id, role, practices(id, name, frameworks_enabled, hipaa_covered_entity)")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
-
-  return {
-    user,
-    membership,
-    supabase,
-  };
 }

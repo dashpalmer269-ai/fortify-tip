@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
-import { getCurrentUserAndPractice, createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { getAppSession, assertActive } from "@/lib/auth/session";
 import ComplianceBrowser from "./ComplianceBrowser";
 
 export const dynamic = "force-dynamic";
@@ -9,9 +9,8 @@ export default async function CompliancePage({
 }: {
   searchParams: Promise<{ framework?: string; category?: string; status?: string }>;
 }) {
-  const session = await getCurrentUserAndPractice();
-  if (!session) redirect("/login");
-  if (!session.membership) redirect("/app/onboarding");
+  const session = await getAppSession();
+  assertActive(session);
 
   const supabase = await createAuthedServerClient();
   const params = await searchParams;

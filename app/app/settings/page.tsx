@@ -1,5 +1,4 @@
-import { redirect } from "next/navigation";
-import { getCurrentUserAndPractice } from "@/lib/supabase/server-auth";
+import { getAppSession, assertActive } from "@/lib/auth/session";
 import PageHeader from "@/components/ui/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
@@ -10,16 +9,15 @@ import DangerZone from "./DangerZone";
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const session = await getCurrentUserAndPractice();
-  if (!session) redirect("/login");
-  if (!session.membership) redirect("/app/onboarding");
+  const session = await getAppSession();
+  assertActive(session);
 
-  const practice = session.membership.practices as unknown as {
-    id: string;
-    name: string;
-    frameworks_enabled: string[];
-    hipaa_covered_entity: boolean;
-  } | null;
+  const practice = {
+    id: session.membership.practice_id,
+    name: session.membership.practice_name,
+    frameworks_enabled: session.membership.frameworks_enabled ?? [],
+    hipaa_covered_entity: session.membership.hipaa_covered_entity ?? false,
+  };
   const role = session.membership.role as Role;
 
   return (
@@ -60,12 +58,12 @@ export default async function SettingsPage() {
               Practice
             </h2>
             <dl className="divide-y divide-[var(--color-border-subtle)]">
-              <Row label="Name" value={practice?.name ?? "—"} />
+              <Row label="Name" value={practice.name ?? "—"} />
               <Row
                 label="Frameworks"
                 custom={
                   <div className="flex flex-wrap gap-1.5 justify-end">
-                    {practice?.frameworks_enabled.map((f) => (
+                    {practice.frameworks_enabled.map((f) => (
                       <Badge key={f} variant="accent">
                         {f}
                       </Badge>
@@ -75,7 +73,7 @@ export default async function SettingsPage() {
               />
               <Row
                 label="HIPAA covered entity"
-                value={practice?.hipaa_covered_entity ? "Yes" : "No"}
+                value={practice.hipaa_covered_entity ? "Yes" : "No"}
               />
             </dl>
           </CardBody>
@@ -102,8 +100,8 @@ export default async function SettingsPage() {
       </section>
 
       <DangerZone
-        practiceId={practice?.id ?? ""}
-        practiceName={practice?.name ?? ""}
+        practiceId={practice.id ?? ""}
+        practiceName={practice.name ?? ""}
         role={role}
       />
     </div>

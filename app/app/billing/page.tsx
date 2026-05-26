@@ -1,5 +1,4 @@
-import { redirect } from "next/navigation";
-import { getCurrentUserAndPractice } from "@/lib/supabase/server-auth";
+import { getAppSession, assertActive } from "@/lib/auth/session";
 import { PLANS, isBillingConfigured } from "@/lib/billing/plans";
 import PageHeader from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -9,9 +8,8 @@ import { ButtonLink } from "@/components/ui/Button";
 export const dynamic = "force-dynamic";
 
 export default async function BillingPage() {
-  const session = await getCurrentUserAndPractice();
-  if (!session) redirect("/login");
-  if (!session.membership) redirect("/app/onboarding");
+  const session = await getAppSession();
+  assertActive(session);
 
   const configured = isBillingConfigured();
 

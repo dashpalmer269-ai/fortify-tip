@@ -1,7 +1,7 @@
 import Link from "next/link";
 import StarfieldBackground from "@/components/StarfieldBackground";
 import MarketingNav from "@/components/marketing/MarketingNav";
-import { getMarketingViewer } from "@/lib/auth/viewer";
+import { getMarketingViewer } from "@/lib/auth/session";
 
 export default async function IntelLayout({ children }: { children: React.ReactNode }) {
   const viewer = await getMarketingViewer();

@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
-import { getCurrentUserAndPractice, createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { getAppSession, assertActive } from "@/lib/auth/session";
 import { isOfficer, type Role } from "@/lib/auth/permissions";
 import DashboardClient from "./DashboardClient";
 import DashboardEmployee from "./DashboardEmployee";
@@ -7,14 +7,12 @@ import DashboardEmployee from "./DashboardEmployee";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const session = await getCurrentUserAndPractice();
-  if (!session) redirect("/login");
-  if (!session.membership) redirect("/app/onboarding");
+  const session = await getAppSession();
+  assertActive(session);
 
   const supabase = await createAuthedServerClient();
   const role = session.membership.role as Role;
-  const practiceName =
-    (session.membership.practices as unknown as { name: string } | null)?.name ?? "";
+  const practiceName = session.membership.practice_name;
 
   // Staff / auditor → simplified employee dashboard
   if (!isOfficer(role)) {
@@ -53,7 +51,12 @@ export default async function DashboardPage() {
     .from("practice_controls")
     .select("id, status, controls(control_key, title, default_priority, category)")
     .eq("practice_id", session.membership.practice_id)
-    .eq("status", "non_compliant");
+    .eq("status", "non_compliant")
+    .returns<Array<{
+      id: string;
+      status: string;
+      controls: { control_key: string; title: string; default_priority: string; category: string } | null;
+    }>>();
 
   const { data: activity } = await supabase
     .from("audit_logs")
@@ -67,8 +70,7 @@ export default async function DashboardPage() {
       practiceName={practiceName}
       readiness={readiness ?? []}
       criticalCount={(critical ?? []).filter(
-        (c) =>
-          (c.controls as unknown as { default_priority: string } | null)?.default_priority === "critical"
+        (c) => c.controls?.default_priority === "critical"
       ).length}
       recentActivity={activity ?? []}
     />
