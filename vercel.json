@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/verify-compliance",
       "schedule": "5 4 * * *"
+    },
+    {
+      "path": "/api/cron/readiness-digest",
+      "schedule": "0 14 * * 1"
     }
   ]
 }

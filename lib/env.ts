@@ -30,6 +30,8 @@ const Schema = z.object({
   M365_CLIENT_ID: z.string().optional(),
   M365_CLIENT_SECRET: z.string().optional(),
   M365_REDIRECT_URI: z.string().url().optional(),
+  RESEND_FROM_EMAIL: z.string().email().optional(),
+  CREDENTIAL_KMS_KEY: z.string().min(32).optional(),
 
   // ── Runtime ──────────────────────────────────────────────────────────────
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),

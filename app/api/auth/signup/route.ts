@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { SignupSchema, parseBody } from "@/lib/schemas/api";
+import { checkRateLimit, clientKey, RATE_LIMITS } from "@/lib/security/rate-limit";
 
 /**
  * Demo signup: creates an auto-confirmed user via service-role so we skip
@@ -13,6 +14,14 @@ import { SignupSchema, parseBody } from "@/lib/schemas/api";
  * is wired through Resend.
  */
 export async function POST(req: NextRequest) {
+  const rl = checkRateLimit(`signup:${clientKey(req)}`, RATE_LIMITS.signup);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: `Too many signup attempts. Try again in ${rl.retryAfterSeconds}s.` },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } }
+    );
+  }
+
   const parsed = await parseBody(SignupSchema, req);
   if (!parsed.ok) return parsed.response;
   const { email, password, account_type = "admin" } = parsed.data;

@@ -62,6 +62,11 @@ export interface Database {
             | "completed"
             | null;
           onboarding_completed_at: string | null;
+          // Added by 014_billing_columns
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
+          billing_status: "trialing" | "active" | "past_due" | "canceled" | "unpaid" | "incomplete";
+          subscription_current_period_end: string | null;
         };
         Insert: {
           id?: string;
@@ -80,6 +85,10 @@ export interface Database {
           selected_plan?: Database["public"]["Tables"]["practices"]["Row"]["selected_plan"];
           onboarding_step?: Database["public"]["Tables"]["practices"]["Row"]["onboarding_step"];
           onboarding_completed_at?: string | null;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          billing_status?: Database["public"]["Tables"]["practices"]["Row"]["billing_status"];
+          subscription_current_period_end?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["practices"]["Insert"]>;
         Relationships: [];
@@ -698,6 +707,7 @@ export interface Database {
           display_name: string | null;
           scopes: string[] | null;
           encrypted_credentials: Json | null;
+          encrypted_credentials_bytes: string | null;
           last_synced_at: string | null;
           last_error: string | null;
           created_at: string | null;
@@ -712,6 +722,7 @@ export interface Database {
           display_name?: string | null;
           scopes?: string[] | null;
           encrypted_credentials?: Json | null;
+          encrypted_credentials_bytes?: string | null;
           last_synced_at?: string | null;
           last_error?: string | null;
           created_at?: string | null;
@@ -972,6 +983,14 @@ export interface Database {
       _no_phi_check: {
         Args: { s: string };
         Returns: boolean;
+      };
+      encrypt_credentials_v1: {
+        Args: { plaintext: string; key: string };
+        Returns: string;
+      };
+      decrypt_credentials_v1: {
+        Args: { cipher: string; key: string };
+        Returns: string;
       };
     };
     Enums: Record<string, never>;

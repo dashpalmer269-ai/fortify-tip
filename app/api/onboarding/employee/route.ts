@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { createServerClient } from "@/lib/supabase/server";
 import { EmployeeOnboardingSchema, parseBody } from "@/lib/schemas/api";
+import { sendEmail } from "@/lib/email/provider";
+import { joinRequestCreatedEmail } from "@/lib/email/templates";
 
 /**
  * Standard-user onboarding submit.
@@ -91,6 +93,29 @@ export async function POST(req: NextRequest) {
         claimed_admin_name: body.claimed_admin_name,
       },
     });
+
+    // ── Email every admin/owner (best-effort; no-ops without RESEND_API_KEY) ──
+    if (admins?.length) {
+      const adminEmails: string[] = [];
+      for (const a of admins) {
+        const { data: u } = await db.auth.admin.getUserById(a.user_id);
+        if (u.user?.email) adminEmails.push(u.user.email);
+      }
+      const appUrl = new URL(req.url).origin;
+      if (adminEmails.length > 0) {
+        await sendEmail({
+          to: adminEmails,
+          subject: `New join request for ${practiceMatch?.name ?? "your practice"}`,
+          html: joinRequestCreatedEmail({
+            practice_name: practiceMatch?.name ?? "your practice",
+            requester_name: body.full_name,
+            requester_job: body.job_title,
+            app_url: appUrl,
+          }),
+          tag: "request.created",
+        });
+      }
+    }
   }
 
   return NextResponse.json({ ok: true, matched: !!matchedPracticeId });

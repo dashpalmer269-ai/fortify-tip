@@ -111,6 +111,105 @@ export function driftAlertEmail(opts: {
   });
 }
 
+export function joinRequestCreatedEmail(opts: {
+  practice_name: string;
+  requester_name: string;
+  requester_job: string;
+  app_url: string;
+}) {
+  return shell({
+    title: `New join request for ${opts.practice_name}`,
+    preheader: `${opts.requester_name} wants to join`,
+    body: `
+      <h1 style="margin:0 0 16px;font-size:22px;color:#ffffff;">New join request</h1>
+      <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${BRAND.text};"><strong>${escapeHtml(opts.requester_name)}</strong> (${escapeHtml(opts.requester_job)}) requested access to your Fortify workspace at <strong>${escapeHtml(opts.practice_name)}</strong>.</p>
+      <p style="margin:0;font-size:15px;line-height:1.6;color:${BRAND.text};">Review their details and approve or deny the request from the Team page.</p>
+    `,
+    cta: { label: "Review request", href: `${opts.app_url}/app/team` },
+  });
+}
+
+export function joinRequestApprovedEmail(opts: {
+  practice_name: string;
+  role_label: string;
+  app_url: string;
+}) {
+  return shell({
+    title: `You're in: ${opts.practice_name} on Fortify`,
+    preheader: "Your access was approved",
+    body: `
+      <h1 style="margin:0 0 16px;font-size:22px;color:#ffffff;">You're approved</h1>
+      <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${BRAND.text};">An administrator at <strong>${escapeHtml(opts.practice_name)}</strong> approved your request to join their Fortify compliance workspace.</p>
+      <p style="margin:0;font-size:15px;line-height:1.6;color:${BRAND.text};">You've been assigned the <strong>${escapeHtml(opts.role_label)}</strong> role. Sign in to get started.</p>
+    `,
+    cta: { label: "Open Fortify", href: `${opts.app_url}/app` },
+  });
+}
+
+export function joinRequestDeniedEmail(opts: {
+  practice_name: string;
+  reason: string | null;
+  app_url: string;
+}) {
+  return shell({
+    title: `Your access request was declined`,
+    preheader: `${opts.practice_name} did not approve your request`,
+    body: `
+      <h1 style="margin:0 0 16px;font-size:22px;color:#ffffff;">Access not granted</h1>
+      <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${BRAND.text};">An administrator at <strong>${escapeHtml(opts.practice_name)}</strong> did not approve your access request.</p>
+      ${opts.reason
+        ? `<p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:${BRAND.muted};">Reason: <span style="color:#ffffff;">${escapeHtml(opts.reason)}</span></p>`
+        : ""}
+      <p style="margin:0;font-size:15px;line-height:1.6;color:${BRAND.text};">If this is a mistake, contact your administrator directly.</p>
+    `,
+    cta: { label: "Open Fortify", href: `${opts.app_url}/denied` },
+  });
+}
+
+export function readinessDigestEmail(opts: {
+  practice_name: string;
+  overall_pct: number;
+  delta_pct: number;
+  critical_open: number;
+  drift_alerts_week: number;
+  baas_expiring: number;
+  ai_summary: string;
+  app_url: string;
+}) {
+  const direction = opts.delta_pct === 0 ? "" : opts.delta_pct > 0 ? "↑" : "↓";
+  const deltaColor = opts.delta_pct >= 0 ? "#10b981" : "#ef4444";
+  return shell({
+    title: `Weekly readiness digest — ${opts.practice_name}`,
+    preheader: `Overall ${opts.overall_pct}% · ${opts.critical_open} critical open · ${opts.drift_alerts_week} drift this week`,
+    body: `
+      <h1 style="margin:0 0 16px;font-size:22px;color:#ffffff;">Weekly readiness digest</h1>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 18px;">
+        <tr>
+          <td style="padding:14px;background:#0f0f0f;border-radius:8px;width:50%;">
+            <p style="margin:0 0 4px;font-size:11px;color:${BRAND.muted};letter-spacing:1.4px;text-transform:uppercase;">Overall readiness</p>
+            <p style="margin:0;font-size:28px;color:#ffffff;font-weight:700;">${opts.overall_pct}%
+              <span style="font-size:14px;color:${deltaColor};font-weight:500;">${direction} ${Math.abs(opts.delta_pct)}%</span>
+            </p>
+          </td>
+          <td width="12"></td>
+          <td style="padding:14px;background:#0f0f0f;border-radius:8px;width:50%;">
+            <p style="margin:0 0 4px;font-size:11px;color:${BRAND.muted};letter-spacing:1.4px;text-transform:uppercase;">Critical open</p>
+            <p style="margin:0;font-size:28px;color:#ffffff;font-weight:700;">${opts.critical_open}</p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0 0 8px;font-size:13px;color:${BRAND.muted};line-height:1.6;">
+        Drift alerts this week: <span style="color:#ffffff;">${opts.drift_alerts_week}</span> ·
+        BAAs expiring soon: <span style="color:#ffffff;">${opts.baas_expiring}</span>
+      </p>
+      <div style="margin:18px 0;padding:14px;background:#0f0f0f;border-radius:8px;border-left:3px solid ${BRAND.violet};">
+        <p style="margin:0;font-size:14px;line-height:1.7;color:${BRAND.text};">${escapeHtml(opts.ai_summary)}</p>
+      </div>
+    `,
+    cta: { label: "Open dashboard", href: `${opts.app_url}/app` },
+  });
+}
+
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) =>
     c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : c === '"' ? "&quot;" : "&#39;"

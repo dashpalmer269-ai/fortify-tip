@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { createServerClient } from "@/lib/supabase/server";
 import { RequestDecisionSchema, parseBody } from "@/lib/schemas/api";
+import { sendEmail } from "@/lib/email/provider";
+import { joinRequestApprovedEmail, joinRequestDeniedEmail } from "@/lib/email/templates";
+import { ROLE_LABELS } from "@/lib/auth/permissions";
 
 /**
  * Approve or deny a pending Standard-user request.
@@ -103,6 +106,26 @@ export async function POST(
       metadata: { assigned_role: role, requester_name: profile.full_name },
     });
 
+    // Email the approved user (best-effort)
+    const { data: requesterAuth } = await db.auth.admin.getUserById(profile.user_id);
+    const { data: practiceRow } = await db
+      .from("practices")
+      .select("name")
+      .eq("id", profile.matched_practice_id)
+      .maybeSingle();
+    if (requesterAuth.user?.email) {
+      await sendEmail({
+        to: requesterAuth.user.email,
+        subject: `You're in: ${practiceRow?.name ?? "your practice"} on Fortify`,
+        html: joinRequestApprovedEmail({
+          practice_name: practiceRow?.name ?? "your practice",
+          role_label: ROLE_LABELS[role],
+          app_url: new URL(req.url).origin,
+        }),
+        tag: "request.approved",
+      });
+    }
+
     return NextResponse.json({ ok: true, status: "approved" });
   }
 
@@ -139,6 +162,26 @@ export async function POST(
     resource_id: profile.user_id,
     metadata: { reason: denialReason, requester_name: profile.full_name },
   });
+
+  // Email the denied user (best-effort)
+  const { data: deniedUser } = await db.auth.admin.getUserById(profile.user_id);
+  const { data: practiceRow2 } = await db
+    .from("practices")
+    .select("name")
+    .eq("id", profile.matched_practice_id)
+    .maybeSingle();
+  if (deniedUser.user?.email) {
+    await sendEmail({
+      to: deniedUser.user.email,
+      subject: `Your access request was declined`,
+      html: joinRequestDeniedEmail({
+        practice_name: practiceRow2?.name ?? "the practice you requested",
+        reason: denialReason,
+        app_url: new URL(req.url).origin,
+      }),
+      tag: "request.denied",
+    });
+  }
 
   return NextResponse.json({ ok: true, status: "denied" });
 }
