@@ -30,6 +30,12 @@ const Schema = z.object({
   M365_CLIENT_ID: z.string().optional(),
   M365_CLIENT_SECRET: z.string().optional(),
   M365_REDIRECT_URI: z.string().url().optional(),
+  MS_CLIENT_ID: z.string().optional(),
+  MS_CLIENT_SECRET: z.string().optional(),
+  MS_REDIRECT_URI: z.string().url().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_REDIRECT_URI: z.string().url().optional(),
   RESEND_FROM_EMAIL: z.string().email().optional(),
   CREDENTIAL_KMS_KEY: z.string().min(32).optional(),
 

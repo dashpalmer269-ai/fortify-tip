@@ -703,6 +703,7 @@ export interface Database {
           practice_id: string;
           integration_type:
             | "microsoft_365"
+            | "google_workspace"
             | "aws"
             | "datto"
             | "connectwise"

@@ -285,14 +285,107 @@ async function runAutomatedApi(
   practiceId: string,
   check: EvidenceCheckRow
 ): Promise<CheckResult> {
-  if (check.source_integration === "microsoft_365") {
-    return await runMicrosoft365Check(supabase, practiceId, check);
+  switch (check.source_integration) {
+    case "microsoft_365":
+      return await runMicrosoft365Check(supabase, practiceId, check);
+    case "google_workspace":
+      return await runGoogleWorkspaceCheck(supabase, practiceId, check);
+    case "okta":
+      return await runOktaCheck(supabase, practiceId, check);
+    default:
+      return {
+        status: "not_collected",
+        observed_value: null,
+        raw: { note: `${check.source_integration ?? "automated_api"} runner not implemented yet` },
+      };
   }
-  return {
-    status: "not_collected",
-    observed_value: null,
-    raw: { note: `${check.source_integration ?? "automated_api"} runner not implemented yet` },
-  };
+}
+
+/**
+ * Load + decrypt credentials for a connected integration of a given type.
+ * Prefers encrypted_credentials_bytes (migration 015), falls back to the
+ * legacy plaintext jsonb column during rollout. Returns null when not
+ * connected or undecryptable.
+ */
+async function loadIntegrationCreds<T>(
+  supabase: SupabaseClient,
+  practiceId: string,
+  integrationType: string
+): Promise<{ creds: T | null; note: string | null }> {
+  const { data: integ } = await supabase
+    .from("integrations")
+    .select("id, status, encrypted_credentials, encrypted_credentials_bytes")
+    .eq("practice_id", practiceId)
+    .eq("integration_type", integrationType)
+    .eq("status", "connected")
+    .maybeSingle();
+  if (!integ) return { creds: null, note: `${integrationType} not connected for this practice` };
+
+  if (integ.encrypted_credentials_bytes) {
+    const { readCredentials } = await import("@/lib/security/credentials");
+    const creds = await readCredentials<NonNullable<T>>(
+      supabase as unknown as Parameters<typeof readCredentials>[0],
+      integ.id
+    );
+    if (!creds) return { creds: null, note: `${integrationType} credentials could not be decrypted (set CREDENTIAL_KMS_KEY?)` };
+    return { creds: creds as T, note: null };
+  }
+  if (integ.encrypted_credentials) {
+    return { creds: integ.encrypted_credentials as unknown as T, note: null };
+  }
+  return { creds: null, note: `${integrationType} has no stored credentials` };
+}
+
+async function runGoogleWorkspaceCheck(
+  supabase: SupabaseClient,
+  practiceId: string,
+  check: EvidenceCheckRow
+): Promise<CheckResult> {
+  type GwCreds = Parameters<typeof import("@/lib/integrations/google-workspace").checkAdmin2SvEnforced>[0];
+  const { creds, note } = await loadIntegrationCreds<NonNullable<GwCreds>>(
+    supabase,
+    practiceId,
+    "google_workspace"
+  );
+  if (!creds) return { status: "not_collected", observed_value: null, raw: { note: note ?? "no connection" } };
+
+  const gw = await import("@/lib/integrations/google-workspace");
+  switch (check.check_key) {
+    case "google_admin_2sv_enforced":
+      return await gw.checkAdmin2SvEnforced(creds);
+    case "google_all_2sv_enrolled":
+      return await gw.checkAll2SvEnrolled(creds);
+    case "google_audit_log_accessible":
+      return await gw.checkAuditLogAccessible(creds);
+    default:
+      return { status: "not_collected", observed_value: null, raw: { note: `No Google runner for ${check.check_key}` } };
+  }
+}
+
+async function runOktaCheck(
+  supabase: SupabaseClient,
+  practiceId: string,
+  check: EvidenceCheckRow
+): Promise<CheckResult> {
+  type OktaCreds = Parameters<typeof import("@/lib/integrations/okta").checkMfaPolicyActive>[0];
+  const { creds, note } = await loadIntegrationCreds<NonNullable<OktaCreds>>(
+    supabase,
+    practiceId,
+    "okta"
+  );
+  if (!creds) return { status: "not_collected", observed_value: null, raw: { note: note ?? "no connection" } };
+
+  const okta = await import("@/lib/integrations/okta");
+  switch (check.check_key) {
+    case "okta_mfa_policy_active":
+      return await okta.checkMfaPolicyActive(creds);
+    case "okta_admins_mfa":
+      return await okta.checkAdminsMfa(creds);
+    case "okta_system_log_accessible":
+      return await okta.checkSystemLogAccessible(creds);
+    default:
+      return { status: "not_collected", observed_value: null, raw: { note: `No Okta runner for ${check.check_key}` } };
+  }
 }
 
 async function runMicrosoft365Check(
