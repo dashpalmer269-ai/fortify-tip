@@ -88,26 +88,27 @@ export async function GET(req: NextRequest) {
 
       // Execute the check
       const result = await runCheck(supabase, practiceId, check as EvidenceCheckRow);
-      const hash = stateHash(result.observed_value);
 
-      // Flip prior current row → false, then insert the new one
-      await supabase
-        .from("practice_evidence")
-        .update({ is_current: false })
-        .eq("practice_id", practiceId)
-        .eq("evidence_check_id", check.id)
-        .eq("is_current", true);
+      // Verify-before-push: validates the collector envelope (status, observed_value
+      // shape, error message presence) before writing. Anything that fails
+      // verification is rewritten to status='error' with a clear reason so the
+      // audit trail records that we tried and the collector misbehaved.
+      const { persistEvidence } = await import("@/lib/compliance/evidence-persistence");
+      const persisted = await persistEvidence(
+        supabase,
+        practiceId,
+        check as EvidenceCheckRow,
+        result
+      );
 
-      await supabase.from("practice_evidence").insert({
-        practice_id: practiceId,
-        evidence_check_id: check.id,
-        status: result.status,
-        observed_value: result.observed_value as never,
-        raw_result: result.raw as never,
-        state_hash: hash,
-        collected_by: null,
-        is_current: true,
-      });
+      // The status that landed in the DB may differ from the raw collector
+      // status if verification downgraded it.
+      const persistedStatus = persisted.verified ? result.status : "error";
+      const hash = stateHash(
+        persisted.verified
+          ? result.observed_value
+          : { status: "error", raw: result.raw }
+      );
 
       // Append immutable snapshot for the historical trail
       await supabase.from("evidence_snapshots").insert({
@@ -117,10 +118,10 @@ export async function GET(req: NextRequest) {
         observed_value: result.observed_value as never,
       });
 
-      counts[result.status] = (counts[result.status] ?? 0) + 1;
+      counts[persistedStatus] = (counts[persistedStatus] ?? 0) + 1;
 
       // Drift detection: state changed AND now failing → alert + audit log
-      if (last && last.state_hash !== hash && result.status === "fail") {
+      if (last && last.state_hash !== hash && persistedStatus === "fail") {
         await supabase.from("drift_alerts").insert({
           practice_id: practiceId,
           evidence_check_id: check.id,
@@ -134,7 +135,7 @@ export async function GET(req: NextRequest) {
           action: "evidence.drift_detected",
           resource_type: "practice_evidence",
           resource_id: check.id,
-          metadata: { check_key: check.check_key, from_status: last.status, to_status: result.status },
+          metadata: { check_key: check.check_key, from_status: last.status, to_status: persistedStatus },
         });
         counts.drift_alerts_created++;
       }

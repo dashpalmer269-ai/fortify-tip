@@ -302,26 +302,56 @@ async function runMicrosoft365Check(
 ): Promise<CheckResult> {
   const { data: integ } = await supabase
     .from("integrations")
-    .select("status, encrypted_credentials")
+    .select("id, status, encrypted_credentials, encrypted_credentials_bytes")
     .eq("practice_id", practiceId)
     .eq("integration_type", "microsoft_365")
     .eq("status", "connected")
     .maybeSingle();
-  if (!integ?.encrypted_credentials) {
-    return { status: "not_collected", observed_value: null, raw: { note: "M365 not connected for this practice" } };
+  if (!integ) {
+    return {
+      status: "not_collected",
+      observed_value: null,
+      raw: { note: "M365 not connected for this practice" },
+    };
   }
-  // Lazy-load to avoid a hard dependency when not used
-  const { checkMfaUsersEnforced, checkAuditLogEnabled, checkBitLockerEnforced } =
-    await import("@/lib/integrations/microsoft-graph");
-  const creds = integ.encrypted_credentials as unknown as Parameters<typeof checkMfaUsersEnforced>[0];
+
+  // Prefer encrypted bytes (migration 015 path); fall back to legacy plaintext
+  // JSONB column for back-compat during rollout.
+  type M365Creds = Parameters<
+    typeof import("@/lib/integrations/microsoft-graph").checkMfaUsersEnforced
+  >[0];
+  let creds: M365Creds | null = null;
+
+  if (integ.encrypted_credentials_bytes) {
+    const { readCredentials } = await import("@/lib/security/credentials");
+    creds = (await readCredentials<NonNullable<M365Creds>>(
+      supabase as unknown as Parameters<typeof readCredentials>[0],
+      integ.id
+    )) as M365Creds;
+  } else if (integ.encrypted_credentials) {
+    creds = integ.encrypted_credentials as unknown as M365Creds;
+  }
+  if (!creds) {
+    return {
+      status: "not_collected",
+      observed_value: null,
+      raw: { note: "M365 credentials could not be decrypted (set CREDENTIAL_KMS_KEY?)" },
+    };
+  }
+
+  const graph = await import("@/lib/integrations/microsoft-graph");
 
   switch (check.check_key) {
     case "m365_mfa_users_enforced":
-      return await checkMfaUsersEnforced(creds);
+      return await graph.checkMfaUsersEnforced(creds);
+    case "m365_mfa_admins_enforced":
+      return await graph.checkMfaAdminsEnforced(creds);
+    case "m365_conditional_access_mfa":
+      return await graph.checkConditionalAccessMfa(creds);
     case "m365_audit_log_enabled":
-      return await checkAuditLogEnabled(creds);
+      return await graph.checkAuditLogEnabled(creds);
     case "m365_bitlocker_enforcement":
-      return await checkBitLockerEnforced(creds);
+      return await graph.checkBitLockerEnforced(creds);
     default:
       return {
         status: "not_collected",

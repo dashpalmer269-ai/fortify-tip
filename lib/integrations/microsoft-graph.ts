@@ -158,6 +158,128 @@ export async function checkAuditLogEnabled(creds: M365Credentials | null): Promi
   }
 }
 
+/** Check: MFA enforced specifically for privileged-role accounts (admins). */
+const PRIVILEGED_ROLE_TEMPLATE_IDS = [
+  "62e90394-69f5-4237-9190-012177145e10", // Global Administrator
+  "e8611ab8-c189-46e8-94e1-60213ab1f814", // Privileged Role Administrator
+  "194ae4cb-b126-40b2-bd5b-6091b380977d", // Security Administrator
+  "729827e3-9c14-49f7-bb1b-9608f156bbb8", // Helpdesk Administrator
+  "fe930be7-5e62-47db-91af-98c3a49a38b1", // User Administrator
+];
+
+const STRONG_AUTH_METHOD_TYPES = new Set([
+  "#microsoft.graph.fido2AuthenticationMethod",
+  "#microsoft.graph.microsoftAuthenticatorAuthenticationMethod",
+  "#microsoft.graph.phoneAuthenticationMethod",
+  "#microsoft.graph.softwareOathAuthenticationMethod",
+  "#microsoft.graph.windowsHelloForBusinessAuthenticationMethod",
+]);
+
+export async function checkMfaAdminsEnforced(creds: M365Credentials | null): Promise<CheckOutcome> {
+  if (!creds) return { status: "not_collected", observed_value: null, raw: { note: "no M365 connection" } };
+  try {
+    const rolesJson = (await graphGet(creds, "/directoryRoles")) as {
+      value: Array<{ id: string; roleTemplateId: string; displayName: string }>;
+    };
+    const privilegedRoles = rolesJson.value.filter((r) =>
+      PRIVILEGED_ROLE_TEMPLATE_IDS.includes(r.roleTemplateId)
+    );
+    if (privilegedRoles.length === 0) {
+      return {
+        status: "not_collected",
+        observed_value: { reason: "no privileged roles activated in tenant" },
+        raw: null,
+      };
+    }
+
+    const adminUserIds = new Set<string>();
+    const adminDetail: Array<{ user_id: string; upn: string; role: string }> = [];
+    for (const role of privilegedRoles) {
+      const membersJson = (await graphGet(creds, `/directoryRoles/${role.id}/members`)) as {
+        value: Array<{ id: string; userPrincipalName?: string }>;
+      };
+      for (const m of membersJson.value) {
+        if (!adminUserIds.has(m.id)) {
+          adminUserIds.add(m.id);
+          adminDetail.push({
+            user_id: m.id,
+            upn: m.userPrincipalName ?? "(unknown)",
+            role: role.displayName,
+          });
+        }
+      }
+    }
+
+    const withMfa: string[] = [];
+    const withoutMfa: string[] = [];
+    for (const admin of adminDetail) {
+      try {
+        const methodsJson = (await graphGet(
+          creds,
+          `/users/${admin.user_id}/authentication/methods`
+        )) as { value: Array<{ "@odata.type"?: string }> };
+        const hasStrong = methodsJson.value.some(
+          (m) => m["@odata.type"] && STRONG_AUTH_METHOD_TYPES.has(m["@odata.type"])
+        );
+        if (hasStrong) withMfa.push(admin.upn);
+        else withoutMfa.push(admin.upn);
+      } catch {
+        withoutMfa.push(admin.upn);
+      }
+    }
+
+    const total = withMfa.length + withoutMfa.length;
+    return {
+      status:
+        total === 0
+          ? "not_collected"
+          : withoutMfa.length === 0
+          ? "pass"
+          : withMfa.length === 0
+          ? "fail"
+          : "partial",
+      observed_value: {
+        total_privileged_admins: total,
+        admins_with_strong_mfa: withMfa.length,
+        admins_missing_mfa: withoutMfa.length,
+        admins_missing_mfa_upns: withoutMfa.slice(0, 20),
+      },
+      raw: { roles_examined: privilegedRoles.map((r) => r.displayName) },
+    };
+  } catch (e) {
+    return { status: "error", observed_value: null, raw: { error: (e as Error).message } };
+  }
+}
+
+/** Check: at least one enabled Conditional Access policy enforces MFA */
+export async function checkConditionalAccessMfa(creds: M365Credentials | null): Promise<CheckOutcome> {
+  if (!creds) return { status: "not_collected", observed_value: null, raw: { note: "no M365 connection" } };
+  try {
+    const json = (await graphGet(creds, "/identity/conditionalAccess/policies")) as {
+      value: Array<{
+        id: string;
+        displayName: string;
+        state: string;
+        grantControls?: { builtInControls?: string[] };
+      }>;
+    };
+    const enabledMfa = json.value.filter(
+      (p) => p.state === "enabled" && p.grantControls?.builtInControls?.includes("mfa")
+    );
+    return {
+      status: enabledMfa.length > 0 ? "pass" : "fail",
+      observed_value: {
+        total_policies: json.value.length,
+        enabled_mfa_policies: enabledMfa.length,
+        policy_names: enabledMfa.map((p) => p.displayName).slice(0, 5),
+      },
+      raw: null,
+    };
+  } catch (e) {
+    return { status: "error", observed_value: null, raw: { error: (e as Error).message } };
+  }
+}
+
 /** Check: BitLocker enforced on Intune-managed Windows devices */
 export async function checkBitLockerEnforced(creds: M365Credentials | null): Promise<CheckOutcome> {
   if (!creds) return { status: "not_collected", observed_value: null, raw: { note: "no M365 connection" } };
