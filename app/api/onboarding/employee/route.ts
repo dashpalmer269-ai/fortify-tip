@@ -48,6 +48,9 @@ export async function POST(req: NextRequest) {
       user_id: user.id,
       account_type: "employee",
       full_name: body.full_name,
+      first_name: body.first_name,
+      last_name: body.last_name,
+      date_of_birth: body.date_of_birth,
       job_title: body.job_title,
       phone: body.phone?.trim() || null,
       pending_practice_name: claimedName,
@@ -60,6 +63,21 @@ export async function POST(req: NextRequest) {
     { onConflict: "user_id" }
   );
   if (upsertErr) return NextResponse.json({ error: upsertErr.message }, { status: 500 });
+
+  // ── Run exclusion screening immediately ────────────────────────────────
+  // The status returned drives the client-side redirect:
+  //   cleared → /pending (admin will approve)
+  //   review_required → /screening/[id] (collect tier-2 inputs)
+  //   blocked → /screening/[id]/blocked
+  const { startPreliminary } = await import("@/lib/screening/service");
+  const screening = await startPreliminary(db, {
+    subjectType: "workforce_member",
+    subjectUserId: user.id,
+    practiceId: matchedPracticeId,
+    firstName: body.first_name,
+    lastName: body.last_name,
+    dateOfBirth: body.date_of_birth,
+  });
 
   if (matchedPracticeId) {
     const { data: admins } = await db
@@ -118,5 +136,19 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, matched: !!matchedPracticeId });
+  // Build a redirect target the client uses to route to the correct next view.
+  const redirect =
+    screening.status === "cleared"
+      ? "/pending"
+      : screening.status === "review_required"
+      ? `/screening/${screening.screeningId}`
+      : `/screening/${screening.screeningId}/blocked`;
+
+  return NextResponse.json({
+    ok: true,
+    matched: !!matchedPracticeId,
+    screening_status: screening.status,
+    screening_id: screening.screeningId,
+    redirect,
+  });
 }

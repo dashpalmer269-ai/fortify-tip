@@ -7,6 +7,14 @@
     {
       "path": "/api/cron/readiness-digest",
       "schedule": "0 14 * * 1"
+    },
+    {
+      "path": "/api/cron/exclusion-list-ingest",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/exclusion-rescreen",
+      "schedule": "30 4 * * *"
     }
   ]
 }

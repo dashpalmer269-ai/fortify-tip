@@ -27,6 +27,9 @@ export default function EmployeeOnboarding({ userEmail, existingProfile }: Props
   const ex = existingProfile;
   const exAddr = (ex?.primary_address ?? {}) as Record<string, string>;
 
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [fullName, setFullName] = useState(ex?.full_name ?? "");
   const [jobTitle, setJobTitle] = useState(ex?.job_title ?? "");
   const [phone, setPhone] = useState(ex?.phone ?? "");
@@ -43,6 +46,9 @@ export default function EmployeeOnboarding({ userEmail, existingProfile }: Props
   const [error, setError] = useState<string | null>(null);
 
   const valid =
+    firstName.trim() &&
+    lastName.trim() &&
+    /^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth) &&
     fullName.trim() &&
     jobTitle.trim() &&
     practiceName.trim() &&
@@ -61,6 +67,9 @@ export default function EmployeeOnboarding({ userEmail, existingProfile }: Props
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           full_name: fullName.trim(),
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          date_of_birth: dateOfBirth,
           job_title: jobTitle.trim(),
           phone: phone.trim() || null,
           pending_practice_name: practiceName.trim(),
@@ -79,7 +88,7 @@ export default function EmployeeOnboarding({ userEmail, existingProfile }: Props
         setError(body.error ?? "Failed to save");
         return;
       }
-      router.push("/pending");
+      router.push(body.redirect ?? "/pending");
       router.refresh();
     } finally {
       setSubmitting(false);
@@ -133,8 +142,23 @@ export default function EmployeeOnboarding({ userEmail, existingProfile }: Props
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Full name" required>
+                <Field label="First name" required>
+                  <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Jane" className="emp-input" />
+                </Field>
+                <Field label="Last name" required>
+                  <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Doe" className="emp-input" />
+                </Field>
+                <Field label="Full name as you'd like it displayed" required>
                   <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jane Doe" className="emp-input" />
+                </Field>
+                <Field label="Date of birth" required hint="For workforce verification">
+                  <input
+                    type="date"
+                    value={dateOfBirth}
+                    onChange={(e) => setDateOfBirth(e.target.value)}
+                    className="emp-input"
+                    max={new Date(Date.now() - 14 * 365 * 86400000).toISOString().slice(0, 10)}
+                  />
                 </Field>
                 <Field label="Your role at the practice" required>
                   <input

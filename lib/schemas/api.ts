@@ -76,6 +76,12 @@ export type OnboardingFinalizeBody = z.infer<typeof OnboardingFinalizeSchema>;
  * ──────────────────────────────────────────────────────────────────────── */
 export const EmployeeOnboardingSchema = z.object({
   full_name: z.string().trim().min(1).max(120),
+  // Required as of 017 for exclusion screening at signup completion
+  first_name: z.string().trim().min(1).max(80),
+  last_name: z.string().trim().min(1).max(80),
+  date_of_birth: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date of birth must be YYYY-MM-DD"),
   job_title: z.string().trim().min(1).max(120),
   phone: z.string().trim().nullable().optional(),
   pending_practice_name: z.string().trim().min(1).max(120),

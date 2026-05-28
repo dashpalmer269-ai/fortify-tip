@@ -210,6 +210,23 @@ export function readinessDigestEmail(opts: {
   });
 }
 
+export function workforceRescreenBlockedEmail(opts: {
+  practice_id: string;
+  member_name: string;
+  app_url: string;
+}) {
+  return shell({
+    title: `Compliance verification paused access for ${opts.member_name}`,
+    preheader: "Periodic re-screening flagged a workforce member",
+    body: `
+      <h1 style="margin:0 0 16px;font-size:22px;color:#ffffff;">Verification needed</h1>
+      <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${BRAND.text};"><strong>${escapeHtml(opts.member_name)}</strong>'s periodic compliance verification did not complete cleanly. Their workspace access is paused while we re-verify.</p>
+      <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:${BRAND.muted};">You don't need to take immediate action. The member will be prompted to complete a brief verification next time they sign in. If you believe this is in error, you can override the decision from the Team page.</p>
+    `,
+    cta: { label: "Open Team", href: `${opts.app_url}/app/team` },
+  });
+}
+
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) =>
     c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : c === '"' ? "&quot;" : "&#39;"

@@ -466,6 +466,9 @@ export interface Database {
           notes: string | null;
           created_at: string | null;
           updated_at: string | null;
+          contact_first_name: string | null;
+          contact_last_name: string | null;
+          contact_date_of_birth: string | null;
         };
         Insert: {
           id?: string;
@@ -479,6 +482,9 @@ export interface Database {
           notes?: string | null;
           created_at?: string | null;
           updated_at?: string | null;
+          contact_first_name?: string | null;
+          contact_last_name?: string | null;
+          contact_date_of_birth?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["vendors"]["Insert"]>;
         Relationships: [];
@@ -827,6 +833,10 @@ export interface Database {
           decided_by: string | null;
           decided_at: string | null;
           denial_reason: string | null;
+          // Added by 017_exclusion_screening
+          first_name: string | null;
+          last_name: string | null;
+          date_of_birth: string | null;
         };
         Insert: {
           user_id: string;
@@ -844,6 +854,9 @@ export interface Database {
           decided_by?: string | null;
           decided_at?: string | null;
           denial_reason?: string | null;
+          first_name?: string | null;
+          last_name?: string | null;
+          date_of_birth?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["user_profiles"]["Insert"]>;
         Relationships: [];
@@ -873,6 +886,138 @@ export interface Database {
           created_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["notifications"]["Insert"]>;
+        Relationships: [];
+      };
+
+      // ── 017: exclusion screening ────────────────────────────────────────
+      exclusion_list_records: {
+        Row: {
+          id: string;
+          source: "OIG_LEIE" | "SAM_GOV";
+          source_record_id: string;
+          source_snapshot_date: string;
+          first_name: string | null;
+          middle_name: string | null;
+          last_name: string | null;
+          business_name: string | null;
+          date_of_birth: string | null;
+          address_line: string | null;
+          city: string | null;
+          state: string | null;
+          zip: string | null;
+          exclusion_type: string | null;
+          exclusion_date: string | null;
+          reinstatement_date: string | null;
+          first_name_normalized: string | null;
+          last_name_normalized: string | null;
+          business_name_normalized: string | null;
+          raw_payload: Json | null;
+          imported_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          source: "OIG_LEIE" | "SAM_GOV";
+          source_record_id: string;
+          source_snapshot_date: string;
+          first_name?: string | null;
+          middle_name?: string | null;
+          last_name?: string | null;
+          business_name?: string | null;
+          date_of_birth?: string | null;
+          address_line?: string | null;
+          city?: string | null;
+          state?: string | null;
+          zip?: string | null;
+          exclusion_type?: string | null;
+          exclusion_date?: string | null;
+          reinstatement_date?: string | null;
+          first_name_normalized?: string | null;
+          last_name_normalized?: string | null;
+          business_name_normalized?: string | null;
+          raw_payload?: Json | null;
+          imported_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["exclusion_list_records"]["Insert"]>;
+        Relationships: [];
+      };
+
+      exclusion_list_snapshots: {
+        Row: {
+          id: string;
+          source: string;
+          snapshot_date: string;
+          source_etag: string | null;
+          records_total: number | null;
+          records_added: number | null;
+          records_removed: number | null;
+          imported_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          source: string;
+          snapshot_date: string;
+          source_etag?: string | null;
+          records_total?: number | null;
+          records_added?: number | null;
+          records_removed?: number | null;
+          imported_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["exclusion_list_snapshots"]["Insert"]>;
+        Relationships: [];
+      };
+
+      exclusion_screenings: {
+        Row: {
+          id: string;
+          subject_type: "workforce_member" | "vendor_contact";
+          subject_user_id: string | null;
+          subject_vendor_id: string | null;
+          practice_id: string | null;
+          first_name: string;
+          middle_name: string | null;
+          last_name: string;
+          date_of_birth: string;
+          address_line: string | null;
+          city: string | null;
+          state: string | null;
+          zip: string | null;
+          status: "pending" | "cleared" | "review_required" | "blocked" | "overridden_clear";
+          tier1_match_count: number | null;
+          tier2_match_count: number | null;
+          matched_record_ids: string[] | null;
+          screened_at: string;
+          expires_at: string | null;
+          decided_by: string | null;
+          decision_reason: string | null;
+          notification_sent_at: string | null;
+          user_message_shown: string | null;
+        };
+        Insert: {
+          id?: string;
+          subject_type: "workforce_member" | "vendor_contact";
+          subject_user_id?: string | null;
+          subject_vendor_id?: string | null;
+          practice_id?: string | null;
+          first_name: string;
+          middle_name?: string | null;
+          last_name: string;
+          date_of_birth: string;
+          address_line?: string | null;
+          city?: string | null;
+          state?: string | null;
+          zip?: string | null;
+          status?: "pending" | "cleared" | "review_required" | "blocked" | "overridden_clear";
+          tier1_match_count?: number | null;
+          tier2_match_count?: number | null;
+          matched_record_ids?: string[] | null;
+          screened_at?: string;
+          expires_at?: string | null;
+          decided_by?: string | null;
+          decision_reason?: string | null;
+          notification_sent_at?: string | null;
+          user_message_shown?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["exclusion_screenings"]["Insert"]>;
         Relationships: [];
       };
 
@@ -991,6 +1136,29 @@ export interface Database {
       decrypt_credentials_v1: {
         Args: { cipher: string; key: string };
         Returns: string;
+      };
+      match_exclusion_fuzzy: {
+        Args: {
+          p_first_normalized: string;
+          p_last_normalized: string;
+          p_dob: string;
+          p_threshold?: number;
+        };
+        Returns: Array<{
+          id: string;
+          source: "OIG_LEIE" | "SAM_GOV";
+          first_name: string | null;
+          middle_name: string | null;
+          last_name: string | null;
+          business_name: string | null;
+          date_of_birth: string | null;
+          address_line: string | null;
+          city: string | null;
+          state: string | null;
+          zip: string | null;
+          exclusion_type: string | null;
+          exclusion_date: string | null;
+        }>;
       };
     };
     Enums: Record<string, never>;
