@@ -69,6 +69,36 @@ export async function POST(
   const now = new Date().toISOString();
 
   if (body.action === "approve") {
+    // Guard: never grant membership to someone whose exclusion screening is
+    // unresolved or blocked. A blocked person is legally barred from federal
+    // healthcare work; a review_required person hasn't finished verification.
+    // Only 'cleared' / 'overridden_clear' (or no screening at all — e.g. LEIE
+    // not yet ingested) may be approved.
+    const { data: latestScreening } = await db
+      .from("exclusion_screenings")
+      .select("status")
+      .eq("subject_user_id", profile.user_id)
+      .eq("subject_type", "workforce_member")
+      .order("screened_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (
+      latestScreening &&
+      latestScreening.status !== "cleared" &&
+      latestScreening.status !== "overridden_clear"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            latestScreening.status === "blocked"
+              ? "This user is blocked by exclusion screening and cannot be approved."
+              : "This user must finish exclusion verification before they can be approved.",
+          screening_status: latestScreening.status,
+        },
+        { status: 409 }
+      );
+    }
+
     const role = body.role ?? "staff";
 
     const { error: muErr } = await db.from("practice_users").upsert(
