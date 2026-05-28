@@ -1,17 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { Card, CardBody } from "@/components/ui/Card";
 import { ROLE_LABELS, type Role } from "@/lib/auth/permissions";
-
-interface PolicyRow {
-  id: string;
-  title: string;
-  framework: string | null;
-  policy_type: string;
-  status: string | null;
-  updated_at: string | null;
-}
+import TaskList, { type TaskItem } from "@/components/app/TaskList";
 
 export default function DashboardEmployee({
   practiceName,
@@ -19,124 +10,70 @@ export default function DashboardEmployee({
   jobTitle,
   userEmail,
   role,
-  publishedPolicies,
+  tasks,
 }: {
   practiceName: string;
   fullName: string | null;
   jobTitle: string | null;
   userEmail: string;
   role: Role;
-  publishedPolicies: PolicyRow[];
+  tasks: TaskItem[];
 }) {
   const firstName = fullName?.split(" ")[0] ?? userEmail.split("@")[0];
+  const openCount = tasks.length;
+  const overdueCount = tasks.filter(
+    (t) => t.due_date && new Date(t.due_date).getTime() < Date.now()
+  ).length;
+  const standing = openCount === 0 ? "All clear" : overdueCount > 0 ? "Action needed" : "On track";
+  const standingTone =
+    openCount === 0 ? "var(--color-success)" : overdueCount > 0 ? "var(--color-danger)" : "var(--color-warning)";
 
   return (
-    <div className="px-8 py-10 max-w-5xl mx-auto">
+    <div className="px-8 py-10 max-w-4xl mx-auto">
       {/* Hero */}
-      <div className="mb-10">
+      <div className="mb-8">
         <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-violet-300/80 mb-3">
           {practiceName}
         </p>
         <h1
-          className="font-display text-[clamp(32px,4vw,46px)] text-[var(--color-primary)] leading-[1.05] mb-3"
+          className="font-display text-[clamp(30px,4vw,44px)] text-[var(--color-primary)] leading-[1.05] mb-2"
           style={{ letterSpacing: "-0.025em" }}
         >
-          Welcome back, {firstName}.
+          {openCount === 0 ? `You're all caught up, ${firstName}.` : `${firstName}, you have ${openCount} ${openCount === 1 ? "task" : "tasks"}.`}
         </h1>
         <p className="text-sm text-[var(--color-tertiary)]">
-          {jobTitle ?? ROLE_LABELS[role]} · {ROLE_LABELS[role]}
+          {jobTitle ?? ROLE_LABELS[role]} ·{" "}
+          <span style={{ color: standingTone }}>{standing}</span>
         </p>
       </div>
 
-      {/* Two-up: identity + role */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-10">
-        <Card className="lg:col-span-2">
-          <CardBody>
-            <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-[var(--color-tertiary)] mb-4">
-              Your access
-            </p>
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-              <Row label="Name" value={fullName ?? "—"} />
-              <Row label="Email" value={userEmail} />
-              <Row label="Role at practice" value={jobTitle ?? "—"} />
-              <Row label="System role" value={ROLE_LABELS[role]} />
-            </dl>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardBody>
-            <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-[var(--color-tertiary)] mb-4">
-              Things to know
-            </p>
-            <ul className="space-y-3 text-sm text-[var(--color-secondary)] leading-relaxed">
-              <Bullet>You can view published policies and acknowledge those required of you.</Bullet>
-              <Bullet>Threat intel relevant to your practice is in the sidebar.</Bullet>
-              <Bullet>Reach out to an admin for anything you can&apos;t access.</Bullet>
-            </ul>
-          </CardBody>
-        </Card>
+      {/* Your tasks — the primary surface */}
+      <div className="mb-4 flex items-baseline justify-between">
+        <h2 className="font-display text-xl text-[var(--color-primary)]" style={{ letterSpacing: "-0.015em" }}>
+          Your tasks
+        </h2>
+        {overdueCount > 0 && (
+          <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-danger)]">
+            {overdueCount} overdue
+          </span>
+        )}
       </div>
 
-      {/* Policies you can acknowledge */}
-      <div className="mb-4 flex items-end justify-between">
-        <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-[var(--color-tertiary)] mb-1">
-            Recently published
+      <TaskList tasks={tasks} emptyMessage="No tasks assigned to you right now. Nice work." />
+
+      {/* Footnote */}
+      <Card className="mt-8">
+        <CardBody>
+          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--color-tertiary)] mb-3">
+            How this works
           </p>
-          <h2
-            className="font-display text-2xl text-[var(--color-primary)]"
-            style={{ letterSpacing: "-0.02em" }}
-          >
-            Policies for you
-          </h2>
-        </div>
-        <Link
-          href="/app/policies"
-          className="text-[13px] text-[var(--color-tertiary)] hover:text-[var(--color-primary)] transition-colors"
-        >
-          View all →
-        </Link>
-      </div>
-
-      {publishedPolicies.length === 0 ? (
-        <Card>
-          <CardBody className="text-center py-10">
-            <p className="text-sm text-[var(--color-tertiary)]">
-              No published policies yet. Your admin will let you know when there&apos;s something to read.
-            </p>
-          </CardBody>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 gap-2">
-          {publishedPolicies.map((p) => (
-            <Link key={p.id} href={`/app/policies/${p.id}`}>
-              <Card variant="interactive">
-                <CardBody className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-[var(--color-primary)] font-medium mb-1">{p.title}</p>
-                    <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-tertiary)]">
-                      {[p.framework, p.policy_type.replace(/_/g, " ")].filter(Boolean).join(" · ")}
-                    </p>
-                  </div>
-                  <span className="text-[var(--color-tertiary)]">→</span>
-                </CardBody>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-quaternary)] mb-1">
-        {label}
-      </dt>
-      <dd className="text-[var(--color-primary)]">{value}</dd>
+          <ul className="space-y-2.5 text-sm text-[var(--color-secondary)] leading-relaxed">
+            <Bullet>Fortify monitors your practice&apos;s compliance continuously and assigns you only what needs your attention.</Bullet>
+            <Bullet>Acknowledge policies and complete tasks here — your standing updates automatically.</Bullet>
+            <Bullet>Questions about a task? Reach out to your practice administrator.</Bullet>
+          </ul>
+        </CardBody>
+      </Card>
     </div>
   );
 }

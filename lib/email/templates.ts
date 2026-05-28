@@ -227,6 +227,28 @@ export function workforceRescreenBlockedEmail(opts: {
   });
 }
 
+export function taskReminderEmail(opts: {
+  overdue: Array<{ title: string; due_date: string }>;
+  due_soon: Array<{ title: string; due_date: string }>;
+  app_url: string;
+}) {
+  const row = (t: { title: string; due_date: string }, isOverdue: boolean) =>
+    `<tr><td style="padding:8px 0;border-bottom:1px solid ${BRAND.border};font-size:14px;color:${BRAND.text};">
+       ${escapeHtml(t.title)}
+       <span style="color:${isOverdue ? "#ef4444" : BRAND.muted};font-size:12px;"> &middot; ${isOverdue ? "overdue" : "due"} ${escapeHtml(t.due_date)}</span>
+     </td></tr>`;
+  return shell({
+    title: "Your compliance tasks need attention",
+    preheader: `${opts.overdue.length} overdue, ${opts.due_soon.length} due soon`,
+    body: `
+      <h1 style="margin:0 0 16px;font-size:22px;color:#ffffff;">Tasks needing attention</h1>
+      ${opts.overdue.length > 0 ? `<p style="margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:1.4px;color:#ef4444;">Overdue</p><table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px;">${opts.overdue.map((t) => row(t, true)).join("")}</table>` : ""}
+      ${opts.due_soon.length > 0 ? `<p style="margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:1.4px;color:${BRAND.muted};">Due soon</p><table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px;">${opts.due_soon.map((t) => row(t, false)).join("")}</table>` : ""}
+    `,
+    cta: { label: "Open Fortify", href: `${opts.app_url}/app` },
+  });
+}
+
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) =>
     c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : c === '"' ? "&quot;" : "&#39;"

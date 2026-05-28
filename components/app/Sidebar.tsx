@@ -18,6 +18,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/app/vendors",         label: "Vendors",        icon: VendorIcon },
   { href: "/app/threats",         label: "Threat intel",   icon: ThreatIcon },
   { href: "/app/reports",         label: "Reports",        icon: ReportIcon,   minRole: "officer" },
+  { href: "/app/attestations",    label: "Attestations",   icon: AttestationIcon, minRole: "officer" },
   { href: "/app/audit-log",       label: "Audit log",      icon: AuditIcon },
   { href: "/app/team",            label: "Edit Staff",     icon: StaffIcon,    minRole: "admin" },
 ];
@@ -179,6 +180,15 @@ function ReportIcon({ active }: { active: boolean }) {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={active ? "var(--color-accent)" : "currentColor"} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" />
       <line x1="6" y1="20" x2="6" y2="14" /><line x1="3" y1="20" x2="21" y2="20" />
+    </svg>
+  );
+}
+function AttestationIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={active ? "var(--color-accent)" : "currentColor"} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <path d="m9 15 2 2 4-4" />
     </svg>
   );
 }

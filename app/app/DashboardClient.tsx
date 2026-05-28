@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import PageHeader from "@/components/ui/PageHeader";
 import { ButtonLink } from "@/components/ui/Button";
+import TaskList, { type TaskItem } from "@/components/app/TaskList";
 
 interface ReadinessRow {
   framework_code: string;
@@ -33,11 +34,15 @@ export default function DashboardClient({
   readiness,
   criticalCount,
   recentActivity,
+  narrative,
+  tasks,
 }: {
   practiceName: string;
   readiness: ReadinessRow[];
   criticalCount: number;
   recentActivity: ActivityRow[];
+  narrative?: string | null;
+  tasks?: TaskItem[];
 }) {
   const overallPct =
     readiness.length > 0
@@ -45,6 +50,7 @@ export default function DashboardClient({
           readiness.reduce((s, r) => s + (Number(r.weighted_pct) || 0), 0) / readiness.length
         )
       : 0;
+  const punchList = tasks ?? [];
 
   return (
     <div className="px-8 py-10 max-w-6xl mx-auto">
@@ -53,6 +59,29 @@ export default function DashboardClient({
         title="Audit readiness"
         description="A live view of how your controls map across every enabled framework. Marking one control compliant updates every framework score it satisfies."
       />
+
+      {/* The "practice in a sentence" — AI narrative from your dedicated compliance officer */}
+      {narrative && (
+        <Card variant="raised" className="mb-6">
+          <div className="px-6 py-5 flex items-start gap-4">
+            <div
+              className="mt-0.5 w-8 h-8 rounded-full shrink-0 flex items-center justify-center"
+              style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(167,139,250,0.4)" }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z" />
+                <path d="M9 12l2 2 4-4" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-violet-300/80 mb-1.5">
+                From your compliance officer
+              </p>
+              <p className="text-[15px] text-[var(--color-primary)] leading-[1.65]">{narrative}</p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Hero stats — two columns: overall + critical findings */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-10">
@@ -137,6 +166,25 @@ export default function DashboardClient({
             );
           })}
         </div>
+      </section>
+
+      {/* Who needs to do what — the prioritized punch list */}
+      <section className="mb-10">
+        <div className="flex items-baseline justify-between mb-4">
+          <h2 className="font-display text-xl text-[var(--color-primary)]" style={{ letterSpacing: "-0.02em" }}>
+            Who needs to do what
+          </h2>
+          {punchList.length > 0 && (
+            <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--color-tertiary)]">
+              {punchList.length} open
+            </span>
+          )}
+        </div>
+        <TaskList
+          tasks={punchList}
+          showAssignee
+          emptyMessage="No open tasks. Every control with evidence is satisfied."
+        />
       </section>
 
       {/* Quick actions */}

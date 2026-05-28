@@ -169,3 +169,40 @@ Plain English. No bullet points. No markdown headings. No quotation marks around
 
   return (message.content[0]?.type === "text" ? message.content[0].text : "").trim();
 }
+
+export interface PosturizeContext {
+  practice_name: string;
+  overall_pct: number;
+  readiness: Array<{ framework_code: string; weighted_pct: number }>;
+  open_tasks: Array<{ title: string; severity: string; overdue: boolean }>;
+  critical_open: number;
+}
+
+/**
+ * The "practice in a sentence" narrative for the admin dashboard. Plain
+ * language, written for an office manager or physician — not a security pro.
+ * 2–3 sentences max: where they stand, the single most important thing to do
+ * next, and a note of encouragement if they're doing well. This is the hybrid
+ * layer's AI half; the task punch-list beneath it is rules-derived.
+ */
+export async function summarizePracticePosture(ctx: PosturizeContext): Promise<string> {
+  const prompt = `You are the dedicated compliance officer for "${ctx.practice_name}", reporting to the practice owner in plain language.
+
+CURRENT STATE
+Overall readiness: ${ctx.overall_pct}%
+Per framework: ${ctx.readiness.map((r) => `${r.framework_code} ${Math.round(r.weighted_pct)}%`).join(", ")}
+Critical items open: ${ctx.critical_open}
+Top open tasks:
+${ctx.open_tasks.slice(0, 5).map((t) => `- [${t.severity}${t.overdue ? ", OVERDUE" : ""}] ${t.title}`).join("\n") || "- none"}
+
+YOUR TASK
+Write 2-3 sentences, conversational, for a non-technical practice owner. State where they stand in one phrase, name the single most important thing to address next (reference an actual task above), and close with a brief, honest note (encouraging if they're above 80%, motivating if below). No jargon, no bullet points, no markdown, no quotation marks. Speak as "you" to the owner.`;
+
+  const message = await getClient().messages.create({
+    system: NO_PHI_AI_SYSTEM_PROMPT,
+    model: MODEL,
+    max_tokens: 400,
+    messages: [{ role: "user", content: prompt }],
+  });
+  return (message.content[0]?.type === "text" ? message.content[0].text : "").trim();
+}

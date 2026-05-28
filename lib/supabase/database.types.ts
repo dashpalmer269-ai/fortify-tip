@@ -356,6 +356,12 @@ export interface Database {
           completed_at: string | null;
           notes: string | null;
           created_at: string | null;
+          control_id: string | null;
+          title: string | null;
+          source: "auto_control" | "policy_ack" | "training" | "baa" | "screening" | "manual";
+          completed_by: string | null;
+          severity: "critical" | "high" | "medium" | "low" | null;
+          subject_ref: string | null;
         };
         Insert: {
           id?: string;
@@ -368,6 +374,12 @@ export interface Database {
           completed_at?: string | null;
           notes?: string | null;
           created_at?: string | null;
+          control_id?: string | null;
+          title?: string | null;
+          source?: Database["public"]["Tables"]["remediation_tasks"]["Row"]["source"];
+          completed_by?: string | null;
+          severity?: Database["public"]["Tables"]["remediation_tasks"]["Row"]["severity"];
+          subject_ref?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["remediation_tasks"]["Insert"]>;
         Relationships: [];
@@ -1019,6 +1031,56 @@ export interface Database {
           user_message_shown?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["exclusion_screenings"]["Insert"]>;
+        Relationships: [];
+      };
+
+      // ── 022: attestations ───────────────────────────────────────────────
+      attestations: {
+        Row: {
+          id: string;
+          practice_id: string;
+          type: "hipaa_sra" | "soc2_readiness";
+          status: "draft" | "signed" | "superseded";
+          title: string;
+          snapshot: Json;
+          executive_summary: string | null;
+          document_hash: string;
+          period_start: string | null;
+          period_end: string | null;
+          generated_by: string | null;
+          generated_at: string;
+          signed_by: string | null;
+          signer_name: string | null;
+          signer_title: string | null;
+          signed_at: string | null;
+          signature_method: "e_signature" | "print_and_sign" | null;
+          signature_ip: string | null;
+          signature_statement: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          practice_id: string;
+          type: "hipaa_sra" | "soc2_readiness";
+          status?: "draft" | "signed" | "superseded";
+          title: string;
+          snapshot: Json;
+          executive_summary?: string | null;
+          document_hash: string;
+          period_start?: string | null;
+          period_end?: string | null;
+          generated_by?: string | null;
+          generated_at?: string;
+          signed_by?: string | null;
+          signer_name?: string | null;
+          signer_title?: string | null;
+          signed_at?: string | null;
+          signature_method?: "e_signature" | "print_and_sign" | null;
+          signature_ip?: string | null;
+          signature_statement?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["attestations"]["Insert"]>;
         Relationships: [];
       };
 

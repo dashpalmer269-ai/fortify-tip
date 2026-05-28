@@ -146,10 +146,29 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // 4. Regenerate tasks for every practice we touched, so the
+  //    virtual-compliance-officer surface reflects the freshly-computed state.
+  const { generateTasksForPractice } = await import("@/lib/compliance/tasks");
+  const touchedPractices = new Set<string>();
+  for (const key of controlsUpdated) touchedPractices.add(key.split("::")[0]!);
+  let tasksOpened = 0;
+  let tasksResolved = 0;
+  for (const practiceId of touchedPractices) {
+    try {
+      const r = await generateTasksForPractice(supabase, practiceId);
+      tasksOpened += r.auto_control_opened + r.policy_ack_opened;
+      tasksResolved += r.auto_control_resolved + r.policy_ack_resolved;
+    } catch {
+      // Task generation failure shouldn't fail the whole cron run.
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     duration_ms: Date.now() - startedAt,
     ...counts,
     controls_updated: controlsUpdated.size,
+    tasks_opened: tasksOpened,
+    tasks_resolved: tasksResolved,
   });
 }

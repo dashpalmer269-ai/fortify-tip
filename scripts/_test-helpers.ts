@@ -237,8 +237,12 @@ export function employeeSubmitBody(
   jobTitle = "Office Manager",
   adminName = "Practice Admin"
 ) {
+  const parts = fullName.split(" ");
   return {
     full_name: fullName,
+    first_name: parts[0] ?? "Jane",
+    last_name: parts.slice(1).join(" ") || "Doe",
+    date_of_birth: "1985-06-15",
     job_title: jobTitle,
     phone: null,
     pending_practice_name: practiceName,
