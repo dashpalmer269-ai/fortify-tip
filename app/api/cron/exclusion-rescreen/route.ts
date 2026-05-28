@@ -5,7 +5,7 @@ import { sendEmail } from "@/lib/email/provider";
 import { workforceRescreenBlockedEmail } from "@/lib/email/templates";
 
 export const runtime = "nodejs";
-export const maxDuration = 600;
+export const maxDuration = 300;
 
 function authorized(req: NextRequest): boolean {
   if (req.headers.get("x-vercel-cron") === "1") return true;

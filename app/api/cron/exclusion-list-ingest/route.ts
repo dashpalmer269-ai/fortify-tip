@@ -3,7 +3,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { fetchLeie } from "@/lib/screening/sources/oig-leie";
 
 export const runtime = "nodejs";
-export const maxDuration = 600; // 10 minutes; LEIE CSV is ~70K rows
+export const maxDuration = 300; // hobby-plan max; LEIE ~70K rows fits comfortably
 
 function authorized(req: NextRequest): boolean {
   if (req.headers.get("x-vercel-cron") === "1") return true;
