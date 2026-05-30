@@ -19,7 +19,11 @@ interface TaskRow {
   due_date: string | null;
   subject_ref: string | null;
   assigned_to: string | null;
+  controls: { control_key: string; remediation_guide: string | null } | null;
 }
+
+const TASK_SELECT =
+  "id, title, source, status, severity, due_date, subject_ref, assigned_to, controls(control_key, remediation_guide)";
 
 function toTaskItems(rows: TaskRow[], emailByUser?: Map<string, string>): TaskItem[] {
   return rows.map((t) => ({
@@ -31,6 +35,8 @@ function toTaskItems(rows: TaskRow[], emailByUser?: Map<string, string>): TaskIt
     due_date: t.due_date,
     subject_ref: t.subject_ref,
     assignee_email: emailByUser && t.assigned_to ? emailByUser.get(t.assigned_to) ?? null : null,
+    control_key: t.controls?.control_key ?? null,
+    remediation_guide: t.controls?.remediation_guide ?? null,
   }));
 }
 
@@ -102,9 +108,10 @@ export default async function DashboardPage() {
         .maybeSingle(),
       supabase
         .from("remediation_tasks")
-        .select("id, title, source, status, severity, due_date, subject_ref, assigned_to")
+        .select(TASK_SELECT)
         .eq("assigned_to", session.user.id)
-        .in("status", ["open", "in_progress", "blocked"]),
+        .in("status", ["open", "in_progress", "blocked"])
+        .returns<TaskRow[]>(),
     ]);
 
     return (
@@ -114,7 +121,7 @@ export default async function DashboardPage() {
         jobTitle={profileRes.data?.job_title ?? null}
         userEmail={session.user.email ?? ""}
         role={role}
-        tasks={toTaskItems(sortTasks((myTasksRes.data ?? []) as TaskRow[]))}
+        tasks={toTaskItems(sortTasks(myTasksRes.data ?? []))}
       />
     );
   }
@@ -142,9 +149,10 @@ export default async function DashboardPage() {
       .limit(8),
     supabase
       .from("remediation_tasks")
-      .select("id, title, source, status, severity, due_date, subject_ref, assigned_to")
+      .select(TASK_SELECT)
       .eq("practice_id", practiceId)
-      .in("status", ["open", "in_progress", "blocked"]),
+      .in("status", ["open", "in_progress", "blocked"])
+      .returns<TaskRow[]>(),
   ]);
 
   const readinessRows = (readinessRes.data ?? []) as Array<{
@@ -154,7 +162,7 @@ export default async function DashboardPage() {
     total: number;
   }>;
   const critical = criticalRes.data ?? [];
-  const sortedTasks = sortTasks((practiceTasksRes.data ?? []) as TaskRow[]);
+  const sortedTasks = sortTasks(practiceTasksRes.data ?? []);
 
   const overallPct =
     readinessRows.length > 0

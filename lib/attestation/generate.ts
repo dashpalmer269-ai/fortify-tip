@@ -32,6 +32,8 @@ export interface AttestationSnapshot {
     category: string;
     priority: string | null;
     status: string;
+    audience: string | null;
+    report_output_text: string | null;
   }>;
   risks: Array<{ control_key: string; title: string; priority: string | null }>;
   safeguards_in_place: number;
@@ -68,12 +70,19 @@ export async function buildSnapshot(
   // Control inventory
   const { data: pcs } = await db
     .from("practice_controls")
-    .select("status, controls(control_key, title, category, default_priority)")
+    .select("status, controls(control_key, title, category, default_priority, audience, report_output_text)")
     .eq("practice_id", practiceId)
     .returns<
       Array<{
         status: string;
-        controls: { control_key: string; title: string; category: string; default_priority: string | null } | null;
+        controls: {
+          control_key: string;
+          title: string;
+          category: string;
+          default_priority: string | null;
+          audience: string | null;
+          report_output_text: string | null;
+        } | null;
       }>
     >();
   const controls = (pcs ?? [])
@@ -84,6 +93,8 @@ export async function buildSnapshot(
       category: p.controls!.category,
       priority: p.controls!.default_priority,
       status: p.status,
+      audience: p.controls!.audience,
+      report_output_text: p.controls!.report_output_text,
     }));
   const risks = controls
     .filter((c) => c.status === "non_compliant" || c.status === "partial")

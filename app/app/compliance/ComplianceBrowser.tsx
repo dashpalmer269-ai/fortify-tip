@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { marked } from "marked";
 import { createBrowserClient } from "@/lib/supabase/browser";
 import PageHeader from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -16,6 +17,12 @@ interface ControlRow {
   implementation_type: string | null;
   default_priority: string | null;
   healthcare_baseline: boolean | null;
+  healthcare_category: string | null;
+  audience: string | null;
+  automation_status: string | null;
+  evidence_summary: string | null;
+  remediation_guide: string | null;
+  report_output_text: string | null;
   frameworks: string[];
   mapping_count: number;
   status: string;
@@ -47,23 +54,54 @@ const FRAMEWORK_TONE: Record<string, string> = {
   GDPR:     "var(--color-fw-gdpr)",
 };
 
+const HEALTHCARE_CATEGORY_LABELS: Record<string, string> = {
+  employee_access:           "Employee Access",
+  mfa_identity:              "MFA & Identity",
+  hipaa_training:            "HIPAA Training",
+  policy_acknowledgments:    "Policy Acknowledgments",
+  vendor_baa_management:     "Vendor / BAA Management",
+  backup_disaster_recovery:  "Backup & Disaster Recovery",
+  audit_logs:                "Audit Logs",
+  device_security:           "Device Security",
+  exclusion_screening:       "Exclusion Screening",
+  risk_assessments:          "Risk Assessments",
+  incident_response:         "Incident Response",
+  physical_safeguards:       "Physical Safeguards",
+  data_protection:           "Data Protection",
+  change_management:         "Change Management",
+  breach_notification:       "Breach Notification",
+};
+
+const AUTOMATION_LABELS: Record<string, { label: string; tone: Variant }> = {
+  fully_automated:    { label: "Fully automated",   tone: "success" },
+  semi_automated:     { label: "Semi-automated",    tone: "info" },
+  document_upload:    { label: "Document upload",   tone: "warning" },
+  manual_attestation: { label: "Manual attestation", tone: "muted" },
+};
+
 export default function ComplianceBrowser({
   practiceId,
   controls,
   initialFramework,
   initialCategory,
+  initialHealthcareCategory,
+  initialAudience,
   initialStatus,
 }: {
   practiceId: string;
   controls: ControlRow[];
   initialFramework: string | null;
   initialCategory: string | null;
+  initialHealthcareCategory: string | null;
+  initialAudience: string | null;
   initialStatus: string | null;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [framework, setFramework] = useState<string | null>(initialFramework);
   const [category, setCategory] = useState<string | null>(initialCategory);
+  const [healthcareCategory, setHealthcareCategory] = useState<string | null>(initialHealthcareCategory);
+  const [audience, setAudience] = useState<string | null>(initialAudience);
   const [status, setStatus] = useState<string | null>(initialStatus);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -72,11 +110,18 @@ export default function ComplianceBrowser({
     () => Array.from(new Set(controls.map((c) => c.category))).sort(),
     [controls]
   );
+  const healthcareCategoriesPresent = useMemo(
+    () =>
+      Array.from(new Set(controls.map((c) => c.healthcare_category).filter(Boolean))).sort() as string[],
+    [controls]
+  );
   const allFrameworks = ["HIPAA", "SOC2", "ISO27001", "GDPR"];
 
   const filtered = controls.filter((c) => {
     if (framework && !c.frameworks.includes(framework)) return false;
     if (category && c.category !== category) return false;
+    if (healthcareCategory && c.healthcare_category !== healthcareCategory) return false;
+    if (audience && c.audience !== audience) return false;
     if (status && c.status !== status) return false;
     return true;
   });
@@ -123,16 +168,12 @@ export default function ComplianceBrowser({
       <PageHeader
         eyebrow="Controls library"
         title="Compliance"
-        description="One control, many requirements. Marking compliant updates every framework score the control is mapped to."
+        description="One control, many frameworks. Each control answers what the practice must do, what proves it, how Fortify checks it, who owns it, and how to fix a failure."
       />
 
-      {/* Filters */}
-      <Card className="px-4 py-3 mb-6 flex flex-wrap items-center gap-2">
-        <FilterChip
-          label="All frameworks"
-          active={!framework}
-          onClick={() => setFramework(null)}
-        />
+      {/* Filters — frameworks */}
+      <Card className="px-4 py-3 mb-3 flex flex-wrap items-center gap-2">
+        <FilterChip label="All frameworks" active={!framework} onClick={() => setFramework(null)} />
         {allFrameworks.map((fw) => (
           <FilterChip
             key={fw}
@@ -142,13 +183,38 @@ export default function ComplianceBrowser({
             onClick={() => setFramework(framework === fw ? null : fw)}
           />
         ))}
-        <span className="w-px h-5 bg-[var(--color-border-default)] mx-1" />
+      </Card>
+
+      {/* Filters — second row: healthcare cat / category / audience / status */}
+      <Card className="px-4 py-3 mb-6 flex flex-wrap items-center gap-2">
+        <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--color-quaternary)] mr-2">Filter</span>
+        <select
+          value={healthcareCategory ?? ""}
+          onChange={(e) => setHealthcareCategory(e.target.value || null)}
+          className="bg-transparent border border-[var(--color-border-default)] rounded-md px-2.5 py-1 text-xs text-[var(--color-primary)] hover:border-[var(--color-border-strong)] transition-colors"
+        >
+          <option value="" className="bg-black">All healthcare workflows</option>
+          {healthcareCategoriesPresent.map((hc) => (
+            <option key={hc} value={hc} className="bg-black">
+              {HEALTHCARE_CATEGORY_LABELS[hc] ?? hc.replace(/_/g, " ")}
+            </option>
+          ))}
+        </select>
+        <select
+          value={audience ?? ""}
+          onChange={(e) => setAudience(e.target.value || null)}
+          className="bg-transparent border border-[var(--color-border-default)] rounded-md px-2.5 py-1 text-xs text-[var(--color-primary)] hover:border-[var(--color-border-strong)] transition-colors"
+        >
+          <option value="" className="bg-black">Customer + Fortify</option>
+          <option value="customer" className="bg-black">Practice-owned only</option>
+          <option value="fortify_internal" className="bg-black">Fortify-managed only</option>
+        </select>
         <select
           value={category ?? ""}
           onChange={(e) => setCategory(e.target.value || null)}
           className="bg-transparent border border-[var(--color-border-default)] rounded-md px-2.5 py-1 text-xs text-[var(--color-primary)] hover:border-[var(--color-border-strong)] transition-colors"
         >
-          <option value="" className="bg-black">All categories</option>
+          <option value="" className="bg-black">All security categories</option>
           {categories.map((c) => (
             <option key={c} value={c} className="bg-black capitalize">
               {c.replace(/_/g, " ")}
@@ -188,6 +254,8 @@ export default function ComplianceBrowser({
           const priority = c.default_priority ?? "medium";
           const isExpanded = expandedId === c.id;
           const isSaving = savingId === c.id;
+          const isFortifyManaged = c.audience === "fortify_internal";
+          const automation = c.automation_status ? AUTOMATION_LABELS[c.automation_status] : null;
           return (
             <Card key={c.id} className="overflow-hidden">
               <button
@@ -203,10 +271,16 @@ export default function ComplianceBrowser({
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <h3 className="text-[var(--color-primary)] text-[14px] font-medium leading-tight">{c.title}</h3>
                     {c.healthcare_baseline && <Badge variant="accent">baseline</Badge>}
+                    {isFortifyManaged && <Badge variant="info">Fortify-managed</Badge>}
+                    {automation && <Badge variant={automation.tone}>{automation.label}</Badge>}
                   </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] text-[var(--color-tertiary)] uppercase tracking-wider">
-                    <span>{c.category.replace(/_/g, " ")}</span>
-                    <span>·</span>
+                    {c.healthcare_category && (
+                      <>
+                        <span>{HEALTHCARE_CATEGORY_LABELS[c.healthcare_category] ?? c.healthcare_category}</span>
+                        <span>·</span>
+                      </>
+                    )}
                     <span>{c.mapping_count} requirements</span>
                     <span>·</span>
                     <span className="flex items-center gap-1.5 normal-case tracking-normal">
@@ -229,10 +303,36 @@ export default function ComplianceBrowser({
               </button>
 
               {isExpanded && (
-                <div className="border-t border-[var(--color-border-subtle)] px-5 py-4 bg-[var(--color-surface)]">
-                  <p className="text-sm text-[var(--color-secondary)] leading-relaxed mb-4">{c.description}</p>
+                <div className="border-t border-[var(--color-border-subtle)] px-5 py-5 bg-[var(--color-surface)] space-y-5">
+                  <Section label="What the practice does">
+                    <p className="text-sm text-[var(--color-secondary)] leading-relaxed">{c.description}</p>
+                  </Section>
+
+                  {c.evidence_summary && (
+                    <Section label="What proves it">
+                      <p className="text-sm text-[var(--color-secondary)] leading-relaxed">{c.evidence_summary}</p>
+                    </Section>
+                  )}
+
+                  {c.remediation_guide && (
+                    <Section label="How to fix a failure">
+                      <div
+                        className="control-remediation text-sm text-[var(--color-secondary)] leading-relaxed"
+                        dangerouslySetInnerHTML={{ __html: marked.parse(c.remediation_guide) as string }}
+                      />
+                    </Section>
+                  )}
+
+                  {c.report_output_text && (
+                    <Section label="Attestation statement (when compliant)">
+                      <p className="text-sm italic text-[var(--color-tertiary)] leading-relaxed border-l-2 border-[var(--color-border-strong)] pl-3">
+                        “{c.report_output_text}”
+                      </p>
+                    </Section>
+                  )}
+
                   {c.last_verified_at && (
-                    <p className="font-mono text-[11px] text-[var(--color-quaternary)] mb-4">
+                    <p className="font-mono text-[11px] text-[var(--color-quaternary)]">
                       Last verified{" "}
                       {new Date(c.last_verified_at).toLocaleString("en-US", {
                         dateStyle: "medium",
@@ -240,33 +340,53 @@ export default function ComplianceBrowser({
                       })}
                     </p>
                   )}
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      loading={isSaving}
-                      onClick={() => setStatusOnControl(c, "compliant")}
-                    >
-                      Mark compliant
-                    </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      disabled={isSaving}
-                      onClick={() => setStatusOnControl(c, "non_compliant")}
-                    >
-                      Non-compliant
-                    </Button>
-                    <Button variant="ghost" size="sm" disabled title="Evidence upload — planned">
-                      Upload evidence
-                    </Button>
-                  </div>
+
+                  {!isFortifyManaged && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        loading={isSaving}
+                        onClick={() => setStatusOnControl(c, "compliant")}
+                      >
+                        Mark compliant
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        disabled={isSaving}
+                        onClick={() => setStatusOnControl(c, "non_compliant")}
+                      >
+                        Non-compliant
+                      </Button>
+                      <Button variant="ghost" size="sm" disabled title="Evidence upload — planned">
+                        Upload evidence
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </Card>
           );
         })}
       </div>
+
+      <style>{`
+        .control-remediation strong { color: var(--color-primary); font-weight: 600; }
+        .control-remediation p { margin: 6px 0; }
+        .control-remediation ol, .control-remediation ul { margin: 6px 0 6px 20px; }
+        .control-remediation li { margin: 3px 0; }
+        .control-remediation code { font-family: var(--font-mono, ui-monospace, monospace); background: var(--color-surface-raised); padding: 1px 5px; border-radius: 3px; font-size: 0.9em; }
+      `}</style>
+    </div>
+  );
+}
+
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-quaternary)] mb-2">{label}</div>
+      {children}
     </div>
   );
 }

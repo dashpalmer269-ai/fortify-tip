@@ -7,7 +7,13 @@ export const dynamic = "force-dynamic";
 export default async function CompliancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ framework?: string; category?: string; status?: string }>;
+  searchParams: Promise<{
+    framework?: string;
+    category?: string;
+    healthcare_category?: string;
+    audience?: string;
+    status?: string;
+  }>;
 }) {
   const session = await getAppSession();
   assertActive(session);
@@ -15,30 +21,31 @@ export default async function CompliancePage({
   const supabase = await createAuthedServerClient();
   const params = await searchParams;
 
-  // Pull every control + this practice's state + mapping counts in one shot.
-  const { data: controls } = await supabase
-    .from("controls")
-    .select(`
-      id, control_key, title, description, category, implementation_type,
-      default_priority, healthcare_baseline,
-      framework_mappings(framework_requirements(framework_id, frameworks(code)))
-    `)
-    .order("default_priority", { ascending: true })
-    .order("category", { ascending: true });
-
-  const { data: practiceControls } = await supabase
-    .from("practice_controls")
-    .select("control_id, status, last_verified_at, implementation_notes")
-    .eq("practice_id", session.membership.practice_id);
+  const [controlsRes, practiceControlsRes] = await Promise.all([
+    supabase
+      .from("controls")
+      .select(`
+        id, control_key, title, description, category, implementation_type,
+        default_priority, healthcare_baseline,
+        healthcare_category, audience, automation_status,
+        evidence_summary, remediation_guide, report_output_text,
+        framework_mappings(framework_requirements(framework_id, frameworks(code)))
+      `)
+      .eq("active", true)
+      .order("default_priority", { ascending: true })
+      .order("category", { ascending: true }),
+    supabase
+      .from("practice_controls")
+      .select("control_id, status, last_verified_at, implementation_notes")
+      .eq("practice_id", session.membership.practice_id),
+  ]);
 
   const statusByControlId = new Map(
-    (practiceControls ?? []).map((pc) => [pc.control_id, pc])
+    (practiceControlsRes.data ?? []).map((pc) => [pc.control_id, pc])
   );
 
-  const enriched = (controls ?? []).map((c) => {
-    type MappingShape = {
-      framework_requirements: { frameworks: { code: string } } | null;
-    };
+  const enriched = (controlsRes.data ?? []).map((c) => {
+    type MappingShape = { framework_requirements: { frameworks: { code: string } } | null };
     const mappings = (c.framework_mappings ?? []) as unknown as MappingShape[];
     const frameworkCodes = Array.from(
       new Set(mappings.map((m) => m.framework_requirements?.frameworks?.code).filter(Boolean))
@@ -53,6 +60,12 @@ export default async function CompliancePage({
       implementation_type: c.implementation_type,
       default_priority: c.default_priority,
       healthcare_baseline: c.healthcare_baseline,
+      healthcare_category: c.healthcare_category,
+      audience: c.audience,
+      automation_status: c.automation_status,
+      evidence_summary: c.evidence_summary,
+      remediation_guide: c.remediation_guide,
+      report_output_text: c.report_output_text,
       frameworks: frameworkCodes,
       mapping_count: mappings.length,
       status: pc?.status ?? "not_started",
@@ -67,6 +80,8 @@ export default async function CompliancePage({
       controls={enriched}
       initialFramework={params.framework ?? null}
       initialCategory={params.category ?? null}
+      initialHealthcareCategory={params.healthcare_category ?? null}
+      initialAudience={params.audience ?? null}
       initialStatus={params.status ?? null}
     />
   );

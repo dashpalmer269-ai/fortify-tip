@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { marked } from "marked";
 import { Card, CardBody } from "@/components/ui/Card";
 
 export interface TaskItem {
@@ -14,6 +15,8 @@ export interface TaskItem {
   due_date: string | null;
   subject_ref: string | null;
   assignee_email?: string | null;
+  control_key?: string | null;
+  remediation_guide?: string | null;
 }
 
 const SEVERITY_TONE: Record<string, { dot: string; label: string }> = {
@@ -40,9 +43,9 @@ export default function TaskList({
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const [openId, setOpenId] = useState<string | null>(null);
 
   async function complete(task: TaskItem) {
-    // Policy-ack tasks resolve by acknowledging the policy, not marking done.
     if (task.source === "policy_ack" && task.subject_ref) {
       router.push(`/app/policies/${task.subject_ref}`);
       return;
@@ -80,10 +83,18 @@ export default function TaskList({
       {visible.map((task) => {
         const tone = SEVERITY_TONE[task.severity ?? "low"] ?? SEVERITY_TONE.low!;
         const overdue = isOverdue(task.due_date);
+        const hasGuide = !!task.remediation_guide && task.remediation_guide.trim().length > 0;
+        const isOpen = openId === task.id;
         return (
-          <Card key={task.id}>
+          <Card key={task.id} className="overflow-hidden">
             <CardBody className="flex items-center justify-between gap-4 py-3.5">
-              <div className="flex items-start gap-3 min-w-0">
+              <button
+                type="button"
+                onClick={() => hasGuide && setOpenId(isOpen ? null : task.id)}
+                className={`flex items-start gap-3 min-w-0 text-left ${hasGuide ? "cursor-pointer" : "cursor-default"}`}
+                disabled={!hasGuide}
+                aria-expanded={isOpen}
+              >
                 <span
                   className="mt-1.5 w-2 h-2 rounded-full shrink-0"
                   style={{ background: tone.dot }}
@@ -93,6 +104,9 @@ export default function TaskList({
                   <p className="text-sm text-[var(--color-primary)] truncate">{task.title}</p>
                   <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-quaternary)] mt-0.5">
                     {tone.label}
+                    {task.control_key && (
+                      <span className="text-[var(--color-tertiary)] ml-2">· {task.control_key}</span>
+                    )}
                     {task.due_date && (
                       <span className={overdue ? "text-[var(--color-danger)] ml-2" : "text-[var(--color-tertiary)] ml-2"}>
                         {overdue ? "Overdue · " : "Due "}
@@ -102,9 +116,14 @@ export default function TaskList({
                     {showAssignee && task.assignee_email && (
                       <span className="text-[var(--color-tertiary)] ml-2">· {task.assignee_email}</span>
                     )}
+                    {hasGuide && (
+                      <span className="text-[var(--color-accent)] ml-2">
+                        {isOpen ? "Hide fix" : "How to fix →"}
+                      </span>
+                    )}
                   </p>
                 </div>
-              </div>
+              </button>
               <div className="shrink-0">
                 {task.source === "policy_ack" && task.subject_ref ? (
                   <Link
@@ -124,9 +143,27 @@ export default function TaskList({
                 )}
               </div>
             </CardBody>
+            {hasGuide && isOpen && (
+              <div className="border-t border-[var(--color-border-subtle)] px-5 py-4 bg-[var(--color-surface)]">
+                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-quaternary)] mb-2">
+                  How to fix
+                </div>
+                <div
+                  className="task-remediation text-sm text-[var(--color-secondary)] leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: marked.parse(task.remediation_guide ?? "") as string }}
+                />
+              </div>
+            )}
           </Card>
         );
       })}
+      <style>{`
+        .task-remediation strong { color: var(--color-primary); font-weight: 600; }
+        .task-remediation p { margin: 6px 0; }
+        .task-remediation ol, .task-remediation ul { margin: 6px 0 6px 20px; }
+        .task-remediation li { margin: 3px 0; }
+        .task-remediation code { font-family: var(--font-mono, ui-monospace, monospace); background: var(--color-surface-raised); padding: 1px 5px; border-radius: 3px; font-size: 0.9em; }
+      `}</style>
     </div>
   );
 }

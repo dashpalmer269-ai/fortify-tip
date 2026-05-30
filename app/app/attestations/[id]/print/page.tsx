@@ -113,6 +113,52 @@ export default async function AttestationPrint({
         </table>
       </section>
 
+      {/* Per-control attestation statements — only render for compliant controls that carry a report sentence. */}
+      {(() => {
+        const compliantStatements = (snap.controls ?? []).filter(
+          (c) => c.status === "compliant" && c.report_output_text && c.report_output_text.trim().length > 0
+        );
+        const practiceStatements = compliantStatements.filter((c) => c.audience !== "fortify_internal");
+        const fortifyStatements = compliantStatements.filter((c) => c.audience === "fortify_internal");
+        if (compliantStatements.length === 0) return null;
+        return (
+          <>
+            {practiceStatements.length > 0 && (
+              <section>
+                <h2>Practice safeguard attestations ({practiceStatements.length})</h2>
+                <p className="prose" style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
+                  The following statements describe safeguards the practice maintains, verified compliant at the time of generation.
+                </p>
+                <ul className="stmt-list">
+                  {practiceStatements.map((c) => (
+                    <li key={c.control_key}>
+                      <span className="stmt-key">{c.control_key}</span>{" "}
+                      <span className="stmt-text">{c.report_output_text}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            {fortifyStatements.length > 0 && (
+              <section>
+                <h2>Fortify-maintained safeguards ({fortifyStatements.length})</h2>
+                <p className="prose" style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
+                  The following safeguards are maintained by Fortify on behalf of the practice.
+                </p>
+                <ul className="stmt-list">
+                  {fortifyStatements.map((c) => (
+                    <li key={c.control_key}>
+                      <span className="stmt-key">{c.control_key}</span>{" "}
+                      <span className="stmt-text">{c.report_output_text}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </>
+        );
+      })()}
+
       <section className="signature-block">
         <h2>Attestation</h2>
         {att.signature_statement && <p className="prose">{att.signature_statement}</p>}
@@ -173,6 +219,11 @@ export default async function AttestationPrint({
         .sign-lines .line span { position:absolute; bottom:-16px; left:0; font-size:10px; color:#777; font-family:-apple-system,sans-serif; text-transform:uppercase; letter-spacing:1px; }
         .att-footer { margin-top:48px; padding-top:14px; border-top:1px solid #ddd; font-size:10px; color:#666; font-family:-apple-system,sans-serif; }
         .att-footer p { margin:4px 0; }
+        .stmt-list { list-style:none; padding:0; margin:0; }
+        .stmt-list li { padding:6px 0; border-bottom:1px solid #f0f0f0; font-size:12.5px; line-height:1.55; }
+        .stmt-list li:last-child { border-bottom:none; }
+        .stmt-key { display:inline-block; font-family:'Courier New',monospace; font-size:10.5px; color:#555; background:#f5f5f5; padding:1px 5px; border-radius:2px; margin-right:6px; }
+        .stmt-text { color:#222; }
         @media print { .att-doc { padding:0; } }
       `}</style>
     </div>
