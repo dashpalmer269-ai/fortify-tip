@@ -23,7 +23,7 @@ Built to do what Vanta and Drata do, for healthcare specifically, at roughly **o
 
 - **Next.js 16** (App Router) — full-stack, server components
 - **Supabase** — PostgreSQL + Auth + Row Level Security (multi-tenancy)
-- **Anthropic Claude** — `claude-opus-4-7` for hard reasoning, `claude-sonnet-4-6` for enrichment
+- **Anthropic Claude** — `claude-opus-4-8` for hard reasoning, `claude-sonnet-4-6` for enrichment
 - **Stripe** — billing & checkout
 - **Vercel** — hosting + cron (threat-intel ingestion runs 2× daily)
 - **Tailwind CSS v4** — styling

@@ -1,5 +1,5 @@
 /**
- * Headline backfill: rewrite every threat's `title` into a punchy newspaper headline using Opus 4.7.
+ * Headline backfill: rewrite every threat's `title` into a punchy newspaper headline using Opus 4.8.
  * Run with: npx tsx scripts/headlines.ts
  */
 import Anthropic from "@anthropic-ai/sdk";
@@ -69,7 +69,7 @@ async function generateHeadline(row: Row): Promise<string> {
     .join("\n");
 
   const msg = await anthropic.messages.create({
-    model: "claude-opus-4-7",
+    model: "claude-opus-4-8",
     max_tokens: 60,
     messages: [{ role: "user", content: `${PROMPT_HEADER}\n\nTHREAT DATA\n${context}\n\nHEADLINE:` }],
   });
@@ -109,7 +109,7 @@ async function main() {
     return;
   }
 
-  console.log(`Generating headlines for ${rows.length} rows with Opus 4.7...\n`);
+  console.log(`Generating headlines for ${rows.length} rows with Opus 4.8...\n`);
 
   const updates = await processInBatches(rows as Row[], 5, async (row) => {
     try {

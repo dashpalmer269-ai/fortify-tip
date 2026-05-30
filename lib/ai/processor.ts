@@ -184,7 +184,7 @@ export async function generateArticle(ctx: ArticleContext, maxAttempts = 3): Pro
     try {
       const msg = await getClient().messages.create({
         system: NO_PHI_AI_SYSTEM_PROMPT,
-        model: 'claude-opus-4-7',
+        model: 'claude-opus-4-8',
         max_tokens: 2000,
         messages: [{ role: 'user', content: buildPrompt(ctx, correction) }],
       });
@@ -259,7 +259,7 @@ export async function enrichThreat(
 export async function searchThreats(query: string, context: string): Promise<string> {
   const message = await getClient().messages.create({
         system: NO_PHI_AI_SYSTEM_PROMPT,
-    model: 'claude-opus-4-7',
+    model: 'claude-opus-4-8',
     max_tokens: 1024,
     messages: [
       {

@@ -1,7 +1,7 @@
 /**
  * Compliance-focused AI helpers.
  * Uses Sonnet 4.6 by default (cheaper, faster, plenty for these tasks) — keep
- * Opus 4.7 reserved for the threat-intel headline generator where prose quality
+ * Opus 4.8 reserved for the threat-intel headline generator where prose quality
  * matters most.
  */
 import Anthropic from "@anthropic-ai/sdk";
