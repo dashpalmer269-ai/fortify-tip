@@ -1,8 +1,8 @@
 /**
  * Compliance-focused AI helpers.
- * Uses Sonnet 4.6 by default (cheaper, faster, plenty for these tasks) — keep
- * Opus 4.8 reserved for the threat-intel headline generator where prose quality
- * matters most.
+ * On Opus 4.8 for risk summaries, policy drafts, executive reports, and the
+ * practice-in-a-sentence dashboard narrative — the prose quality and reasoning
+ * depth matter most here.
  */
 import Anthropic from "@anthropic-ai/sdk";
 import { NO_PHI_AI_SYSTEM_PROMPT } from "@/lib/compliance/no-phi";
@@ -18,7 +18,7 @@ function getClient(): Anthropic {
   return _client;
 }
 
-const MODEL = "claude-sonnet-4-6";
+const MODEL = "claude-opus-4-8";
 
 export interface RiskAssessmentContext {
   practice_name: string;
