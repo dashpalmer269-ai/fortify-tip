@@ -185,6 +185,34 @@ export interface Database {
           default_priority: "critical" | "high" | "medium" | "low" | null;
           healthcare_baseline: boolean | null;
           active: boolean | null;
+          // Added by 024_operational_controls_schema
+          healthcare_category:
+            | "employee_access"
+            | "mfa_identity"
+            | "hipaa_training"
+            | "policy_acknowledgments"
+            | "vendor_baa_management"
+            | "backup_disaster_recovery"
+            | "audit_logs"
+            | "device_security"
+            | "exclusion_screening"
+            | "risk_assessments"
+            | "incident_response"
+            | "physical_safeguards"
+            | "data_protection"
+            | "change_management"
+            | "breach_notification"
+            | null;
+          audience: "customer" | "fortify_internal";
+          automation_status:
+            | "fully_automated"
+            | "semi_automated"
+            | "document_upload"
+            | "manual_attestation"
+            | null;
+          evidence_summary: string | null;
+          remediation_guide: string | null;
+          report_output_text: string | null;
         };
         Insert: {
           id?: string;
@@ -196,6 +224,12 @@ export interface Database {
           default_priority?: Database["public"]["Tables"]["controls"]["Row"]["default_priority"];
           healthcare_baseline?: boolean | null;
           active?: boolean | null;
+          healthcare_category?: Database["public"]["Tables"]["controls"]["Row"]["healthcare_category"];
+          audience?: Database["public"]["Tables"]["controls"]["Row"]["audience"];
+          automation_status?: Database["public"]["Tables"]["controls"]["Row"]["automation_status"];
+          evidence_summary?: string | null;
+          remediation_guide?: string | null;
+          report_output_text?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["controls"]["Insert"]>;
         Relationships: [];
