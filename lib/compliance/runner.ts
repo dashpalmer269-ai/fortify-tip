@@ -49,10 +49,22 @@ export function stateHash(value: unknown): string {
 
 // ─── Dispatcher ───────────────────────────────────────────────────────────────
 
+/**
+ * Per-invocation cache for decrypted integration credentials. The cron passes
+ * a fresh Map each run; without this, every check on the same integration
+ * (e.g. 5 M365 checks) re-queries `integrations` and re-decrypts.
+ */
+export type CredentialCache = Map<string, { creds: unknown; note: string | null }>;
+
+export interface RunCheckOptions {
+  credentialCache?: CredentialCache;
+}
+
 export async function runCheck(
   supabase: SupabaseClient,
   practiceId: string,
-  check: EvidenceCheckRow
+  check: EvidenceCheckRow,
+  options: RunCheckOptions = {}
 ): Promise<CheckResult> {
   try {
     switch (check.collection_method) {
@@ -63,7 +75,7 @@ export async function runCheck(
       case "document_upload":
         return await runDocumentRecency(supabase, practiceId, check);
       case "automated_api":
-        return await runAutomatedApi(supabase, practiceId, check);
+        return await runAutomatedApi(supabase, practiceId, check, options);
       case "automated_scan":
         return await runAutomatedScan(supabase, practiceId, check);
       case "screenshot":
@@ -283,15 +295,16 @@ async function runDocumentRecency(
 async function runAutomatedApi(
   supabase: SupabaseClient,
   practiceId: string,
-  check: EvidenceCheckRow
+  check: EvidenceCheckRow,
+  options: RunCheckOptions
 ): Promise<CheckResult> {
   switch (check.source_integration) {
     case "microsoft_365":
-      return await runMicrosoft365Check(supabase, practiceId, check);
+      return await runMicrosoft365Check(supabase, practiceId, check, options);
     case "google_workspace":
-      return await runGoogleWorkspaceCheck(supabase, practiceId, check);
+      return await runGoogleWorkspaceCheck(supabase, practiceId, check, options);
     case "okta":
-      return await runOktaCheck(supabase, practiceId, check);
+      return await runOktaCheck(supabase, practiceId, check, options);
     default:
       return {
         status: "not_collected",
@@ -306,12 +319,23 @@ async function runAutomatedApi(
  * Prefers encrypted_credentials_bytes (migration 015), falls back to the
  * legacy plaintext jsonb column during rollout. Returns null when not
  * connected or undecryptable.
+ *
+ * When `cache` is provided, results are memoized by (practiceId, integrationType)
+ * for the lifetime of the cache — the cron's per-run cache avoids re-querying
+ * + re-decrypting on every check against the same integration.
  */
 async function loadIntegrationCreds<T>(
   supabase: SupabaseClient,
   practiceId: string,
-  integrationType: string
+  integrationType: string,
+  cache?: CredentialCache
 ): Promise<{ creds: T | null; note: string | null }> {
+  const cacheKey = `${practiceId}::${integrationType}`;
+  if (cache?.has(cacheKey)) {
+    const cached = cache.get(cacheKey)!;
+    return { creds: cached.creds as T | null, note: cached.note };
+  }
+
   const { data: integ } = await supabase
     .from("integrations")
     .select("id, status, encrypted_credentials, encrypted_credentials_bytes")
@@ -319,33 +343,41 @@ async function loadIntegrationCreds<T>(
     .eq("integration_type", integrationType)
     .eq("status", "connected")
     .maybeSingle();
-  if (!integ) return { creds: null, note: `${integrationType} not connected for this practice` };
 
-  if (integ.encrypted_credentials_bytes) {
+  let result: { creds: T | null; note: string | null };
+  if (!integ) {
+    result = { creds: null, note: `${integrationType} not connected for this practice` };
+  } else if (integ.encrypted_credentials_bytes) {
     const { readCredentials } = await import("@/lib/security/credentials");
     const creds = await readCredentials<NonNullable<T>>(
       supabase as unknown as Parameters<typeof readCredentials>[0],
       integ.id
     );
-    if (!creds) return { creds: null, note: `${integrationType} credentials could not be decrypted (set CREDENTIAL_KMS_KEY?)` };
-    return { creds: creds as T, note: null };
+    result = creds
+      ? { creds: creds as T, note: null }
+      : { creds: null, note: `${integrationType} credentials could not be decrypted (set CREDENTIAL_KMS_KEY?)` };
+  } else if (integ.encrypted_credentials) {
+    result = { creds: integ.encrypted_credentials as unknown as T, note: null };
+  } else {
+    result = { creds: null, note: `${integrationType} has no stored credentials` };
   }
-  if (integ.encrypted_credentials) {
-    return { creds: integ.encrypted_credentials as unknown as T, note: null };
-  }
-  return { creds: null, note: `${integrationType} has no stored credentials` };
+
+  cache?.set(cacheKey, { creds: result.creds, note: result.note });
+  return result;
 }
 
 async function runGoogleWorkspaceCheck(
   supabase: SupabaseClient,
   practiceId: string,
-  check: EvidenceCheckRow
+  check: EvidenceCheckRow,
+  options: RunCheckOptions
 ): Promise<CheckResult> {
   type GwCreds = Parameters<typeof import("@/lib/integrations/google-workspace").checkAdmin2SvEnforced>[0];
   const { creds, note } = await loadIntegrationCreds<NonNullable<GwCreds>>(
     supabase,
     practiceId,
-    "google_workspace"
+    "google_workspace",
+    options.credentialCache
   );
   if (!creds) return { status: "not_collected", observed_value: null, raw: { note: note ?? "no connection" } };
 
@@ -365,13 +397,15 @@ async function runGoogleWorkspaceCheck(
 async function runOktaCheck(
   supabase: SupabaseClient,
   practiceId: string,
-  check: EvidenceCheckRow
+  check: EvidenceCheckRow,
+  options: RunCheckOptions
 ): Promise<CheckResult> {
   type OktaCreds = Parameters<typeof import("@/lib/integrations/okta").checkMfaPolicyActive>[0];
   const { creds, note } = await loadIntegrationCreds<NonNullable<OktaCreds>>(
     supabase,
     practiceId,
-    "okta"
+    "okta",
+    options.credentialCache
   );
   if (!creds) return { status: "not_collected", observed_value: null, raw: { note: note ?? "no connection" } };
 
@@ -391,46 +425,19 @@ async function runOktaCheck(
 async function runMicrosoft365Check(
   supabase: SupabaseClient,
   practiceId: string,
-  check: EvidenceCheckRow
+  check: EvidenceCheckRow,
+  options: RunCheckOptions
 ): Promise<CheckResult> {
-  const { data: integ } = await supabase
-    .from("integrations")
-    .select("id, status, encrypted_credentials, encrypted_credentials_bytes")
-    .eq("practice_id", practiceId)
-    .eq("integration_type", "microsoft_365")
-    .eq("status", "connected")
-    .maybeSingle();
-  if (!integ) {
-    return {
-      status: "not_collected",
-      observed_value: null,
-      raw: { note: "M365 not connected for this practice" },
-    };
-  }
-
-  // Prefer encrypted bytes (migration 015 path); fall back to legacy plaintext
-  // JSONB column for back-compat during rollout.
   type M365Creds = Parameters<
     typeof import("@/lib/integrations/microsoft-graph").checkMfaUsersEnforced
   >[0];
-  let creds: M365Creds | null = null;
-
-  if (integ.encrypted_credentials_bytes) {
-    const { readCredentials } = await import("@/lib/security/credentials");
-    creds = (await readCredentials<NonNullable<M365Creds>>(
-      supabase as unknown as Parameters<typeof readCredentials>[0],
-      integ.id
-    )) as M365Creds;
-  } else if (integ.encrypted_credentials) {
-    creds = integ.encrypted_credentials as unknown as M365Creds;
-  }
-  if (!creds) {
-    return {
-      status: "not_collected",
-      observed_value: null,
-      raw: { note: "M365 credentials could not be decrypted (set CREDENTIAL_KMS_KEY?)" },
-    };
-  }
+  const { creds, note } = await loadIntegrationCreds<NonNullable<M365Creds>>(
+    supabase,
+    practiceId,
+    "microsoft_365",
+    options.credentialCache
+  );
+  if (!creds) return { status: "not_collected", observed_value: null, raw: { note: note ?? "no connection" } };
 
   const graph = await import("@/lib/integrations/microsoft-graph");
 

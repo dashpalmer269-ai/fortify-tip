@@ -3,7 +3,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { getAppSession, assertActive } from "@/lib/auth/session";
 import { isOfficer, type Role } from "@/lib/auth/permissions";
 import { generateTasksForPractice } from "@/lib/compliance/tasks";
-import { summarizePracticePosture } from "@/lib/ai/compliance-ai";
+import { getOrGenerateNarrative } from "@/lib/dashboard/narrative";
 import type { TaskItem } from "@/components/app/TaskList";
 import DashboardClient from "./DashboardClient";
 import DashboardEmployee from "./DashboardEmployee";
@@ -46,6 +46,31 @@ function sortTasks(rows: TaskRow[]): TaskRow[] {
   });
 }
 
+/**
+ * Resolve a small set of user IDs to emails via targeted lookups, not a full
+ * tenant list. Bound by the count of distinct task assignees.
+ */
+async function emailsForAssignees(
+  service: NonNullable<ReturnType<typeof createServerClient>>,
+  userIds: string[]
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const unique = Array.from(new Set(userIds));
+  const results = await Promise.all(
+    unique.map(async (id) => {
+      try {
+        const { data } = await service.auth.admin.getUserById(id);
+        return [id, data.user?.email ?? null] as const;
+      } catch (err) {
+        console.error("[dashboard] assignee email lookup failed", { user_id: id, error: err instanceof Error ? err.message : String(err) });
+        return [id, null] as const;
+      }
+    })
+  );
+  for (const [id, email] of results) if (email) map.set(id, email);
+  return map;
+}
+
 export default async function DashboardPage() {
   const session = await getAppSession();
   assertActive(session);
@@ -56,122 +81,131 @@ export default async function DashboardPage() {
   const practiceId = session.membership.practice_id;
   const practiceName = session.membership.practice_name;
 
-  // Keep the task surface fresh on every dashboard load (idempotent).
+  // Keep the task surface fresh. Throttled in the generator to once per 10min
+  // per practice — so a tab refresh doesn't re-run the whole regen.
   if (service) {
-    try {
-      await generateTasksForPractice(service, practiceId);
-    } catch {
-      /* non-fatal */
-    }
+    generateTasksForPractice(service, practiceId).catch((err) => {
+      console.error("[dashboard] task generation failed", {
+        practice_id: practiceId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
   }
 
   // ── Standard / auditor → employee dashboard (task-first) ──────────────────
   if (!isOfficer(role)) {
-    const { data: profile } = await supabase
-      .from("user_profiles")
-      .select("full_name, job_title")
-      .eq("user_id", session.user.id)
-      .maybeSingle();
-
-    const { data: myTasks } = await supabase
-      .from("remediation_tasks")
-      .select("id, title, source, status, severity, due_date, subject_ref, assigned_to")
-      .eq("assigned_to", session.user.id)
-      .in("status", ["open", "in_progress", "blocked"]);
+    const [profileRes, myTasksRes] = await Promise.all([
+      supabase
+        .from("user_profiles")
+        .select("full_name, job_title")
+        .eq("user_id", session.user.id)
+        .maybeSingle(),
+      supabase
+        .from("remediation_tasks")
+        .select("id, title, source, status, severity, due_date, subject_ref, assigned_to")
+        .eq("assigned_to", session.user.id)
+        .in("status", ["open", "in_progress", "blocked"]),
+    ]);
 
     return (
       <DashboardEmployee
         practiceName={practiceName}
-        fullName={profile?.full_name ?? null}
-        jobTitle={profile?.job_title ?? null}
+        fullName={profileRes.data?.full_name ?? null}
+        jobTitle={profileRes.data?.job_title ?? null}
         userEmail={session.user.email ?? ""}
         role={role}
-        tasks={toTaskItems(sortTasks((myTasks ?? []) as TaskRow[]))}
+        tasks={toTaskItems(sortTasks((myTasksRes.data ?? []) as TaskRow[]))}
       />
     );
   }
 
-  // ── Admin / officer dashboard ─────────────────────────────────────────────
-  const { data: readiness } = await supabase.rpc("audit_readiness_summary", {
-    p_practice_id: practiceId,
-  });
+  // ── Admin / officer dashboard — every query independent, fan out in parallel
+  const [readinessRes, criticalRes, activityRes, practiceTasksRes] = await Promise.all([
+    supabase.rpc("audit_readiness_summary", { p_practice_id: practiceId }),
+    supabase
+      .from("practice_controls")
+      .select("id, status, controls(control_key, title, default_priority, category)")
+      .eq("practice_id", practiceId)
+      .eq("status", "non_compliant")
+      .returns<
+        Array<{
+          id: string;
+          status: string;
+          controls: { control_key: string; title: string; default_priority: string; category: string } | null;
+        }>
+      >(),
+    supabase
+      .from("audit_logs")
+      .select("id, action, resource_type, metadata, occurred_at, actor_service")
+      .eq("practice_id", practiceId)
+      .order("occurred_at", { ascending: false })
+      .limit(8),
+    supabase
+      .from("remediation_tasks")
+      .select("id, title, source, status, severity, due_date, subject_ref, assigned_to")
+      .eq("practice_id", practiceId)
+      .in("status", ["open", "in_progress", "blocked"]),
+  ]);
 
-  const { data: critical } = await supabase
-    .from("practice_controls")
-    .select("id, status, controls(control_key, title, default_priority, category)")
-    .eq("practice_id", practiceId)
-    .eq("status", "non_compliant")
-    .returns<
-      Array<{
-        id: string;
-        status: string;
-        controls: { control_key: string; title: string; default_priority: string; category: string } | null;
-      }>
-    >();
-
-  const { data: activity } = await supabase
-    .from("audit_logs")
-    .select("id, action, resource_type, metadata, occurred_at, actor_service")
-    .eq("practice_id", practiceId)
-    .order("occurred_at", { ascending: false })
-    .limit(8);
-
-  // Practice-wide open tasks (the punch list)
-  const { data: practiceTasks } = await supabase
-    .from("remediation_tasks")
-    .select("id, title, source, status, severity, due_date, subject_ref, assigned_to")
-    .eq("practice_id", practiceId)
-    .in("status", ["open", "in_progress", "blocked"]);
-
-  const sortedTasks = sortTasks((practiceTasks ?? []) as TaskRow[]);
-
-  // Resolve assignee emails for the punch list
-  const emailByUser = new Map<string, string>();
-  if (service && sortedTasks.length > 0) {
-    const { data: list } = await service.auth.admin.listUsers({ page: 1, perPage: 200 });
-    for (const u of list?.users ?? []) if (u.email) emailByUser.set(u.id, u.email);
-  }
-
-  const readinessRows = (readiness ?? []) as Array<{
+  const readinessRows = (readinessRes.data ?? []) as Array<{
     framework_code: string;
     weighted_pct: number;
     satisfied: number;
     total: number;
   }>;
+  const critical = criticalRes.data ?? [];
+  const sortedTasks = sortTasks((practiceTasksRes.data ?? []) as TaskRow[]);
+
   const overallPct =
     readinessRows.length > 0
       ? Math.round(readinessRows.reduce((s, r) => s + (Number(r.weighted_pct) || 0), 0) / readinessRows.length)
       : 0;
-  const criticalCount = (critical ?? []).filter((c) => c.controls?.default_priority === "critical").length;
+  const criticalCount = critical.filter((c) => c.controls?.default_priority === "critical").length;
 
-  // AI narrative — "practice in a sentence." Best-effort; falls back to a
-  // deterministic line if the AI call fails or isn't configured.
-  let narrative: string | null = null;
-  try {
-    narrative = await summarizePracticePosture({
-      practice_name: practiceName,
-      overall_pct: overallPct,
-      readiness: readinessRows.map((r) => ({ framework_code: r.framework_code, weighted_pct: r.weighted_pct })),
-      open_tasks: sortedTasks.slice(0, 5).map((t) => ({
-        title: t.title ?? "task",
-        severity: t.severity ?? "low",
-        overdue: !!t.due_date && new Date(t.due_date).getTime() < Date.now(),
-      })),
-      critical_open: criticalCount,
-    });
-  } catch {
-    narrative =
-      overallPct >= 80
-        ? `${practiceName} is in strong shape at ${overallPct}% overall. ${sortedTasks.length} open ${sortedTasks.length === 1 ? "task" : "tasks"} to clear.`
-        : `${practiceName} is at ${overallPct}% overall with ${criticalCount} critical ${criticalCount === 1 ? "item" : "items"} open. Start with the highest-severity task below.`;
-  }
+  // Targeted email lookup: only the distinct assignees on visible tasks.
+  const assigneeIds = sortedTasks
+    .map((t) => t.assigned_to)
+    .filter((id): id is string => !!id);
+  const emailByUser =
+    service && assigneeIds.length > 0
+      ? await emailsForAssignees(service, assigneeIds)
+      : new Map<string, string>();
+
+  // Cached AI narrative — regenerates only when the state hash changes.
+  // Fallback to deterministic line if AI is unavailable.
+  const topTaskSigs = sortedTasks
+    .slice(0, 5)
+    .map((t) => `${t.id}:${t.status}:${t.due_date ?? ""}`);
+  const fallbackNarrative =
+    overallPct >= 80
+      ? `${practiceName} is in strong shape at ${overallPct}% overall. ${sortedTasks.length} open ${sortedTasks.length === 1 ? "task" : "tasks"} to clear.`
+      : `${practiceName} is at ${overallPct}% overall with ${criticalCount} critical ${criticalCount === 1 ? "item" : "items"} open. Start with the highest-severity task below.`;
+
+  const narrative = service
+    ? (await getOrGenerateNarrative(
+        service,
+        practiceId,
+        {
+          practice_name: practiceName,
+          overall_pct: overallPct,
+          readiness: readinessRows.map((r) => ({ framework_code: r.framework_code, weighted_pct: r.weighted_pct })),
+          open_tasks: sortedTasks.slice(0, 5).map((t) => ({
+            title: t.title ?? "task",
+            severity: t.severity ?? "low",
+            overdue: !!t.due_date && new Date(t.due_date).getTime() < Date.now(),
+          })),
+          critical_open: criticalCount,
+        },
+        topTaskSigs
+      )) || fallbackNarrative
+    : fallbackNarrative;
 
   return (
     <DashboardClient
       practiceName={practiceName}
       readiness={readinessRows}
       criticalCount={criticalCount}
-      recentActivity={activity ?? []}
+      recentActivity={activityRes.data ?? []}
       narrative={narrative}
       tasks={toTaskItems(sortedTasks, emailByUser)}
     />

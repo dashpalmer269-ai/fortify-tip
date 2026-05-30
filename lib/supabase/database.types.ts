@@ -67,6 +67,11 @@ export interface Database {
           stripe_subscription_id: string | null;
           billing_status: "trialing" | "active" | "past_due" | "canceled" | "unpaid" | "incomplete";
           subscription_current_period_end: string | null;
+          // Added by 023_dashboard_cache_columns
+          dashboard_narrative: string | null;
+          dashboard_narrative_state_hash: string | null;
+          dashboard_narrative_at: string | null;
+          tasks_last_generated_at: string | null;
         };
         Insert: {
           id?: string;
@@ -89,6 +94,10 @@ export interface Database {
           stripe_subscription_id?: string | null;
           billing_status?: Database["public"]["Tables"]["practices"]["Row"]["billing_status"];
           subscription_current_period_end?: string | null;
+          dashboard_narrative?: string | null;
+          dashboard_narrative_state_hash?: string | null;
+          dashboard_narrative_at?: string | null;
+          tasks_last_generated_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["practices"]["Insert"]>;
         Relationships: [];

@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
-import { runCheck, recomputeControlStatus, stateHash, type EvidenceCheckRow } from "@/lib/compliance/runner";
+import {
+  runCheck,
+  recomputeControlStatus,
+  stateHash,
+  type EvidenceCheckRow,
+  type CredentialCache,
+} from "@/lib/compliance/runner";
 
 export const maxDuration = 300;
 
@@ -37,6 +43,9 @@ export async function GET(req: NextRequest) {
     drift_alerts_created: 0,
   };
   const controlsUpdated = new Set<string>();
+  // Per-run credential cache: avoids re-querying + re-decrypting the same
+  // integration row for every check (e.g. 5 M365 checks → 1 load instead of 5).
+  const credentialCache: CredentialCache = new Map();
 
   // 1. Load every active evidence check
   const { data: checks, error: ecErr } = await supabase
@@ -87,7 +96,9 @@ export async function GET(req: NextRequest) {
       counts.checks_attempted++;
 
       // Execute the check
-      const result = await runCheck(supabase, practiceId, check as EvidenceCheckRow);
+      const result = await runCheck(supabase, practiceId, check as EvidenceCheckRow, {
+        credentialCache,
+      });
 
       // Verify-before-push: validates the collector envelope (status, observed_value
       // shape, error message presence) before writing. Anything that fails
@@ -140,14 +151,30 @@ export async function GET(req: NextRequest) {
         counts.drift_alerts_created++;
       }
 
-      // Roll up control status from its evidence
-      await recomputeControlStatus(supabase, practiceId, check.control_id);
+      // Record that this (practice, control) needs recompute. We defer the
+      // actual recompute until after the inner loop so a control with N
+      // evidence checks rolls up once, not N times.
       controlsUpdated.add(`${practiceId}::${check.control_id}`);
     }
   }
 
-  // 4. Regenerate tasks for every practice we touched, so the
+  // 4. Recompute control status — once per distinct (practice, control)
+  for (const key of controlsUpdated) {
+    const [practiceId, controlId] = key.split("::") as [string, string];
+    try {
+      await recomputeControlStatus(supabase, practiceId, controlId);
+    } catch (err) {
+      console.error("[verify-compliance] recompute failed", {
+        practice_id: practiceId,
+        control_id: controlId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  // 5. Regenerate tasks for every practice we touched, so the
   //    virtual-compliance-officer surface reflects the freshly-computed state.
+  //    `force: true` bypasses the dashboard throttle — we have fresh signal.
   const { generateTasksForPractice } = await import("@/lib/compliance/tasks");
   const touchedPractices = new Set<string>();
   for (const key of controlsUpdated) touchedPractices.add(key.split("::")[0]!);
@@ -155,11 +182,14 @@ export async function GET(req: NextRequest) {
   let tasksResolved = 0;
   for (const practiceId of touchedPractices) {
     try {
-      const r = await generateTasksForPractice(supabase, practiceId);
+      const r = await generateTasksForPractice(supabase, practiceId, { force: true });
       tasksOpened += r.auto_control_opened + r.policy_ack_opened;
       tasksResolved += r.auto_control_resolved + r.policy_ack_resolved;
-    } catch {
-      // Task generation failure shouldn't fail the whole cron run.
+    } catch (err) {
+      console.error("[verify-compliance] task generation failed", {
+        practice_id: practiceId,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 

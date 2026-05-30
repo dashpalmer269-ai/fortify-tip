@@ -14,6 +14,7 @@
  * server-auth.ts is gone; everywhere uses one of these two helpers now.
  */
 
+import { cache } from "react";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import {
   ROLE_LABELS,
@@ -47,8 +48,12 @@ interface RawState {
  * Single Supabase round-trip that resolves everything an authenticated
  * request might need to render. Branded IDs are minted here so consumers
  * never deal with raw UUIDs.
+ *
+ * Wrapped in React `cache()` so layout + page sharing the same render only
+ * hit Supabase once — without this the auth+membership+profile triad runs
+ * 2-3× per authenticated page load.
  */
-async function loadRawState(): Promise<RawState> {
+const loadRawState = cache(async function loadRawState(): Promise<RawState> {
   const supabase = await createAuthedServerClient();
   const {
     data: { user },
@@ -86,7 +91,7 @@ async function loadRawState(): Promise<RawState> {
     : null;
 
   return { user, membership, profile: profile ?? null };
-}
+});
 
 /* ──────────────────────────────────────────────────────────────────────── *
  * App-side: discriminated union for server pages
