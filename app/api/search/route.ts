@@ -166,7 +166,7 @@ export async function GET(req: NextRequest) {
   }
 
   // ─── Score & rank literal matches ────────────────────────────────────────
-  let literalRanked = Array.from(candidateMap.values())
+  const literalRanked = Array.from(candidateMap.values())
     .map((row) => ({ row, score: scoreRow(row, words, phrase) }))
     .filter((s) => s.score > 0)
     .sort((a, b) => b.score - a.score);

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardBody } from "@/components/ui/Card";
 import { ROLE_LABELS, type Role } from "@/lib/auth/permissions";
 import TaskList, { type TaskItem } from "@/components/app/TaskList";
@@ -21,9 +22,20 @@ export default function DashboardEmployee({
 }) {
   const firstName = fullName?.split(" ")[0] ?? userEmail.split("@")[0];
   const openCount = tasks.length;
-  const overdueCount = tasks.filter(
-    (t) => t.due_date && new Date(t.due_date).getTime() < Date.now()
-  ).length;
+  // Defer time-dependent computation to after mount so SSR + first client
+  // render produce identical HTML. Server renders overdueCount = 0; client
+  // recomputes once mounted. Avoids hydration mismatch on edge-case tasks
+  // whose due_date crosses the SSR boundary.
+  const [now, setNow] = useState<number | null>(null);
+  // Post-mount initialization to keep SSR + first client render identical.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNow(Date.now());
+  }, []);
+  const overdueCount = useMemo(() => {
+    if (now === null) return 0;
+    return tasks.filter((t) => t.due_date && new Date(t.due_date).getTime() < now).length;
+  }, [now, tasks]);
   const standing = openCount === 0 ? "All clear" : overdueCount > 0 ? "Action needed" : "On track";
   const standingTone =
     openCount === 0 ? "var(--color-success)" : overdueCount > 0 ? "var(--color-danger)" : "var(--color-warning)";

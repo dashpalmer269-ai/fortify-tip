@@ -200,6 +200,7 @@ export default async function DashboardPage() {
           open_tasks: sortedTasks.slice(0, 5).map((t) => ({
             title: t.title ?? "task",
             severity: t.severity ?? "low",
+            // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is per-request not per-render
             overdue: !!t.due_date && new Date(t.due_date).getTime() < Date.now(),
           })),
           critical_open: criticalCount,

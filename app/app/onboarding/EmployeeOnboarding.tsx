@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import StarfieldBackground from "@/components/StarfieldBackground";
@@ -44,6 +44,15 @@ export default function EmployeeOnboarding({ userEmail, existingProfile }: Props
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Max DOB = 14 years ago. Computed post-mount to avoid SSR/hydration
+  // mismatch (Date.now() during render produces non-deterministic HTML).
+  const [maxDob, setMaxDob] = useState("");
+  // Post-mount initialization (avoids SSR/hydration mismatch on time-dependent attribute)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMaxDob(new Date(Date.now() - 14 * 365 * 86400000).toISOString().slice(0, 10));
+  }, []);
 
   const valid =
     firstName.trim() &&
@@ -157,7 +166,7 @@ export default function EmployeeOnboarding({ userEmail, existingProfile }: Props
                     value={dateOfBirth}
                     onChange={(e) => setDateOfBirth(e.target.value)}
                     className="emp-input"
-                    max={new Date(Date.now() - 14 * 365 * 86400000).toISOString().slice(0, 10)}
+                    max={maxDob}
                   />
                 </Field>
                 <Field label="Your role at the practice" required>

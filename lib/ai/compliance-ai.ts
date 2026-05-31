@@ -69,7 +69,14 @@ Respond with ONLY the JSON object. No markdown fences, no commentary.`;
 
   const text = message.content[0]?.type === "text" ? message.content[0].text : "{}";
   const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
-  const parsed = JSON.parse(cleaned) as Partial<RiskAssessmentAi>;
+  let parsed: Partial<RiskAssessmentAi>;
+  try {
+    parsed = JSON.parse(cleaned) as Partial<RiskAssessmentAi>;
+  } catch {
+    // AI returned malformed JSON despite the explicit instruction. Fail
+    // soft — the caller has a deterministic fallback path.
+    parsed = {};
+  }
 
   const score = Math.min(100, Math.max(0, Math.round(Number(parsed.risk_score) || 0)));
   const level: RiskAssessmentAi["risk_level"] =

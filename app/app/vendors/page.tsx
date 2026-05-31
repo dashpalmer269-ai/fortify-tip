@@ -57,6 +57,7 @@ export default async function VendorsPage() {
     if (!latestBaaByVendor.has(b.vendor_id)) latestBaaByVendor.set(b.vendor_id, b);
   }
 
+  // eslint-disable-next-line react-hooks/purity -- server component renders once per request; Date.now is acceptable
   const now = Date.now();
   const enriched: VendorWithBaa[] = (vendors ?? []).map((v) => {
     const b = latestBaaByVendor.get(v.id);

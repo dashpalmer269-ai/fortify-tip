@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import type { SafeguardsData } from "./types";
@@ -65,6 +66,15 @@ export default function StepSafeguards({ data, onChange, onContinue, onBack, isL
   const validSchedule =
     data.mode === "schedule" && !!data.assistance_date && !!data.assistance_window;
   const valid = validManual || validSchedule;
+
+  // Earliest scheduled assist = tomorrow. Computed post-mount to avoid
+  // SSR/hydration mismatch on the <input min={...}> attribute.
+  const [minDate, setMinDate] = useState("");
+  // Post-mount initialization (avoids SSR/hydration mismatch on time-dependent attribute)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMinDate(new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+  }, []);
 
   function toggleIntegration(key: string) {
     const next = data.integrations.includes(key)
@@ -175,7 +185,7 @@ export default function StepSafeguards({ data, onChange, onContinue, onBack, isL
               <Field label="Preferred date" required>
                 <input
                   type="date"
-                  min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10)}
+                  min={minDate}
                   value={data.assistance_date ?? ""}
                   onChange={(e) => onChange({ ...data, assistance_date: e.target.value })}
                   className="onb-input"

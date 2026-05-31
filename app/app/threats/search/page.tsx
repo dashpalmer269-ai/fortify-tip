@@ -14,14 +14,29 @@ function SearchResults() {
 
   useEffect(() => {
     if (!q) return;
+    const ctrl = new AbortController();
+    // Intentional: signal "loading" on every q change. The eslint rule warns
+    // about cascading renders; here we have at most two renders per query
+    // (loading=true → loading=false) and the alternative (useTransition over
+    // a promise) would obscure the loading signal.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    fetch(`/api/search?q=${encodeURIComponent(q)}`)
-      .then(r => r.json())
-      .then(data => {
+    fetch(`/api/search?q=${encodeURIComponent(q)}`, { signal: ctrl.signal })
+      .then((r) => r.json())
+      .then((data) => {
+        if (ctrl.signal.aborted) return;
         setResults(data.results ?? []);
         setSynthesis(data.synthesis ?? null);
       })
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (err?.name !== "AbortError") {
+          console.error("[search] fetch failed", err instanceof Error ? err.message : String(err));
+        }
+      })
+      .finally(() => {
+        if (!ctrl.signal.aborted) setLoading(false);
+      });
+    return () => ctrl.abort();
   }, [q]);
 
   return (
@@ -33,7 +48,7 @@ function SearchResults() {
             Dashboard
           </Link>
           <h1 className="text-lg font-semibold text-white">
-            Search: <span className="text-violet-400">"{q}"</span>
+            Search: <span className="text-violet-400">&ldquo;{q}&rdquo;</span>
           </h1>
         </div>
       </div>
@@ -62,7 +77,7 @@ function SearchResults() {
 
         {!loading && results.length === 0 && (
           <div className="text-center py-20">
-            <p className="text-gray-400 text-lg">No results found for "{q}"</p>
+            <p className="text-gray-400 text-lg">No results found for &ldquo;{q}&rdquo;</p>
             <p className="text-gray-600 text-sm mt-2">Try different keywords or check back after the next ingestion run.</p>
           </div>
         )}

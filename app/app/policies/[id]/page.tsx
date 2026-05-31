@@ -1,6 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { marked } from "marked";
+import { renderMarkdown } from "@/lib/sanitize";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { getAppSession, assertActive } from "@/lib/auth/session";
 
@@ -50,7 +50,7 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
 
       <article
         className="glass-card rounded-2xl p-8 text-gray-200 leading-relaxed policy-prose"
-        dangerouslySetInnerHTML={{ __html: marked.parse(policy.content_markdown ?? "") }}
+        dangerouslySetInnerHTML={{ __html: renderMarkdown(policy.content_markdown) }}
       />
       <style>{`
         .policy-prose h2 { font-family: var(--font-display); font-size: 22px; color: var(--color-primary); margin: 24px 0 8px; letter-spacing: -0.01em; }

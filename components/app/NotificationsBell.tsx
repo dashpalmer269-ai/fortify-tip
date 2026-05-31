@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 interface Notification {
@@ -13,6 +13,11 @@ interface Notification {
   created_at: string;
 }
 
+interface NotificationsResponse {
+  items?: Notification[];
+  unread?: number;
+}
+
 export default function NotificationsBell() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notification[]>([]);
@@ -20,11 +25,30 @@ export default function NotificationsBell() {
   const [loading, setLoading] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
+  // Declared BEFORE the useEffect that references it — function declarations
+  // are hoisted at runtime but React Compiler analysis requires lexical order.
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch("/api/notifications");
+      if (!res.ok) return;
+      const data: NotificationsResponse = await res.json();
+      setItems(data.items ?? []);
+      setUnread(data.unread ?? 0);
+    } catch (err) {
+      console.error("[notifications] refresh failed", err instanceof Error ? err.message : String(err));
+    }
+  }, []);
+
   useEffect(() => {
+    // Polling pattern — refresh() updates state via setItems/setUnread.
+    // This is intentional: notifications are external state that we sync
+    // into React on a 30s cadence. The lint rule's preferred patterns
+    // (subscribe via callback) don't fit a polled HTTP endpoint.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
     const t = setInterval(refresh, 30_000);
     return () => clearInterval(t);
-  }, []);
+  }, [refresh]);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -33,16 +57,6 @@ export default function NotificationsBell() {
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
-
-  async function refresh() {
-    try {
-      const res = await fetch("/api/notifications");
-      if (!res.ok) return;
-      const data = await res.json();
-      setItems(data.items ?? []);
-      setUnread(data.unread ?? 0);
-    } catch {/* ignore */}
-  }
 
   async function openPanel() {
     setOpen((o) => !o);

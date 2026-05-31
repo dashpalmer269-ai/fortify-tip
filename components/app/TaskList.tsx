@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { marked } from "marked";
+import { renderMarkdown } from "@/lib/sanitize";
 import { Card, CardBody } from "@/components/ui/Card";
 
 export interface TaskItem {
@@ -150,7 +150,7 @@ export default function TaskList({
                 </div>
                 <div
                   className="task-remediation text-sm text-[var(--color-secondary)] leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: marked.parse(task.remediation_guide ?? "") as string }}
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(task.remediation_guide) }}
                 />
               </div>
             )}

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { marked } from "marked";
+import { renderMarkdown } from "@/lib/sanitize";
 import { createBrowserClient } from "@/lib/supabase/browser";
 import PageHeader from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -399,7 +399,7 @@ export default function ComplianceBrowser({
                     <Section label="How to fix a failure">
                       <div
                         className="control-remediation text-sm text-[var(--color-secondary)] leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: marked.parse(c.remediation_guide) as string }}
+                        dangerouslySetInnerHTML={{ __html: renderMarkdown(c.remediation_guide) }}
                       />
                     </Section>
                   )}
