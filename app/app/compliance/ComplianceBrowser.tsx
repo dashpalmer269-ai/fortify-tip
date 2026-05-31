@@ -74,6 +74,7 @@ const HEALTHCARE_CATEGORY_LABELS: Record<string, string> = {
   data_protection:           "Data Protection",
   change_management:         "Change Management",
   breach_notification:       "Breach Notification",
+  integration_credentials:   "Integration Credentials",
 };
 
 const AUTOMATION_LABELS: Record<string, { label: string; tone: Variant }> = {

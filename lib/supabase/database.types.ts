@@ -202,6 +202,7 @@ export interface Database {
             | "data_protection"
             | "change_management"
             | "breach_notification"
+            | "integration_credentials"
             | null;
           audience: "customer" | "fortify_internal";
           automation_status:
