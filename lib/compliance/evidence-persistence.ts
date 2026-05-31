@@ -106,7 +106,11 @@ export async function persistEvidence(
   practiceId: string,
   check: EvidenceCheckRow,
   collectorResult: CheckResult,
-  options: { collectedByUserId?: string | null } = {}
+  options: {
+    collectedByUserId?: string | null;
+    evidenceFileUrl?: string | null;
+    notes?: string | null;
+  } = {}
 ): Promise<{ evidenceId: string | null; verified: boolean; reason?: string }> {
   const verification = verifyCollected(check, collectorResult);
   const result = verification.result;
@@ -126,9 +130,15 @@ export async function persistEvidence(
       : { status: result.status, raw: result.raw };
   const hash = stateHash(hashSource);
 
-  // collected_by stays null for cron writes (system-generated evidence).
-  // observed_value is stored as Json; raw_result captures the full collector envelope
-  // so an auditor can replay what we saw.
+  // Verification-failure note takes precedence; caller-supplied note appended.
+  const verificationNote = verification.ok
+    ? null
+    : `Collector output failed verification: ${verification.reason}`;
+  const combinedNotes =
+    verificationNote && options.notes
+      ? `${verificationNote}\n\n${options.notes}`
+      : verificationNote ?? options.notes ?? null;
+
   const { data: row, error } = await db
     .from("practice_evidence")
     .insert({
@@ -140,10 +150,8 @@ export async function persistEvidence(
       raw_result: result.raw as never,
       observed_value: result.observed_value as never,
       state_hash: hash,
-      notes:
-        verification.ok
-          ? null
-          : `Collector output failed verification: ${verification.reason}`,
+      evidence_file_url: options.evidenceFileUrl ?? null,
+      notes: combinedNotes,
       is_current: true,
     })
     .select("id")

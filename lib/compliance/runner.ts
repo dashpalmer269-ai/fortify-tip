@@ -108,6 +108,16 @@ async function runInternalQuery(
       return await checkRiskAnalysisRecency(supabase, practiceId, check);
     case "all_phi_vendors_have_baa":
       return await checkVendorsHaveBaa(supabase, practiceId, check);
+    case "exclusion_hire_screening":
+      return await checkExclusionHireScreening(supabase, practiceId, check);
+    case "exclusion_monthly_rescreen":
+      return await checkExclusionMonthlyRescreen(supabase, practiceId, check);
+    case "policy_ack_new_hire_complete":
+      return await checkPolicyAckNewHire(supabase, practiceId, check);
+    case "policy_ack_current_version":
+      return await checkPolicyAckCurrentVersion(supabase, practiceId, check);
+    case "training_new_hire_complete":
+      return await checkTrainingNewHire(supabase, practiceId, check);
     default:
       return {
         status: "not_collected",
@@ -115,6 +125,252 @@ async function runInternalQuery(
         raw: { note: `No internal query implementation for check_key=${check.check_key}` },
       };
   }
+}
+
+/**
+ * Exclusion screening at hire: every workforce member should have a
+ * pre-hire screening record with status cleared / overridden_clear.
+ */
+async function checkExclusionHireScreening(
+  supabase: SupabaseClient,
+  practiceId: string,
+  _check: EvidenceCheckRow
+): Promise<CheckResult> {
+  const { data: members, error: mErr } = await supabase
+    .from("practice_users")
+    .select("user_id")
+    .eq("practice_id", practiceId);
+  if (mErr) return errorResult(mErr.message);
+  const total = members?.length ?? 0;
+  if (total === 0) {
+    return { status: "not_collected", observed_value: { total_members: 0 }, raw: { note: "no workforce members" } };
+  }
+
+  const { data: screenings, error: sErr } = await supabase
+    .from("exclusion_screenings")
+    .select("subject_user_id, status")
+    .eq("practice_id", practiceId)
+    .eq("subject_type", "workforce_member")
+    .in("status", ["cleared", "overridden_clear"]);
+  if (sErr && sErr.code !== "42P01") return errorResult(sErr.message);
+
+  const screenedIds = new Set((screenings ?? []).map((s) => s.subject_user_id).filter(Boolean));
+  const unscreened = (members ?? []).filter((m) => !screenedIds.has(m.user_id));
+
+  return {
+    status: unscreened.length === 0 ? "pass" : "fail",
+    observed_value: {
+      total_members: total,
+      screened: total - unscreened.length,
+      unscreened: unscreened.length,
+    },
+    raw: { unscreened_user_ids: unscreened.map((m) => m.user_id) },
+  };
+}
+
+/**
+ * Monthly LEIE re-screen: every active member should have a screening
+ * record dated within max_age_days (default 30).
+ */
+async function checkExclusionMonthlyRescreen(
+  supabase: SupabaseClient,
+  practiceId: string,
+  check: EvidenceCheckRow
+): Promise<CheckResult> {
+  const maxAge = (check.check_config?.max_age_days as number) ?? 30;
+  const cutoff = new Date(Date.now() - maxAge * 86400_000).toISOString();
+
+  const { data: members, error: mErr } = await supabase
+    .from("practice_users")
+    .select("user_id")
+    .eq("practice_id", practiceId);
+  if (mErr) return errorResult(mErr.message);
+  const total = members?.length ?? 0;
+  if (total === 0) {
+    return { status: "not_collected", observed_value: { total_members: 0 }, raw: { note: "no workforce members" } };
+  }
+
+  const { data: screenings, error: sErr } = await supabase
+    .from("exclusion_screenings")
+    .select("subject_user_id, screened_at")
+    .eq("practice_id", practiceId)
+    .eq("subject_type", "workforce_member")
+    .gte("screened_at", cutoff);
+  if (sErr && sErr.code !== "42P01") return errorResult(sErr.message);
+
+  const recentIds = new Set((screenings ?? []).map((s) => s.subject_user_id).filter(Boolean));
+  const stale = (members ?? []).filter((m) => !recentIds.has(m.user_id));
+
+  return {
+    status: stale.length === 0 ? "pass" : "fail",
+    observed_value: {
+      total_members: total,
+      recently_screened: total - stale.length,
+      stale: stale.length,
+      max_age_days: maxAge,
+    },
+    raw: { stale_user_ids: stale.map((m) => m.user_id) },
+  };
+}
+
+/**
+ * New-hire policy acks: any member hired more than `max_age_days` ago
+ * (default 7) must have an acknowledgement for every active policy.
+ */
+async function checkPolicyAckNewHire(
+  supabase: SupabaseClient,
+  practiceId: string,
+  check: EvidenceCheckRow
+): Promise<CheckResult> {
+  const maxAge = (check.check_config?.max_age_days as number) ?? 7;
+  const cutoff = new Date(Date.now() - maxAge * 86400_000).toISOString();
+
+  const { data: members, error: mErr } = await supabase
+    .from("practice_users")
+    .select("user_id, created_at")
+    .eq("practice_id", practiceId)
+    .lt("created_at", cutoff); // hired >max_age days ago
+  if (mErr) return errorResult(mErr.message);
+
+  const { data: policies, error: pErr } = await supabase
+    .from("policies")
+    .select("id")
+    .eq("practice_id", practiceId)
+    .eq("status", "active");
+  if (pErr && pErr.code !== "42P01") return errorResult(pErr.message);
+  const policyIds = (policies ?? []).map((p) => p.id);
+  if (policyIds.length === 0 || !members || members.length === 0) {
+    return { status: "pass", observed_value: { eligible_members: members?.length ?? 0, active_policies: policyIds.length, missing: 0 }, raw: null };
+  }
+
+  const { data: acks, error: aErr } = await supabase
+    .from("policy_acknowledgments")
+    .select("user_id, policy_id")
+    .eq("practice_id", practiceId)
+    .in("policy_id", policyIds);
+  if (aErr && aErr.code !== "42P01") return errorResult(aErr.message);
+
+  const ackedPairs = new Set((acks ?? []).map((a) => `${a.user_id}:${a.policy_id}`));
+  let missing = 0;
+  for (const m of members) {
+    for (const p of policyIds) {
+      if (!ackedPairs.has(`${m.user_id}:${p}`)) missing++;
+    }
+  }
+
+  return {
+    status: missing === 0 ? "pass" : "fail",
+    observed_value: {
+      eligible_members: members.length,
+      active_policies: policyIds.length,
+      missing_acknowledgements: missing,
+      max_age_days: maxAge,
+    },
+    raw: null,
+  };
+}
+
+/**
+ * Current-version policy ack coverage across all members. Passes when
+ * coverage ≥ min_coverage_pct (default 95).
+ */
+async function checkPolicyAckCurrentVersion(
+  supabase: SupabaseClient,
+  practiceId: string,
+  check: EvidenceCheckRow
+): Promise<CheckResult> {
+  const minPct = (check.check_config?.min_coverage_pct as number) ?? 95;
+
+  const { data: members } = await supabase
+    .from("practice_users")
+    .select("user_id")
+    .eq("practice_id", practiceId);
+  const memberIds = (members ?? []).map((m) => m.user_id);
+
+  const { data: policies, error: pErr } = await supabase
+    .from("policies")
+    .select("id, version")
+    .eq("practice_id", practiceId)
+    .eq("status", "active");
+  if (pErr && pErr.code !== "42P01") return errorResult(pErr.message);
+  const activePolicies = policies ?? [];
+  if (activePolicies.length === 0 || memberIds.length === 0) {
+    return { status: "pass", observed_value: { coverage_pct: 100, members: memberIds.length, policies: activePolicies.length }, raw: null };
+  }
+
+  const { data: acks, error: aErr } = await supabase
+    .from("policy_acknowledgments")
+    .select("user_id, policy_id, policy_version")
+    .eq("practice_id", practiceId)
+    .in("policy_id", activePolicies.map((p) => p.id));
+  if (aErr && aErr.code !== "42P01") return errorResult(aErr.message);
+
+  const ackedSet = new Set(
+    (acks ?? []).map((a) => `${a.user_id}:${a.policy_id}:${a.policy_version}`)
+  );
+  const expectedPairs = memberIds.length * activePolicies.length;
+  let satisfied = 0;
+  for (const m of memberIds) {
+    for (const p of activePolicies) {
+      if (ackedSet.has(`${m}:${p.id}:${p.version ?? 1}`)) satisfied++;
+    }
+  }
+  const coveragePct = Math.round((satisfied / expectedPairs) * 100);
+
+  return {
+    status:
+      coveragePct >= minPct ? "pass" : coveragePct > 0 ? "partial" : "fail",
+    observed_value: {
+      coverage_pct: coveragePct,
+      satisfied,
+      expected: expectedPairs,
+      min_coverage_pct: minPct,
+    },
+    raw: null,
+  };
+}
+
+/**
+ * New-hire HIPAA training: any member hired more than `max_age_days` ago
+ * (default 30) must have a training completion record.
+ */
+async function checkTrainingNewHire(
+  supabase: SupabaseClient,
+  practiceId: string,
+  check: EvidenceCheckRow
+): Promise<CheckResult> {
+  const maxAge = (check.check_config?.max_age_days as number) ?? 30;
+  const cutoff = new Date(Date.now() - maxAge * 86400_000).toISOString();
+
+  const { data: members, error: mErr } = await supabase
+    .from("practice_users")
+    .select("user_id, created_at")
+    .eq("practice_id", practiceId)
+    .lt("created_at", cutoff);
+  if (mErr) return errorResult(mErr.message);
+  if (!members || members.length === 0) {
+    return { status: "pass", observed_value: { eligible_members: 0, untrained: 0 }, raw: null };
+  }
+
+  const { data: completions, error: cErr } = await supabase
+    .from("training_completions")
+    .select("user_id")
+    .eq("practice_id", practiceId);
+  if (cErr && cErr.code !== "42P01") return errorResult(cErr.message);
+
+  const trainedIds = new Set((completions ?? []).map((c) => c.user_id));
+  const untrained = members.filter((m) => !trainedIds.has(m.user_id));
+
+  return {
+    status: untrained.length === 0 ? "pass" : "fail",
+    observed_value: {
+      eligible_members: members.length,
+      trained: members.length - untrained.length,
+      untrained: untrained.length,
+      max_age_days: maxAge,
+    },
+    raw: { untrained_user_ids: untrained.map((m) => m.user_id) },
+  };
 }
 
 async function checkTrainingCompletion(

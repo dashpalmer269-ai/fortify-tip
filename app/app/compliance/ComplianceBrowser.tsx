@@ -28,6 +28,10 @@ interface ControlRow {
   status: string;
   last_verified_at: string | null;
   implementation_notes: string | null;
+  primary_evidence_check_id: string | null;
+  latest_evidence_at: string | null;
+  latest_evidence_status: string | null;
+  latest_evidence_file: string | null;
 }
 
 type Variant = "default" | "muted" | "success" | "danger" | "warning" | "info" | "accent";
@@ -105,6 +109,82 @@ export default function ComplianceBrowser({
   const [status, setStatus] = useState<string | null>(initialStatus);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [attestingId, setAttestingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  async function uploadEvidenceFor(control: ControlRow, file: File) {
+    if (!control.primary_evidence_check_id) return;
+    setActionError(null);
+    setUploadingId(control.id);
+    try {
+      // 1. Mint signed upload URL
+      const signRes = await fetch("/api/evidence/upload", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          evidence_check_id: control.primary_evidence_check_id,
+          file_name: file.name,
+          file_size: file.size,
+        }),
+      });
+      if (!signRes.ok) {
+        const err = await signRes.json().catch(() => ({}));
+        throw new Error(err.error ?? `Sign request failed (${signRes.status})`);
+      }
+      const { signed_url, path } = (await signRes.json()) as { signed_url: string; path: string };
+
+      // 2. PUT the file directly to Supabase Storage
+      const putRes = await fetch(signed_url, {
+        method: "PUT",
+        headers: { "content-type": file.type || "application/octet-stream" },
+        body: file,
+      });
+      if (!putRes.ok) throw new Error(`Upload failed (${putRes.status})`);
+
+      // 3. Finalize — runs the unified evidence flow
+      const finRes = await fetch("/api/evidence/finalize", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          evidence_check_id: control.primary_evidence_check_id,
+          path,
+          file_name: file.name,
+        }),
+      });
+      if (!finRes.ok) {
+        const err = await finRes.json().catch(() => ({}));
+        throw new Error(err.error ?? `Finalize failed (${finRes.status})`);
+      }
+      startTransition(() => router.refresh());
+    } catch (e) {
+      setActionError((e as Error).message);
+    } finally {
+      setUploadingId(null);
+    }
+  }
+
+  async function attestControl(control: ControlRow) {
+    if (!control.primary_evidence_check_id) return;
+    setActionError(null);
+    setAttestingId(control.id);
+    try {
+      const res = await fetch("/api/evidence/attest", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ evidence_check_id: control.primary_evidence_check_id }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? `Attestation failed (${res.status})`);
+      }
+      startTransition(() => router.refresh());
+    } catch (e) {
+      setActionError((e as Error).message);
+    } finally {
+      setAttestingId(null);
+    }
+  }
 
   const categories = useMemo(
     () => Array.from(new Set(controls.map((c) => c.category))).sort(),
@@ -331,37 +411,84 @@ export default function ComplianceBrowser({
                     </Section>
                   )}
 
-                  {c.last_verified_at && (
-                    <p className="font-mono text-[11px] text-[var(--color-quaternary)]">
-                      Last verified{" "}
-                      {new Date(c.last_verified_at).toLocaleString("en-US", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
-                    </p>
+                  {(c.last_verified_at || c.latest_evidence_at) && (
+                    <div className="font-mono text-[11px] text-[var(--color-quaternary)] space-y-0.5">
+                      {c.latest_evidence_at && (
+                        <p>
+                          Latest evidence: <span className="text-[var(--color-tertiary)]">{c.latest_evidence_status ?? "—"}</span>
+                          {" · "}
+                          {new Date(c.latest_evidence_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+                          {c.latest_evidence_file && (
+                            <span className="text-[var(--color-tertiary)] ml-2">· file on record</span>
+                          )}
+                        </p>
+                      )}
+                      {c.last_verified_at && (
+                        <p>
+                          Control verified:{" "}
+                          {new Date(c.last_verified_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+                        </p>
+                      )}
+                    </div>
                   )}
 
                   {!isFortifyManaged && (
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        loading={isSaving}
-                        onClick={() => setStatusOnControl(c, "compliant")}
-                      >
-                        Mark compliant
-                      </Button>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        disabled={isSaving}
-                        onClick={() => setStatusOnControl(c, "non_compliant")}
-                      >
-                        Non-compliant
-                      </Button>
-                      <Button variant="ghost" size="sm" disabled title="Evidence upload — planned">
-                        Upload evidence
-                      </Button>
+                    <div className="space-y-2 pt-1">
+                      {/* Document upload (only when this control has a document_upload check) */}
+                      {c.automation_status === "document_upload" && c.primary_evidence_check_id && (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <label
+                            className={`text-[12px] px-3 py-1.5 rounded-md border border-[var(--color-border-default)] cursor-pointer hover:border-[var(--color-border-strong)] transition-colors ${
+                              uploadingId === c.id ? "opacity-50 cursor-wait" : ""
+                            }`}
+                          >
+                            {uploadingId === c.id ? "Uploading…" : "Upload evidence document"}
+                            <input
+                              type="file"
+                              className="hidden"
+                              disabled={uploadingId === c.id}
+                              accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.txt"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) uploadEvidenceFor(c, f);
+                                e.target.value = "";
+                              }}
+                            />
+                          </label>
+                          <span className="text-[11px] text-[var(--color-quaternary)]">PDF / image / document</span>
+                        </div>
+                      )}
+
+                      {/* Manual attestation */}
+                      {c.automation_status === "manual_attestation" && c.primary_evidence_check_id && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          loading={attestingId === c.id}
+                          onClick={() => attestControl(c)}
+                        >
+                          Attest now
+                        </Button>
+                      )}
+
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          loading={isSaving}
+                          onClick={() => setStatusOnControl(c, "compliant")}
+                        >
+                          Override: mark compliant
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={isSaving}
+                          onClick={() => setStatusOnControl(c, "non_compliant")}
+                        >
+                          Override: non-compliant
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -370,6 +497,13 @@ export default function ComplianceBrowser({
           );
         })}
       </div>
+
+      {actionError && (
+        <div className="fixed bottom-6 right-6 max-w-sm bg-[var(--color-surface-raised)] border border-[var(--color-danger)] rounded-md px-4 py-3 text-sm text-[var(--color-primary)] shadow-lg">
+          <strong className="text-[var(--color-danger)]">Error: </strong>{actionError}
+          <button onClick={() => setActionError(null)} className="ml-3 text-[var(--color-tertiary)] hover:text-[var(--color-primary)]">×</button>
+        </div>
+      )}
 
       <style>{`
         .control-remediation strong { color: var(--color-primary); font-weight: 600; }

@@ -21,7 +21,7 @@ export default async function CompliancePage({
   const supabase = await createAuthedServerClient();
   const params = await searchParams;
 
-  const [controlsRes, practiceControlsRes] = await Promise.all([
+  const [controlsRes, practiceControlsRes, evidenceChecksRes, latestEvidenceRes] = await Promise.all([
     supabase
       .from("controls")
       .select(`
@@ -38,10 +38,30 @@ export default async function CompliancePage({
       .from("practice_controls")
       .select("control_id, status, last_verified_at, implementation_notes")
       .eq("practice_id", session.membership.practice_id),
+    supabase
+      .from("evidence_checks")
+      .select("id, control_id, check_key, collection_method"),
+    supabase
+      .from("practice_evidence")
+      .select("evidence_check_id, status, collected_at, evidence_file_url")
+      .eq("practice_id", session.membership.practice_id)
+      .eq("is_current", true),
   ]);
 
   const statusByControlId = new Map(
     (practiceControlsRes.data ?? []).map((pc) => [pc.control_id, pc])
+  );
+  const checksByControlId = new Map<string, Array<{ id: string; check_key: string; collection_method: string }>>();
+  for (const ec of evidenceChecksRes.data ?? []) {
+    if (!checksByControlId.has(ec.control_id)) checksByControlId.set(ec.control_id, []);
+    checksByControlId.get(ec.control_id)!.push({
+      id: ec.id,
+      check_key: ec.check_key,
+      collection_method: ec.collection_method,
+    });
+  }
+  const latestByCheckId = new Map(
+    (latestEvidenceRes.data ?? []).map((e) => [e.evidence_check_id, e])
   );
 
   const enriched = (controlsRes.data ?? []).map((c) => {
@@ -51,6 +71,12 @@ export default async function CompliancePage({
       new Set(mappings.map((m) => m.framework_requirements?.frameworks?.code).filter(Boolean))
     ) as string[];
     const pc = statusByControlId.get(c.id) ?? null;
+    const checks = checksByControlId.get(c.id) ?? [];
+    // Primary check = first check whose collection_method matches the control's
+    // automation_status (so document_upload controls get their document check, etc.).
+    const primaryCheck =
+      checks.find((ec) => ec.collection_method === c.automation_status) ?? checks[0] ?? null;
+    const latestEvidence = primaryCheck ? latestByCheckId.get(primaryCheck.id) ?? null : null;
     return {
       id: c.id,
       control_key: c.control_key,
@@ -71,6 +97,10 @@ export default async function CompliancePage({
       status: pc?.status ?? "not_started",
       last_verified_at: pc?.last_verified_at ?? null,
       implementation_notes: pc?.implementation_notes ?? null,
+      primary_evidence_check_id: primaryCheck?.id ?? null,
+      latest_evidence_at: latestEvidence?.collected_at ?? null,
+      latest_evidence_status: latestEvidence?.status ?? null,
+      latest_evidence_file: latestEvidence?.evidence_file_url ?? null,
     };
   });
 
