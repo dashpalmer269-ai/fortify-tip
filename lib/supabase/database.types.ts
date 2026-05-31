@@ -758,13 +758,25 @@ export interface Database {
           id: string;
           practice_id: string;
           integration_type:
-            | "microsoft_365"
-            | "google_workspace"
-            | "aws"
-            | "datto"
-            | "connectwise"
-            | "okta"
-            | "azure_ad";
+            // Identity
+            | "microsoft_365" | "google_workspace" | "okta" | "azure_ad"
+            // Cloud infrastructure
+            | "aws" | "gcp" | "azure"
+            // Backup / DR
+            | "datto" | "acronis" | "cove_nable" | "veeam" | "azure_backup"
+            // EHR / PMS (NO PHI — metadata only)
+            | "athenahealth" | "advancedmd" | "dentrix" | "kareo_tebra" | "drchrono" | "ehr_other"
+            // RMM / MSP
+            | "ninjaone" | "connectwise" | "connectwise_rmm" | "connectwise_automate"
+            | "datto_rmm" | "atera" | "syncro" | "nable_rmm"
+            // E-signature
+            | "docusign" | "dropbox_sign"
+            // Task / project tracker
+            | "jira" | "linear" | "asana" | "trello";
+          // Set automatically by trigger from integration_type (migration 031)
+          category:
+            | "identity" | "cloud_infra" | "backup" | "ehr_pms"
+            | "rmm_msp" | "signing" | "task_tracker" | null;
           status: "connected" | "disconnected" | "error";
           external_account_id: string | null;
           display_name: string | null;

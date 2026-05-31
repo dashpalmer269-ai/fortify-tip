@@ -626,6 +626,8 @@ async function runAutomatedApi(
       return await runOktaCheck(supabase, practiceId, check, options);
     case "aws":
       return await runAwsCheck(supabase, practiceId, check, options);
+    case "docusign":
+      return await runDocuSignCheck(supabase, practiceId, check, options);
     default:
       return {
         status: "not_collected",
@@ -658,8 +660,42 @@ async function runAwsCheck(
       return await aws.checkS3NoPublicBuckets(creds);
     case "aws_s3_default_encryption":
       return await aws.checkS3DefaultEncryption(creds);
+    case "aws_guardduty_enabled":
+      return await aws.checkGuardDutyEnabled(creds);
+    case "aws_security_groups_open":
+      return await aws.checkSecurityGroupsOpen(creds);
+    case "aws_unused_access_keys":
+      return await aws.checkUnusedAccessKeys(creds, (check.check_config?.max_age_days as number) ?? 90);
     default:
       return { status: "not_collected", observed_value: null, raw: { note: `No AWS runner for ${check.check_key}` } };
+  }
+}
+
+async function runDocuSignCheck(
+  supabase: SupabaseClient,
+  practiceId: string,
+  check: EvidenceCheckRow,
+  options: RunCheckOptions
+): Promise<CheckResult> {
+  type DsCreds = Parameters<typeof import("@/lib/integrations/docusign").checkAccountAccessible>[0];
+  const { creds, note } = await loadIntegrationCreds<NonNullable<DsCreds>>(
+    supabase,
+    practiceId,
+    "docusign",
+    options.credentialCache
+  );
+  if (!creds) return { status: "not_collected", observed_value: null, raw: { note: note ?? "no connection" } };
+
+  const ds = await import("@/lib/integrations/docusign");
+  switch (check.check_key) {
+    case "docusign_account_accessible":
+      return await ds.checkAccountAccessible(creds);
+    case "docusign_signed_compliance_envelopes":
+      return await ds.checkSignedComplianceEnvelopes(creds, (check.check_config?.window_days as number) ?? 365);
+    case "docusign_outstanding_envelopes":
+      return await ds.checkOutstandingEnvelopes(creds, (check.check_config?.max_age_days as number) ?? 30);
+    default:
+      return { status: "not_collected", observed_value: null, raw: { note: `No DocuSign runner for ${check.check_key}` } };
   }
 }
 
@@ -740,7 +776,14 @@ async function runGoogleWorkspaceCheck(
     case "google_all_2sv_enrolled":
       return await gw.checkAll2SvEnrolled(creds);
     case "google_audit_log_accessible":
+    case "google_audit_log_accessible_v2":
       return await gw.checkAuditLogAccessible(creds);
+    case "google_admin_inventory":
+      return await gw.checkAdminInventory(creds);
+    case "google_inactive_users":
+      return await gw.checkInactiveUsers(creds, (check.check_config?.max_days_since_login as number) ?? 90);
+    case "google_external_sharing":
+      return await gw.checkExternalSharing(creds);
     default:
       return { status: "not_collected", observed_value: null, raw: { note: `No Google runner for ${check.check_key}` } };
   }
@@ -768,7 +811,14 @@ async function runOktaCheck(
     case "okta_admins_mfa":
       return await okta.checkAdminsMfa(creds);
     case "okta_system_log_accessible":
+    case "okta_system_log_accessible_v2":
       return await okta.checkSystemLogAccessible(creds);
+    case "okta_admin_role_inventory":
+      return await okta.checkAdminRoleInventory(creds);
+    case "okta_inactive_users":
+      return await okta.checkInactiveUsers(creds, (check.check_config?.max_days_since_login as number) ?? 90);
+    case "okta_password_policy":
+      return await okta.checkPasswordPolicy(creds);
     default:
       return { status: "not_collected", observed_value: null, raw: { note: `No Okta runner for ${check.check_key}` } };
   }
@@ -803,7 +853,18 @@ async function runMicrosoft365Check(
     case "m365_audit_log_enabled":
       return await graph.checkAuditLogEnabled(creds);
     case "m365_bitlocker_enforcement":
+    case "m365_bitlocker_enforcement_v2":
       return await graph.checkBitLockerEnforced(creds);
+    case "m365_inactive_users":
+      return await graph.checkInactiveUsers(creds, (check.check_config?.max_days_since_signin as number) ?? 90);
+    case "m365_risky_guest_users":
+      return await graph.checkRiskyGuestUsers(creds);
+    case "m365_mailbox_forwarding":
+      return await graph.checkMailboxForwarding(creds);
+    case "m365_security_defaults":
+      return await graph.checkSecurityDefaults(creds);
+    case "m365_audit_log_enabled_v2":
+      return await graph.checkAuditLogEnabled(creds);
     default:
       return {
         status: "not_collected",

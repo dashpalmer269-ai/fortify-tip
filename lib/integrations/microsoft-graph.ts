@@ -305,3 +305,155 @@ export async function checkBitLockerEnforced(creds: M365Credentials | null): Pro
     return { status: "error", observed_value: null, raw: { error: (e as Error).message } };
   }
 }
+
+/**
+ * Check: inactive users — accounts with no sign-in in the configured window
+ * (default 90 days). Inactive accounts are a standing attack surface.
+ */
+export async function checkInactiveUsers(
+  creds: M365Credentials | null,
+  maxDaysSinceSignIn: number = 90
+): Promise<CheckOutcome> {
+  if (!creds) return { status: "not_collected", observed_value: null, raw: { note: "no M365 connection" } };
+  try {
+    // signInActivity requires AuditLog.Read.All + a P1+ license
+    const r = (await graphGet(
+      creds,
+      "/users?$select=id,userPrincipalName,signInActivity,accountEnabled&$top=999"
+    )) as { value: Array<{ id: string; userPrincipalName: string; accountEnabled: boolean; signInActivity?: { lastSignInDateTime?: string | null } }> };
+    const cutoff = Date.now() - maxDaysSinceSignIn * 86400_000;
+    const active = (r.value ?? []).filter((u) => u.accountEnabled);
+    const inactive = active.filter((u) => {
+      const last = u.signInActivity?.lastSignInDateTime;
+      if (!last) return true; // never signed in
+      return new Date(last).getTime() < cutoff;
+    });
+    return {
+      status: inactive.length === 0 ? "pass" : "fail",
+      observed_value: {
+        total_enabled_users: active.length,
+        inactive_users: inactive.length,
+        max_days_since_signin: maxDaysSinceSignIn,
+      },
+      raw: { inactive_upns: inactive.slice(0, 25).map((u) => u.userPrincipalName) },
+    };
+  } catch (e) {
+    return { status: "error", observed_value: null, raw: { error: (e as Error).message } };
+  }
+}
+
+/**
+ * Check: guest accounts with elevated privileges (admin role assignment).
+ * Risky: guests should not hold directory roles.
+ */
+export async function checkRiskyGuestUsers(creds: M365Credentials | null): Promise<CheckOutcome> {
+  if (!creds) return { status: "not_collected", observed_value: null, raw: { note: "no M365 connection" } };
+  try {
+    const guests = (await graphGet(
+      creds,
+      "/users?$filter=userType eq 'Guest'&$select=id,userPrincipalName&$top=999"
+    )) as { value: Array<{ id: string; userPrincipalName: string }> };
+    const guestIds = new Set((guests.value ?? []).map((u) => u.id));
+    if (guestIds.size === 0) {
+      return { status: "pass", observed_value: { total_guests: 0, guests_with_admin_role: 0 }, raw: null };
+    }
+
+    const dirRoles = (await graphGet(creds, "/directoryRoles")) as { value: Array<{ id: string; displayName: string }> };
+    const riskyGuests: Array<{ guest: string; role: string }> = [];
+    for (const role of dirRoles.value ?? []) {
+      const members = (await graphGet(creds, `/directoryRoles/${role.id}/members?$select=id,userPrincipalName`)) as {
+        value: Array<{ id: string; userPrincipalName?: string }>;
+      };
+      for (const m of members.value ?? []) {
+        if (guestIds.has(m.id)) {
+          riskyGuests.push({ guest: m.userPrincipalName ?? m.id, role: role.displayName });
+        }
+      }
+    }
+    return {
+      status: riskyGuests.length === 0 ? "pass" : "fail",
+      observed_value: {
+        total_guests: guestIds.size,
+        guests_with_admin_role: riskyGuests.length,
+      },
+      raw: { risky_guest_assignments: riskyGuests.slice(0, 20) },
+    };
+  } catch (e) {
+    return { status: "error", observed_value: null, raw: { error: (e as Error).message } };
+  }
+}
+
+/**
+ * Check: mailbox forwarding rules — surveys the first 50 enabled users for
+ * inbox rules that forward/redirect to external addresses. External
+ * forwarding is a classic data-exfil channel for ransomware crews.
+ */
+export async function checkMailboxForwarding(creds: M365Credentials | null): Promise<CheckOutcome> {
+  if (!creds) return { status: "not_collected", observed_value: null, raw: { note: "no M365 connection" } };
+  try {
+    const r = (await graphGet(
+      creds,
+      "/users?$select=id,userPrincipalName&$top=50&$filter=accountEnabled eq true"
+    )) as { value: Array<{ id: string; userPrincipalName: string }> };
+    const users = r.value ?? [];
+
+    const internalDomains = new Set<string>();
+    const orgRes = (await graphGet(creds, "/organization?$select=verifiedDomains")) as {
+      value: Array<{ verifiedDomains: Array<{ name: string }> }>;
+    };
+    for (const o of orgRes.value ?? []) for (const d of o.verifiedDomains ?? []) internalDomains.add(d.name.toLowerCase());
+
+    const offenders: Array<{ user: string; rule: string; to: string[] }> = [];
+    for (const u of users) {
+      try {
+        const rules = (await graphGet(creds, `/users/${u.id}/mailFolders/inbox/messageRules`)) as {
+          value: Array<{ displayName?: string; actions?: { forwardTo?: Array<{ emailAddress: { address: string } }>; redirectTo?: Array<{ emailAddress: { address: string } }> } }>;
+        };
+        for (const rule of rules.value ?? []) {
+          const targets = [
+            ...(rule.actions?.forwardTo ?? []),
+            ...(rule.actions?.redirectTo ?? []),
+          ].map((t) => t.emailAddress.address);
+          const external = targets.filter((addr) => {
+            const domain = addr.split("@")[1]?.toLowerCase();
+            return domain && !internalDomains.has(domain);
+          });
+          if (external.length > 0) offenders.push({ user: u.userPrincipalName, rule: rule.displayName ?? "", to: external });
+        }
+      } catch {
+        /* skip user we can't read rules for */
+      }
+    }
+    return {
+      status: offenders.length === 0 ? "pass" : "fail",
+      observed_value: {
+        users_surveyed: users.length,
+        users_with_external_forwarding: offenders.length,
+      },
+      raw: { offenders: offenders.slice(0, 20) },
+    };
+  } catch (e) {
+    return { status: "error", observed_value: null, raw: { error: (e as Error).message } };
+  }
+}
+
+/**
+ * Check: Microsoft Entra security defaults enabled. For small practices
+ * without Conditional Access licensing, security defaults are the
+ * out-of-the-box MFA + legacy auth block.
+ */
+export async function checkSecurityDefaults(creds: M365Credentials | null): Promise<CheckOutcome> {
+  if (!creds) return { status: "not_collected", observed_value: null, raw: { note: "no M365 connection" } };
+  try {
+    const r = (await graphGet(creds, "/policies/identitySecurityDefaultsEnforcementPolicy")) as {
+      isEnabled?: boolean;
+    };
+    return {
+      status: r.isEnabled === true ? "pass" : "fail",
+      observed_value: { security_defaults_enabled: r.isEnabled === true },
+      raw: null,
+    };
+  } catch (e) {
+    return { status: "error", observed_value: null, raw: { error: (e as Error).message } };
+  }
+}

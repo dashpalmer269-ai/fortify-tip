@@ -26,6 +26,8 @@ import {
   GetAccountSummaryCommand,
   ListUsersCommand,
   ListMFADevicesCommand,
+  ListAccessKeysCommand,
+  GetAccessKeyLastUsedCommand,
 } from "@aws-sdk/client-iam";
 import {
   S3Client,
@@ -36,6 +38,12 @@ import {
   GetBucketPolicyStatusCommand,
 } from "@aws-sdk/client-s3";
 import { STSClient, GetCallerIdentityCommand } from "@aws-sdk/client-sts";
+import {
+  EC2Client,
+  DescribeSecurityGroupsCommand,
+  DescribeRegionsCommand,
+} from "@aws-sdk/client-ec2";
+import { GuardDutyClient, ListDetectorsCommand, GetDetectorCommand } from "@aws-sdk/client-guardduty";
 import type { CheckResult } from "@/lib/compliance/runner";
 
 export interface AwsCreds {
@@ -265,6 +273,152 @@ export async function checkS3DefaultEncryption(creds: AwsCreds): Promise<CheckRe
         encrypted_buckets: Buckets.length - unencrypted.length,
       },
       raw: { unencrypted_bucket_names: unencrypted },
+    };
+  } catch (err) {
+    return { status: "error", observed_value: null, raw: { error: (err as Error).message } };
+  }
+}
+
+// ─── 6. GuardDuty enabled in every active region ─────────────────────────────
+export async function checkGuardDutyEnabled(creds: AwsCreds): Promise<CheckResult> {
+  try {
+    // List all opt-in regions via the default region's EC2 client.
+    const ec2 = new EC2Client(clientConfig(creds));
+    const { Regions = [] } = await ec2.send(new DescribeRegionsCommand({}));
+    const regionNames = Regions.map((r) => r.RegionName).filter((n): n is string => !!n);
+
+    const missing: string[] = [];
+    const enabled: string[] = [];
+    for (const region of regionNames) {
+      try {
+        const gd = new GuardDutyClient({ ...clientConfig(creds), region });
+        const { DetectorIds = [] } = await gd.send(new ListDetectorsCommand({}));
+        if (DetectorIds.length === 0) {
+          missing.push(region);
+          continue;
+        }
+        const det = await gd.send(new GetDetectorCommand({ DetectorId: DetectorIds[0] }));
+        if (det.Status === "ENABLED") enabled.push(region);
+        else missing.push(region);
+      } catch {
+        // Region may not be opted-in or the IAM key may lack guardduty:* there
+        missing.push(region);
+      }
+    }
+
+    return {
+      status:
+        missing.length === 0
+          ? "pass"
+          : enabled.length === 0
+          ? "fail"
+          : "partial",
+      observed_value: {
+        regions_checked: regionNames.length,
+        regions_with_guardduty: enabled.length,
+        regions_without_guardduty: missing.length,
+      },
+      raw: { regions_without_guardduty: missing.slice(0, 20) },
+    };
+  } catch (err) {
+    return { status: "error", observed_value: null, raw: { error: (err as Error).message } };
+  }
+}
+
+// ─── 7. Security groups open to the internet ────────────────────────────────
+export async function checkSecurityGroupsOpen(creds: AwsCreds): Promise<CheckResult> {
+  try {
+    const ec2 = new EC2Client(clientConfig(creds));
+    const { SecurityGroups = [] } = await ec2.send(new DescribeSecurityGroupsCommand({}));
+
+    // A SG is "open" if any inbound rule allows 0.0.0.0/0 or ::/0 on a port
+    // other than 80/443 (common public-web exemptions still flagged below).
+    const exemptPorts = new Set([80, 443]);
+    type Offender = { sg_id: string; sg_name: string; ports: string[] };
+    const offenders: Offender[] = [];
+    for (const sg of SecurityGroups) {
+      const badPorts: string[] = [];
+      for (const rule of sg.IpPermissions ?? []) {
+        const wideOpen =
+          (rule.IpRanges ?? []).some((r) => r.CidrIp === "0.0.0.0/0") ||
+          (rule.Ipv6Ranges ?? []).some((r) => r.CidrIpv6 === "::/0");
+        if (!wideOpen) continue;
+        const portLabel =
+          rule.FromPort === undefined
+            ? "all"
+            : rule.FromPort === rule.ToPort
+            ? String(rule.FromPort)
+            : `${rule.FromPort}-${rule.ToPort}`;
+        const portNum = rule.FromPort;
+        if (portNum !== undefined && exemptPorts.has(portNum) && portNum === rule.ToPort) {
+          // 80 or 443 alone — public web is fine
+          continue;
+        }
+        badPorts.push(portLabel);
+      }
+      if (badPorts.length > 0) {
+        offenders.push({ sg_id: sg.GroupId ?? "", sg_name: sg.GroupName ?? "", ports: badPorts });
+      }
+    }
+    return {
+      status: offenders.length === 0 ? "pass" : "fail",
+      observed_value: {
+        total_security_groups: SecurityGroups.length,
+        security_groups_open_to_internet: offenders.length,
+      },
+      raw: { offenders: offenders.slice(0, 20) },
+    };
+  } catch (err) {
+    return { status: "error", observed_value: null, raw: { error: (err as Error).message } };
+  }
+}
+
+// ─── 8. Unused access keys ──────────────────────────────────────────────────
+export async function checkUnusedAccessKeys(
+  creds: AwsCreds,
+  maxAgeDays: number = 90
+): Promise<CheckResult> {
+  try {
+    const iam = new IAMClient(clientConfig(creds));
+    const users: string[] = [];
+    let marker: string | undefined;
+    do {
+      const page = await iam.send(new ListUsersCommand({ Marker: marker }));
+      for (const u of page.Users ?? []) if (u.UserName) users.push(u.UserName);
+      marker = page.IsTruncated ? page.Marker : undefined;
+    } while (marker);
+
+    type Stale = { user: string; access_key_id: string; days_since_use: number | null };
+    const stale: Stale[] = [];
+    let totalActiveKeys = 0;
+    const cutoff = Date.now() - maxAgeDays * 86400_000;
+    for (const user of users) {
+      const { AccessKeyMetadata = [] } = await iam.send(new ListAccessKeysCommand({ UserName: user }));
+      for (const k of AccessKeyMetadata) {
+        if (k.Status !== "Active" || !k.AccessKeyId) continue;
+        totalActiveKeys++;
+        const lastUsed = await iam.send(new GetAccessKeyLastUsedCommand({ AccessKeyId: k.AccessKeyId }));
+        const lastUsedAt = lastUsed.AccessKeyLastUsed?.LastUsedDate;
+        if (!lastUsedAt || lastUsedAt.getTime() < cutoff) {
+          stale.push({
+            user,
+            access_key_id: k.AccessKeyId,
+            days_since_use: lastUsedAt
+              ? Math.floor((Date.now() - lastUsedAt.getTime()) / 86400_000)
+              : null,
+          });
+        }
+      }
+    }
+
+    return {
+      status: stale.length === 0 ? "pass" : "fail",
+      observed_value: {
+        total_active_keys: totalActiveKeys,
+        stale_keys: stale.length,
+        max_age_days: maxAgeDays,
+      },
+      raw: { stale_keys: stale.slice(0, 25) },
     };
   } catch (err) {
     return { status: "error", observed_value: null, raw: { error: (err as Error).message } };

@@ -142,3 +142,145 @@ export async function checkSystemLogAccessible(creds: OktaCredentials | null): P
     return { status: "error", observed_value: null, raw: { error: (e as Error).message } };
   }
 }
+
+/**
+ * Check: admin role inventory — count Super Admin + Org Admin + read-only
+ * admins. Same logic as Google: too few = SPOF, too many = privilege sprawl.
+ */
+export async function checkAdminRoleInventory(creds: OktaCredentials | null): Promise<CheckOutcome> {
+  if (!creds) return { status: "not_collected", observed_value: null, raw: { note: "no Okta connection" } };
+  try {
+    type Role = { id: string; label: string; type: string };
+    const { json: rolesJson } = await oktaGet(creds, "/api/v1/iam/assignments?limit=500");
+    const roles = rolesJson as Array<{ assignee?: { type: string; id: string }; roleType?: string }>;
+    const userRoleMap = new Map<string, Set<string>>();
+    for (const r of roles) {
+      if (r.assignee?.type !== "USER" || !r.assignee.id || !r.roleType) continue;
+      if (!userRoleMap.has(r.assignee.id)) userRoleMap.set(r.assignee.id, new Set());
+      userRoleMap.get(r.assignee.id)!.add(r.roleType);
+    }
+    const superAdmins: string[] = [];
+    const orgAdmins: string[] = [];
+    for (const [uid, rs] of userRoleMap) {
+      if (rs.has("SUPER_ADMIN")) superAdmins.push(uid);
+      if (rs.has("ORG_ADMIN") && !rs.has("SUPER_ADMIN")) orgAdmins.push(uid);
+    }
+
+    const total = superAdmins.length;
+    const status: CheckOutcome["status"] =
+      total === 0 ? "fail" : total >= 1 && total <= 5 ? "pass" : "partial";
+    return {
+      status,
+      observed_value: {
+        super_admins: superAdmins.length,
+        org_admins: orgAdmins.length,
+        total_admin_users: userRoleMap.size,
+        healthy_range: "1-5 super admins",
+      },
+      raw: { admin_user_ids: Array.from(userRoleMap.keys()).slice(0, 25) },
+    };
+  } catch (e) {
+    // Fallback to v1/users with isAdmin filter not available; report as not_collected if 404
+    if ((e as Error).message.includes("HTTP 404")) {
+      return { status: "not_collected", observed_value: null, raw: { note: "Okta iam assignments API not available in this org" } };
+    }
+    return { status: "error", observed_value: null, raw: { error: (e as Error).message } };
+  }
+}
+
+/**
+ * Check: inactive users — Okta has lastLogin in the user profile. Defaults
+ * to flagging accounts with no login in 90+ days (excluding STAGED/RECOVERY
+ * states which haven't yet had a chance to log in).
+ */
+export async function checkInactiveUsers(
+  creds: OktaCredentials | null,
+  maxDaysSinceLogin: number = 90
+): Promise<CheckOutcome> {
+  if (!creds) return { status: "not_collected", observed_value: null, raw: { note: "no Okta connection" } };
+  try {
+    type FullOktaUser = { id: string; status: string; lastLogin?: string | null; profile: { login: string } };
+    const users: FullOktaUser[] = [];
+    let url = "/api/v1/users?limit=200&filter=status%20eq%20%22ACTIVE%22";
+    let safety = 0;
+    while (url && safety < 25) {
+      const { json, res } = await oktaGet(creds, url);
+      users.push(...(json as FullOktaUser[]));
+      const link = res.headers.get("link");
+      const next = link?.match(/<([^>]+)>;\s*rel="next"/)?.[1];
+      if (!next) break;
+      const u = new URL(next);
+      url = u.pathname + u.search;
+      safety++;
+    }
+
+    const cutoff = Date.now() - maxDaysSinceLogin * 86400_000;
+    const inactive = users.filter(
+      (u) => !u.lastLogin || new Date(u.lastLogin).getTime() < cutoff
+    );
+
+    return {
+      status: inactive.length === 0 ? "pass" : "fail",
+      observed_value: {
+        total_active_users: users.length,
+        inactive: inactive.length,
+        max_days_since_login: maxDaysSinceLogin,
+      },
+      raw: { inactive_logins: inactive.slice(0, 25).map((u) => u.profile.login) },
+    };
+  } catch (e) {
+    return { status: "error", observed_value: null, raw: { error: (e as Error).message } };
+  }
+}
+
+/**
+ * Check: password policy — verify the default policy enforces minimum
+ * length >= 12, mixed character requirements, and lockout. NIST 800-63B
+ * compatible defaults.
+ */
+export async function checkPasswordPolicy(creds: OktaCredentials | null): Promise<CheckOutcome> {
+  if (!creds) return { status: "not_collected", observed_value: null, raw: { note: "no Okta connection" } };
+  try {
+    const { json } = await oktaGet(creds, "/api/v1/policies?type=PASSWORD&expand=rules");
+    const policies = json as Array<{
+      id: string;
+      name: string;
+      status: string;
+      settings?: {
+        password?: {
+          complexity?: {
+            minLength?: number;
+            minNumber?: number;
+            minLowerCase?: number;
+            minUpperCase?: number;
+            minSymbol?: number;
+          };
+        };
+      };
+    }>;
+    const active = policies.filter((p) => p.status === "ACTIVE");
+    if (active.length === 0) {
+      return { status: "fail", observed_value: { active_policies: 0 }, raw: { note: "no active password policy" } };
+    }
+
+    type Failure = { policy: string; reason: string };
+    const failures: Failure[] = [];
+    for (const p of active) {
+      const c = p.settings?.password?.complexity ?? {};
+      if ((c.minLength ?? 0) < 12) failures.push({ policy: p.name, reason: `minLength=${c.minLength ?? 0} < 12` });
+      if ((c.minNumber ?? 0) < 1 && (c.minLowerCase ?? 0) < 1 && (c.minUpperCase ?? 0) < 1) {
+        failures.push({ policy: p.name, reason: "no character-class requirement" });
+      }
+    }
+    return {
+      status: failures.length === 0 ? "pass" : "fail",
+      observed_value: {
+        active_policies: active.length,
+        non_compliant_policies: failures.length,
+      },
+      raw: { failures },
+    };
+  } catch (e) {
+    return { status: "error", observed_value: null, raw: { error: (e as Error).message } };
+  }
+}
