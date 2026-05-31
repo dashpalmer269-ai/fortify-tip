@@ -118,6 +118,8 @@ async function runInternalQuery(
       return await checkPolicyAckCurrentVersion(supabase, practiceId, check);
     case "training_new_hire_complete":
       return await checkTrainingNewHire(supabase, practiceId, check);
+    case "integration_credential_strength":
+      return await checkIntegrationCredentialStrength(supabase, practiceId, check);
     default:
       return {
         status: "not_collected",
@@ -125,6 +127,67 @@ async function runInternalQuery(
         raw: { note: `No internal query implementation for check_key=${check.check_key}` },
       };
   }
+}
+
+/**
+ * Score every connected integration and fail if any score is below the
+ * configured threshold (default 60 = medium). The per-integration breakdown
+ * lands in `raw` so the UI can render a credential health card.
+ */
+async function checkIntegrationCredentialStrength(
+  supabase: SupabaseClient,
+  practiceId: string,
+  check: EvidenceCheckRow
+): Promise<CheckResult> {
+  const minScore = (check.pass_criteria?.min_score as number) ?? 60;
+  const { scoreIntegrationCredentials } = await import("@/lib/security/credential-scoring");
+
+  const { data: integrations } = await supabase
+    .from("integrations")
+    .select("integration_type, status, encrypted_credentials_bytes, last_synced_at, scopes")
+    .eq("practice_id", practiceId)
+    .neq("status", "disconnected");
+  const list = integrations ?? [];
+  if (list.length === 0) {
+    return {
+      status: "not_collected",
+      observed_value: { total_integrations: 0 },
+      raw: { note: "no integrations connected" },
+    };
+  }
+
+  const scored = list.map((i) => {
+    const s = scoreIntegrationCredentials({
+      integration_type: i.integration_type,
+      status: i.status,
+      encrypted_credentials_bytes: i.encrypted_credentials_bytes,
+      last_synced_at: i.last_synced_at,
+      scopes: i.scopes,
+    });
+    return {
+      integration_type: i.integration_type,
+      status: i.status,
+      score: s.score,
+      level: s.level,
+      factors: s.factors,
+    };
+  });
+
+  const minScored = scored.reduce((m, s) => Math.min(m, s.score), 100);
+  const avgScore = Math.round(scored.reduce((sum, s) => sum + s.score, 0) / scored.length);
+  const failing = scored.filter((s) => s.score < minScore);
+
+  return {
+    status: failing.length === 0 ? "pass" : minScored < 30 ? "fail" : "partial",
+    observed_value: {
+      total_integrations: scored.length,
+      avg_score: avgScore,
+      min_score: minScored,
+      below_threshold: failing.length,
+      threshold: minScore,
+    },
+    raw: { per_integration: scored, failing_types: failing.map((f) => f.integration_type) },
+  };
 }
 
 /**
@@ -561,6 +624,8 @@ async function runAutomatedApi(
       return await runGoogleWorkspaceCheck(supabase, practiceId, check, options);
     case "okta":
       return await runOktaCheck(supabase, practiceId, check, options);
+    case "aws":
+      return await runAwsCheck(supabase, practiceId, check, options);
     default:
       return {
         status: "not_collected",
@@ -570,11 +635,40 @@ async function runAutomatedApi(
   }
 }
 
+async function runAwsCheck(
+  supabase: SupabaseClient,
+  practiceId: string,
+  check: EvidenceCheckRow,
+  options: RunCheckOptions
+): Promise<CheckResult> {
+  const { creds, note } = await loadIntegrationCreds<
+    import("@/lib/integrations/aws").AwsCreds
+  >(supabase, practiceId, "aws", options.credentialCache);
+  if (!creds) return { status: "not_collected", observed_value: null, raw: { note: note ?? "no connection" } };
+
+  const aws = await import("@/lib/integrations/aws");
+  switch (check.check_key) {
+    case "aws_cloudtrail_multi_region":
+      return await aws.checkCloudTrailMultiRegion(creds);
+    case "aws_iam_root_mfa":
+      return await aws.checkRootAccountMfa(creds);
+    case "aws_iam_user_mfa_enforced":
+      return await aws.checkIamUserMfa(creds);
+    case "aws_s3_no_public_buckets":
+      return await aws.checkS3NoPublicBuckets(creds);
+    case "aws_s3_default_encryption":
+      return await aws.checkS3DefaultEncryption(creds);
+    default:
+      return { status: "not_collected", observed_value: null, raw: { note: `No AWS runner for ${check.check_key}` } };
+  }
+}
+
 /**
- * Load + decrypt credentials for a connected integration of a given type.
- * Prefers encrypted_credentials_bytes (migration 015), falls back to the
- * legacy plaintext jsonb column during rollout. Returns null when not
- * connected or undecryptable.
+ * Load + decrypt credentials for a connected integration. Sole read path —
+ * `encrypted_credentials_bytes` is the only storage; the legacy plaintext
+ * jsonb column was dropped in migration 028. If decryption fails or the
+ * row is missing the encrypted blob, we return null with a note (callers
+ * surface this as 'not_collected' so the audit trail records the gap).
  *
  * When `cache` is provided, results are memoized by (practiceId, integrationType)
  * for the lifetime of the cache — the cron's per-run cache avoids re-querying
@@ -594,7 +688,7 @@ async function loadIntegrationCreds<T>(
 
   const { data: integ } = await supabase
     .from("integrations")
-    .select("id, status, encrypted_credentials, encrypted_credentials_bytes")
+    .select("id, status, encrypted_credentials_bytes")
     .eq("practice_id", practiceId)
     .eq("integration_type", integrationType)
     .eq("status", "connected")
@@ -603,7 +697,13 @@ async function loadIntegrationCreds<T>(
   let result: { creds: T | null; note: string | null };
   if (!integ) {
     result = { creds: null, note: `${integrationType} not connected for this practice` };
-  } else if (integ.encrypted_credentials_bytes) {
+  } else if (!integ.encrypted_credentials_bytes) {
+    // CHECK constraint should prevent this, but defense in depth.
+    result = {
+      creds: null,
+      note: `${integrationType} integration is in an invalid state (no encrypted credentials). Please reconnect.`,
+    };
+  } else {
     const { readCredentials } = await import("@/lib/security/credentials");
     const creds = await readCredentials<NonNullable<T>>(
       supabase as unknown as Parameters<typeof readCredentials>[0],
@@ -611,11 +711,7 @@ async function loadIntegrationCreds<T>(
     );
     result = creds
       ? { creds: creds as T, note: null }
-      : { creds: null, note: `${integrationType} credentials could not be decrypted (set CREDENTIAL_KMS_KEY?)` };
-  } else if (integ.encrypted_credentials) {
-    result = { creds: integ.encrypted_credentials as unknown as T, note: null };
-  } else {
-    result = { creds: null, note: `${integrationType} has no stored credentials` };
+      : { creds: null, note: `${integrationType} credentials could not be decrypted (verify CREDENTIAL_KMS_KEY)` };
   }
 
   cache?.set(cacheKey, { creds: result.creds, note: result.note });

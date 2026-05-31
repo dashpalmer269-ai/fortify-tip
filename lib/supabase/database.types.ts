@@ -768,7 +768,8 @@ export interface Database {
           external_account_id: string | null;
           display_name: string | null;
           scopes: string[] | null;
-          encrypted_credentials: Json | null;
+          // Sole credential storage — sealed via writeCredentials(). The legacy
+          // `encrypted_credentials` jsonb column was dropped in migration 028.
           encrypted_credentials_bytes: string | null;
           last_synced_at: string | null;
           last_error: string | null;
@@ -783,7 +784,6 @@ export interface Database {
           external_account_id?: string | null;
           display_name?: string | null;
           scopes?: string[] | null;
-          encrypted_credentials?: Json | null;
           encrypted_credentials_bytes?: string | null;
           last_synced_at?: string | null;
           last_error?: string | null;
