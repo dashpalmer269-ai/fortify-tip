@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createServerClient } from "@/lib/supabase/server";
-import { getAppSession, assertActive } from "@/lib/auth/session";
+import { getAppSession } from "@/lib/auth/session";
 import { isAdmin } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/schemas/api";
 
@@ -22,7 +22,9 @@ const UploadRequestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   const session = await getAppSession();
-  assertActive(session);
+  if (session.kind !== "active") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   if (!isAdmin(session.membership.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
