@@ -30,16 +30,28 @@ export interface AttestationSnapshot {
     control_key: string;
     title: string;
     category: string;
+    healthcare_category: string | null;
     priority: string | null;
     status: string;
     audience: string | null;
+    automation_level: string | null;
+    default_weight: number;
+    responsible_role: string | null;
     report_output_text: string | null;
+    framework_citations: Array<{ framework: string; citation: string; source_url: string | null }>;
   }>;
-  risks: Array<{ control_key: string; title: string; priority: string | null }>;
+  risks: Array<{
+    control_key: string;
+    title: string;
+    priority: string | null;
+    healthcare_category: string | null;
+    framework_impact: string[];
+  }>;
   safeguards_in_place: number;
   vendors: { total: number; with_active_baa: number; missing_baa: number };
   workforce_screening: { total_members: number; cleared: number; blocked: number; stale: number };
   evidence_summary: { total_current: number; pass: number; fail: number; partial: number };
+  framework_coverage: Record<string, { citations_covered: number; total_citations: number }>;
 }
 
 function canonical(value: unknown): string {
@@ -67,10 +79,18 @@ export async function buildSnapshot(
   const overall =
     readiness.length > 0 ? Math.round(readiness.reduce((s, r) => s + r.weighted_pct, 0) / readiness.length) : 0;
 
-  // Control inventory
+  // Control inventory with full v2 metadata + framework citations
   const { data: pcs } = await db
     .from("practice_controls")
-    .select("status, controls(control_key, title, category, default_priority, audience, report_output_text)")
+    .select(`
+      status,
+      controls(
+        control_key, title, category, default_priority, audience,
+        report_output_text, healthcare_category, automation_level,
+        default_weight, responsible_role,
+        framework_mappings(framework_requirements(citation, source_url, frameworks(code)))
+      )
+    `)
     .eq("practice_id", practiceId)
     .returns<
       Array<{
@@ -82,24 +102,84 @@ export async function buildSnapshot(
           default_priority: string | null;
           audience: string | null;
           report_output_text: string | null;
+          healthcare_category: string | null;
+          automation_level: string | null;
+          default_weight: number | null;
+          responsible_role: string | null;
+          framework_mappings: Array<{
+            framework_requirements: {
+              citation: string;
+              source_url: string | null;
+              frameworks: { code: string } | null;
+            } | null;
+          }>;
         } | null;
       }>
     >();
   const controls = (pcs ?? [])
     .filter((p) => p.controls)
-    .map((p) => ({
-      control_key: p.controls!.control_key,
-      title: p.controls!.title,
-      category: p.controls!.category,
-      priority: p.controls!.default_priority,
-      status: p.status,
-      audience: p.controls!.audience,
-      report_output_text: p.controls!.report_output_text,
-    }));
+    .map((p) => {
+      const ctl = p.controls!;
+      const citations = (ctl.framework_mappings ?? [])
+        .map((m) => ({
+          framework: m.framework_requirements?.frameworks?.code ?? "",
+          citation: m.framework_requirements?.citation ?? "",
+          source_url: m.framework_requirements?.source_url ?? null,
+        }))
+        .filter((m) => m.framework && m.citation);
+      return {
+        control_key: ctl.control_key,
+        title: ctl.title,
+        category: ctl.category,
+        healthcare_category: ctl.healthcare_category,
+        priority: ctl.default_priority,
+        status: p.status,
+        audience: ctl.audience,
+        automation_level: ctl.automation_level,
+        default_weight: ctl.default_weight ?? 1.0,
+        responsible_role: ctl.responsible_role,
+        report_output_text: ctl.report_output_text,
+        framework_citations: citations,
+      };
+    });
   const risks = controls
     .filter((c) => c.status === "non_compliant" || c.status === "partial")
-    .map((c) => ({ control_key: c.control_key, title: c.title, priority: c.priority }));
+    .map((c) => ({
+      control_key: c.control_key,
+      title: c.title,
+      priority: c.priority,
+      healthcare_category: c.healthcare_category,
+      framework_impact: Array.from(new Set(c.framework_citations.map((fc) => fc.framework))),
+    }));
   const safeguards = controls.filter((c) => c.status === "compliant").length;
+
+  // Framework coverage map — how many distinct citations are covered by
+  // at least one compliant control, per framework.
+  const framework_coverage: Record<string, { citations_covered: number; total_citations: number }> = {};
+  const { data: allReqs } = await db
+    .from("framework_requirements")
+    .select("citation, frameworks(code)")
+    .returns<Array<{ citation: string; frameworks: { code: string } | null }>>();
+  for (const r of allReqs ?? []) {
+    const code = r.frameworks?.code;
+    if (!code) continue;
+    const existing = framework_coverage[code] ?? { citations_covered: 0, total_citations: 0 };
+    existing.total_citations++;
+    framework_coverage[code] = existing;
+  }
+  const coveredByFramework: Record<string, Set<string>> = {};
+  for (const c of controls.filter((c) => c.status === "compliant")) {
+    for (const fc of c.framework_citations) {
+      const existing = coveredByFramework[fc.framework] ?? new Set<string>();
+      existing.add(fc.citation);
+      coveredByFramework[fc.framework] = existing;
+    }
+  }
+  for (const [framework, set] of Object.entries(coveredByFramework)) {
+    const existing = framework_coverage[framework] ?? { citations_covered: 0, total_citations: 0 };
+    existing.citations_covered = set.size;
+    framework_coverage[framework] = existing;
+  }
 
   // Vendors + BAAs
   const { data: vendors } = await db
@@ -170,6 +250,7 @@ export async function buildSnapshot(
     vendors: { total: vendorIds.length, with_active_baa: withBaa, missing_baa: vendorIds.length - withBaa },
     workforce_screening: { total_members: latestByUser.size, cleared, blocked, stale },
     evidence_summary: ev,
+    framework_coverage,
   };
 }
 

@@ -27,11 +27,16 @@ export default async function CompliancePage({
       .select(`
         id, control_key, title, description, category, implementation_type,
         default_priority, healthcare_baseline,
-        healthcare_category, audience, automation_status,
+        healthcare_category, audience, automation_status, automation_level,
         evidence_summary, remediation_guide, report_output_text,
-        framework_mappings(framework_requirements(framework_id, frameworks(code)))
+        default_weight, responsible_role,
+        framework_mappings(
+          mapping_strength, mapping_confidence, interpretation_basis,
+          framework_requirements(citation, title, source_url, framework_id, frameworks(code))
+        )
       `)
       .eq("active", true)
+      .order("default_weight", { ascending: false })
       .order("default_priority", { ascending: true })
       .order("category", { ascending: true }),
     supabase
@@ -65,11 +70,32 @@ export default async function CompliancePage({
   );
 
   const enriched = (controlsRes.data ?? []).map((c) => {
-    type MappingShape = { framework_requirements: { frameworks: { code: string } } | null };
+    type MappingShape = {
+      mapping_strength: string | null;
+      mapping_confidence: "high" | "medium" | "low";
+      interpretation_basis: string | null;
+      framework_requirements: {
+        citation: string;
+        title: string;
+        source_url: string | null;
+        frameworks: { code: string } | null;
+      } | null;
+    };
     const mappings = (c.framework_mappings ?? []) as unknown as MappingShape[];
     const frameworkCodes = Array.from(
       new Set(mappings.map((m) => m.framework_requirements?.frameworks?.code).filter(Boolean))
     ) as string[];
+    const mappingDetails = mappings
+      .map((m) => ({
+        framework: m.framework_requirements?.frameworks?.code ?? "",
+        citation: m.framework_requirements?.citation ?? "",
+        title: m.framework_requirements?.title ?? "",
+        source_url: m.framework_requirements?.source_url ?? null,
+        strength: m.mapping_strength,
+        confidence: m.mapping_confidence,
+        basis: m.interpretation_basis,
+      }))
+      .filter((m) => m.framework && m.citation);
     const pc = statusByControlId.get(c.id) ?? null;
     const checks = checksByControlId.get(c.id) ?? [];
     // Primary check = first check whose collection_method matches the control's
@@ -89,11 +115,15 @@ export default async function CompliancePage({
       healthcare_category: c.healthcare_category,
       audience: c.audience,
       automation_status: c.automation_status,
+      automation_level: c.automation_level,
       evidence_summary: c.evidence_summary,
       remediation_guide: c.remediation_guide,
       report_output_text: c.report_output_text,
+      default_weight: c.default_weight ?? 1.0,
+      responsible_role: c.responsible_role,
       frameworks: frameworkCodes,
       mapping_count: mappings.length,
+      mapping_details: mappingDetails,
       status: pc?.status ?? "not_started",
       last_verified_at: pc?.last_verified_at ?? null,
       implementation_notes: pc?.implementation_notes ?? null,

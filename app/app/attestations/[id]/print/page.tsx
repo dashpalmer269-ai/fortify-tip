@@ -113,6 +113,38 @@ export default async function AttestationPrint({
         </table>
       </section>
 
+      {/* Framework coverage map — shown when the snapshot carries it (post-038 snapshots) */}
+      {snap.framework_coverage && Object.keys(snap.framework_coverage).length > 0 && (
+        <section>
+          <h2>Framework coverage</h2>
+          <p className="prose" style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
+            Citations covered by at least one compliant control. Coverage gaps indicate requirements
+            where the practice does not yet have a satisfying control in place — supporting evidence
+            for audit prep, not an audit attestation.
+          </p>
+          <table>
+            <thead>
+              <tr><th>Framework</th><th className="num">Citations covered</th><th className="num">Total citations in library</th><th className="num">Coverage</th></tr>
+            </thead>
+            <tbody>
+              {Object.entries(snap.framework_coverage)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([code, c]) => {
+                  const pct = c.total_citations > 0 ? Math.round((c.citations_covered / c.total_citations) * 100) : 0;
+                  return (
+                    <tr key={code}>
+                      <td>{code}</td>
+                      <td className="num">{c.citations_covered}</td>
+                      <td className="num">{c.total_citations}</td>
+                      <td className="num">{pct}%</td>
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
+        </section>
+      )}
+
       {/* Per-control attestation statements — only render for compliant controls that carry a report sentence. */}
       {(() => {
         const compliantStatements = (snap.controls ?? []).filter(

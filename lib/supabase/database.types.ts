@@ -157,6 +157,19 @@ export interface Database {
           obligation_type: "required" | "addressable" | "recommended" | null;
           weight: number | null;
           source_url: string | null;
+          // Added by 034_compliance_library_v2_schema
+          source_type:
+            | "statute"
+            | "regulation"
+            | "standard"
+            | "guidance"
+            | "interpretation"
+            | "cross_reference"
+            | null;
+          last_reviewed_at: string | null;
+          reviewed_by: string | null;
+          interpretation_notes: string | null;
+          is_official_language: boolean;
         };
         Insert: {
           id?: string;
@@ -169,6 +182,11 @@ export interface Database {
           obligation_type?: Database["public"]["Tables"]["framework_requirements"]["Row"]["obligation_type"];
           weight?: number | null;
           source_url?: string | null;
+          source_type?: Database["public"]["Tables"]["framework_requirements"]["Row"]["source_type"];
+          last_reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          interpretation_notes?: string | null;
+          is_official_language?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["framework_requirements"]["Insert"]>;
         Relationships: [];
@@ -204,7 +222,15 @@ export interface Database {
             | "breach_notification"
             | "integration_credentials"
             | null;
-          audience: "customer" | "fortify_internal";
+          audience:
+            | "customer"
+            | "customer_practice"
+            | "fortify_internal"
+            | "vendor"
+            | "workforce"
+            | "admin"
+            | "integration"
+            | "managed_service";
           automation_status:
             | "fully_automated"
             | "semi_automated"
@@ -214,6 +240,17 @@ export interface Database {
           evidence_summary: string | null;
           remediation_guide: string | null;
           report_output_text: string | null;
+          // Added by 034_compliance_library_v2_schema
+          default_weight: number;
+          automation_level:
+            | "auto_verified"
+            | "partially_verified"
+            | "manual_evidence_required"
+            | "admin_attestation"
+            | "managed_review_required"
+            | "needs_integration"
+            | null;
+          responsible_role: string | null;
         };
         Insert: {
           id?: string;
@@ -231,6 +268,9 @@ export interface Database {
           evidence_summary?: string | null;
           remediation_guide?: string | null;
           report_output_text?: string | null;
+          default_weight?: number;
+          automation_level?: Database["public"]["Tables"]["controls"]["Row"]["automation_level"];
+          responsible_role?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["controls"]["Insert"]>;
         Relationships: [];
@@ -247,6 +287,11 @@ export interface Database {
             | "contributes_to"
             | null;
           notes: string | null;
+          // Added by 034_compliance_library_v2_schema
+          mapping_confidence: "high" | "medium" | "low";
+          interpretation_basis: string | null;
+          last_reviewed_at: string | null;
+          reviewed_by: string | null;
         };
         Insert: {
           id?: string;
@@ -254,6 +299,10 @@ export interface Database {
           framework_requirement_id: string;
           mapping_strength?: Database["public"]["Tables"]["framework_mappings"]["Row"]["mapping_strength"];
           notes?: string | null;
+          mapping_confidence?: "high" | "medium" | "low";
+          interpretation_basis?: string | null;
+          last_reviewed_at?: string | null;
+          reviewed_by?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["framework_mappings"]["Insert"]>;
         Relationships: [];

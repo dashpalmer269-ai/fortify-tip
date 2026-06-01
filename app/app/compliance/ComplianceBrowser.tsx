@@ -8,6 +8,16 @@ import { Card } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 
+interface MappingDetail {
+  framework: string;
+  citation: string;
+  title: string;
+  source_url: string | null;
+  strength: string | null;
+  confidence: "high" | "medium" | "low";
+  basis: string | null;
+}
+
 interface ControlRow {
   id: string;
   control_key: string;
@@ -20,11 +30,15 @@ interface ControlRow {
   healthcare_category: string | null;
   audience: string | null;
   automation_status: string | null;
+  automation_level: string | null;
   evidence_summary: string | null;
   remediation_guide: string | null;
   report_output_text: string | null;
+  default_weight: number;
+  responsible_role: string | null;
   frameworks: string[];
   mapping_count: number;
+  mapping_details: MappingDetail[];
   status: string;
   last_verified_at: string | null;
   implementation_notes: string | null;
@@ -78,10 +92,24 @@ const HEALTHCARE_CATEGORY_LABELS: Record<string, string> = {
 };
 
 const AUTOMATION_LABELS: Record<string, { label: string; tone: Variant }> = {
-  fully_automated:    { label: "Fully automated",   tone: "success" },
-  semi_automated:     { label: "Semi-automated",    tone: "info" },
-  document_upload:    { label: "Document upload",   tone: "warning" },
-  manual_attestation: { label: "Manual attestation", tone: "muted" },
+  // Legacy automation_status values (kept for back-compat)
+  fully_automated:    { label: "Fully automated",     tone: "success" },
+  semi_automated:     { label: "Semi-automated",      tone: "info" },
+  document_upload:    { label: "Document upload",     tone: "warning" },
+  manual_attestation: { label: "Manual attestation",  tone: "muted" },
+  // v2 automation_level values
+  auto_verified:             { label: "Auto-verified",            tone: "success" },
+  partially_verified:        { label: "Partially verified",       tone: "info" },
+  manual_evidence_required:  { label: "Manual evidence required", tone: "warning" },
+  admin_attestation:         { label: "Admin attestation",        tone: "muted" },
+  managed_review_required:   { label: "Managed review required",  tone: "warning" },
+  needs_integration:         { label: "Needs integration",        tone: "danger" },
+};
+
+const CONFIDENCE_TONE: Record<"high" | "medium" | "low", Variant> = {
+  high: "success",
+  medium: "info",
+  low: "warning",
 };
 
 export default function ComplianceBrowser({
@@ -336,7 +364,10 @@ export default function ComplianceBrowser({
           const isExpanded = expandedId === c.id;
           const isSaving = savingId === c.id;
           const isFortifyManaged = c.audience === "fortify_internal";
-          const automation = c.automation_status ? AUTOMATION_LABELS[c.automation_status] : null;
+          const automation =
+            (c.automation_level && AUTOMATION_LABELS[c.automation_level]) ||
+            (c.automation_status && AUTOMATION_LABELS[c.automation_status]) ||
+            null;
           return (
             <Card key={c.id} className="overflow-hidden">
               <button
@@ -410,6 +441,56 @@ export default function ComplianceBrowser({
                         “{c.report_output_text}”
                       </p>
                     </Section>
+                  )}
+
+                  {c.mapping_details.length > 0 && (
+                    <Section label={`Framework citations (${c.mapping_details.length})`}>
+                      <div className="space-y-1.5">
+                        {c.mapping_details.map((m, idx) => (
+                          <div
+                            key={`${m.framework}-${m.citation}-${idx}`}
+                            className="flex items-start gap-3 text-[12px] leading-relaxed"
+                          >
+                            <span
+                              className="font-mono text-[10px] uppercase tracking-wider shrink-0 w-16 mt-0.5"
+                              style={{ color: FRAMEWORK_TONE[m.framework] ?? "var(--color-accent)" }}
+                            >
+                              {m.framework}
+                            </span>
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-baseline gap-2">
+                                {m.source_url ? (
+                                  <a
+                                    href={m.source_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-mono text-[11px] text-[var(--color-accent)] hover:text-[var(--color-primary)]"
+                                  >
+                                    {m.citation}
+                                  </a>
+                                ) : (
+                                  <span className="font-mono text-[11px] text-[var(--color-primary)]">{m.citation}</span>
+                                )}
+                                <span className="text-[var(--color-tertiary)]">{m.title}</span>
+                                <Badge variant={CONFIDENCE_TONE[m.confidence]}>
+                                  {m.confidence} confidence
+                                </Badge>
+                              </div>
+                              {m.basis && (
+                                <p className="text-[11px] text-[var(--color-quaternary)] italic mt-0.5">{m.basis}</p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </Section>
+                  )}
+
+                  {c.responsible_role && (
+                    <div className="font-mono text-[11px] text-[var(--color-quaternary)]">
+                      Owner: <span className="text-[var(--color-tertiary)]">{c.responsible_role}</span>
+                      {" · "}Weight: <span className="text-[var(--color-tertiary)]">{c.default_weight.toFixed(1)}</span>
+                    </div>
                   )}
 
                   {(c.last_verified_at || c.latest_evidence_at) && (
