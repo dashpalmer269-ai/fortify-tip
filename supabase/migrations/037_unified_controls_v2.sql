@@ -186,30 +186,11 @@ on conflict (control_key) do nothing;
 
 -- ════════════════════════════════════════════════════════════════════
 -- B. Multi-framework mappings for the new controls
+--
+-- Implemented as a single INSERT ... SELECT joined to a (values) table of
+-- (control_key, requirement_citation, interpretation_basis) so we don't
+-- have to enumerate dozens of uuid lookup variables.
 -- ════════════════════════════════════════════════════════════════════
-do $$
-declare
-  -- New controls
-  c_iam_001 uuid := (select id from controls where control_key = 'IAM-001');
-  c_iam_002 uuid := (select id from controls where control_key = 'IAM-002');
-  c_iam_003 uuid := (select id from controls where control_key = 'IAM-003');
-  c_dat_001 uuid := (select id from controls where control_key = 'DAT-001');
-  c_dat_002 uuid := (select id from controls where control_key = 'DAT-002');
-  c_dat_003 uuid := (select id from controls where control_key = 'DAT-003');
-  c_net_001 uuid := (select id from controls where control_key = 'NET-001');
-  c_net_002 uuid := (select id from controls where control_key = 'NET-002');
-  c_log_007 uuid := (select id from controls where control_key = 'LOG-007');
-  c_prv_001 uuid := (select id from controls where control_key = 'PRV-001');
-  c_prv_002 uuid := (select id from controls where control_key = 'PRV-002');
-  c_sup_001 uuid := (select id from controls where control_key = 'SUP-001');
-
-  -- Requirement IDs (look up by citation — works for both old and new)
-  r(citation text) uuid;
-begin
-end $$;
-
--- That do-block is just a placeholder; cleaner to inline the inserts with
--- inline subqueries so we don't have to declare 80 variables.
 insert into framework_mappings (control_id, framework_requirement_id, mapping_strength, mapping_confidence, interpretation_basis)
 select c.id, r.id, 'fully_satisfies', 'high', basis
 from controls c
