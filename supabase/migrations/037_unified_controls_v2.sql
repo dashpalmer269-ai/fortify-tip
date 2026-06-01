@@ -192,10 +192,8 @@ on conflict (control_key) do nothing;
 -- have to enumerate dozens of uuid lookup variables.
 -- ════════════════════════════════════════════════════════════════════
 insert into framework_mappings (control_id, framework_requirement_id, mapping_strength, mapping_confidence, interpretation_basis)
-select c.id, r.id, 'fully_satisfies', 'high', basis
-from controls c
-join framework_requirements r on r.citation = req_citation
-join (values
+select c.id, r.id, 'fully_satisfies', 'high', m.basis
+from (values
   -- IAM-001 — unique user identification
   ('IAM-001', '164.312(a)(2)(i)',  'Direct: HIPAA §164.312(a)(2)(i) requires unique user identification for any system accessing ePHI.'),
   ('IAM-001', '164.312(a)(1)',     'Supports access control (technical safeguard).'),
@@ -261,7 +259,9 @@ join (values
   ('SUP-001', 'A.5.19',            'ISO Information security in supplier relationships.'),
   ('SUP-001', 'A.5.20',            'ISO Addressing security in supplier agreements.'),
   ('SUP-001', 'Art. 28',           'GDPR Processor agreements.')
-) as m(control_key, req_citation, basis) on m.control_key = c.control_key
+) as m(control_key, req_citation, basis)
+join controls c on c.control_key = m.control_key
+join framework_requirements r on r.citation = m.req_citation
 on conflict (control_id, framework_requirement_id) do nothing;
 
 -- ════════════════════════════════════════════════════════════════════
