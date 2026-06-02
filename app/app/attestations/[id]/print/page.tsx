@@ -191,6 +191,45 @@ export default async function AttestationPrint({
         );
       })()}
 
+      {/* Detailed framework citations per compliant control — the audit-defensibility appendix */}
+      {(() => {
+        const compliantWithCitations = (snap.controls ?? []).filter(
+          (c) => c.status === "compliant" && Array.isArray(c.framework_citations) && c.framework_citations.length > 0
+        );
+        if (compliantWithCitations.length === 0) return null;
+        return (
+          <section>
+            <h2>Source citations per compliant control</h2>
+            <p className="prose" style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
+              The specific framework requirements satisfied by each compliant control. This appendix
+              answers &ldquo;which regulation or standard does each safeguard map to?&rdquo;
+            </p>
+            <table>
+              <thead>
+                <tr><th>Control</th><th>Framework</th><th>Citation</th></tr>
+              </thead>
+              <tbody>
+                {compliantWithCitations.flatMap((c) =>
+                  c.framework_citations.map((fc, idx) => (
+                    <tr key={`${c.control_key}-${fc.framework}-${fc.citation}-${idx}`}>
+                      <td className="mono">{idx === 0 ? c.control_key : ""}</td>
+                      <td>{fc.framework}</td>
+                      <td className="mono">
+                        {fc.source_url ? (
+                          <a href={fc.source_url} target="_blank" rel="noopener noreferrer">{fc.citation}</a>
+                        ) : (
+                          fc.citation
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </section>
+        );
+      })()}
+
       <section className="signature-block">
         <h2>Attestation</h2>
         {att.signature_statement && <p className="prose">{att.signature_statement}</p>}

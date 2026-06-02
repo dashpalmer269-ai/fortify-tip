@@ -13,6 +13,7 @@ export default async function CompliancePage({
     healthcare_category?: string;
     audience?: string;
     status?: string;
+    role?: string;
   }>;
 }) {
   const session = await getAppSession();
@@ -143,6 +144,7 @@ export default async function CompliancePage({
       initialHealthcareCategory={params.healthcare_category ?? null}
       initialAudience={params.audience ?? null}
       initialStatus={params.status ?? null}
+      initialRole={params.role ?? null}
     />
   );
 }

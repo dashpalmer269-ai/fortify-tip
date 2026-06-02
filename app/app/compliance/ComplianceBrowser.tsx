@@ -120,6 +120,7 @@ export default function ComplianceBrowser({
   initialHealthcareCategory,
   initialAudience,
   initialStatus,
+  initialRole,
 }: {
   practiceId: string;
   controls: ControlRow[];
@@ -128,6 +129,7 @@ export default function ComplianceBrowser({
   initialHealthcareCategory: string | null;
   initialAudience: string | null;
   initialStatus: string | null;
+  initialRole: string | null;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -136,6 +138,7 @@ export default function ComplianceBrowser({
   const [healthcareCategory, setHealthcareCategory] = useState<string | null>(initialHealthcareCategory);
   const [audience, setAudience] = useState<string | null>(initialAudience);
   const [status, setStatus] = useState<string | null>(initialStatus);
+  const [role, setRole] = useState<string | null>(initialRole);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
@@ -224,6 +227,11 @@ export default function ComplianceBrowser({
       Array.from(new Set(controls.map((c) => c.healthcare_category).filter(Boolean))).sort() as string[],
     [controls]
   );
+  const rolesPresent = useMemo(
+    () =>
+      Array.from(new Set(controls.map((c) => c.responsible_role).filter(Boolean))).sort() as string[],
+    [controls]
+  );
   const allFrameworks = ["HIPAA", "SOC2", "ISO27001", "GDPR"];
 
   const filtered = controls.filter((c) => {
@@ -232,6 +240,7 @@ export default function ComplianceBrowser({
     if (healthcareCategory && c.healthcare_category !== healthcareCategory) return false;
     if (audience && c.audience !== audience) return false;
     if (status && c.status !== status) return false;
+    if (role && c.responsible_role !== role) return false;
     return true;
   });
 
@@ -315,8 +324,18 @@ export default function ComplianceBrowser({
           className="bg-transparent border border-[var(--color-border-default)] rounded-md px-2.5 py-1 text-xs text-[var(--color-primary)] hover:border-[var(--color-border-strong)] transition-colors"
         >
           <option value="" className="bg-black">Customer + Fortify</option>
-          <option value="customer" className="bg-black">Practice-owned only</option>
+          <option value="customer_practice" className="bg-black">Practice-owned only</option>
           <option value="fortify_internal" className="bg-black">Fortify-managed only</option>
+        </select>
+        <select
+          value={role ?? ""}
+          onChange={(e) => setRole(e.target.value || null)}
+          className="bg-transparent border border-[var(--color-border-default)] rounded-md px-2.5 py-1 text-xs text-[var(--color-primary)] hover:border-[var(--color-border-strong)] transition-colors"
+        >
+          <option value="" className="bg-black">Any responsible role</option>
+          {rolesPresent.map((r) => (
+            <option key={r} value={r} className="bg-black">{r}</option>
+          ))}
         </select>
         <select
           value={category ?? ""}

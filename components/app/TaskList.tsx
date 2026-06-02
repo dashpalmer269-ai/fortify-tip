@@ -17,6 +17,8 @@ export interface TaskItem {
   assignee_email?: string | null;
   control_key?: string | null;
   remediation_guide?: string | null;
+  responsible_role?: string | null;
+  risk_score?: number;
 }
 
 const SEVERITY_TONE: Record<string, { dot: string; label: string }> = {
@@ -104,8 +106,14 @@ export default function TaskList({
                   <p className="text-sm text-[var(--color-primary)] truncate">{task.title}</p>
                   <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-quaternary)] mt-0.5">
                     {tone.label}
+                    {typeof task.risk_score === "number" && task.risk_score >= 6 && (
+                      <span className="text-[var(--color-danger)] ml-2">· risk {task.risk_score.toFixed(1)}</span>
+                    )}
                     {task.control_key && (
                       <span className="text-[var(--color-tertiary)] ml-2">· {task.control_key}</span>
+                    )}
+                    {task.responsible_role && (
+                      <span className="text-[var(--color-tertiary)] ml-2">· {task.responsible_role}</span>
                     )}
                     {task.due_date && (
                       <span className={overdue ? "text-[var(--color-danger)] ml-2" : "text-[var(--color-tertiary)] ml-2"}>

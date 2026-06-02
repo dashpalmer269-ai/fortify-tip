@@ -19,13 +19,33 @@ interface TaskRow {
   due_date: string | null;
   subject_ref: string | null;
   assigned_to: string | null;
-  controls: { control_key: string; remediation_guide: string | null } | null;
+  controls: {
+    control_key: string;
+    remediation_guide: string | null;
+    default_weight: number | null;
+    responsible_role: string | null;
+  } | null;
 }
 
 const TASK_SELECT =
-  "id, title, source, status, severity, due_date, subject_ref, assigned_to, controls(control_key, remediation_guide)";
+  "id, title, source, status, severity, due_date, subject_ref, assigned_to, controls(control_key, remediation_guide, default_weight, responsible_role)";
+
+/**
+ * Risk score = severity multiplier × control weight × overdue multiplier.
+ * Higher score = higher priority. Drives the punch-list sort so a
+ * non-compliant MFA control (weight 2.0) outranks a stale documentation
+ * refinement (weight 0.5) even if both are 'high' severity.
+ */
+const SEVERITY_FACTOR: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+function riskScore(t: TaskRow, now: number): number {
+  const sev = SEVERITY_FACTOR[t.severity ?? "low"] ?? 1;
+  const weight = t.controls?.default_weight ?? 1.0;
+  const overdue = t.due_date && new Date(t.due_date).getTime() < now ? 1.5 : 1.0;
+  return sev * weight * overdue;
+}
 
 function toTaskItems(rows: TaskRow[], emailByUser?: Map<string, string>): TaskItem[] {
+  const now = Date.now();
   return rows.map((t) => ({
     id: t.id,
     title: t.title ?? "Task",
@@ -37,12 +57,20 @@ function toTaskItems(rows: TaskRow[], emailByUser?: Map<string, string>): TaskIt
     assignee_email: emailByUser && t.assigned_to ? emailByUser.get(t.assigned_to) ?? null : null,
     control_key: t.controls?.control_key ?? null,
     remediation_guide: t.controls?.remediation_guide ?? null,
+    responsible_role: t.controls?.responsible_role ?? null,
+    risk_score: riskScore(t, now),
   }));
 }
 
 const SEVERITY_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 function sortTasks(rows: TaskRow[]): TaskRow[] {
+  const now = Date.now();
   return [...rows].sort((a, b) => {
+    // Risk-weighted: severity × control weight × overdue multiplier
+    const ra = riskScore(a, now);
+    const rb = riskScore(b, now);
+    if (ra !== rb) return rb - ra; // higher risk first
+    // Tie-break: severity ladder then due date
     const sa = SEVERITY_ORDER[a.severity ?? "low"] ?? 3;
     const sb = SEVERITY_ORDER[b.severity ?? "low"] ?? 3;
     if (sa !== sb) return sa - sb;
