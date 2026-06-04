@@ -131,5 +131,13 @@ export function scoreIntegrationCredentials(i: IntegrationForScoring): Credentia
   factors.push({ axis: "scope", points: scopePts, max: 15, note: scopeNote });
 
   const score = factors.reduce((s, f) => s + f.points, 0);
-  return { score, level: levelFor(score), factors };
+
+  // Invariant: encryption is non-negotiable. If the encryption axis scored
+  // zero (no sealed blob on file), the integration is "critical" regardless
+  // of the other axes — there is no real security without it.
+  const encryption = factors.find((f) => f.axis === "encryption");
+  const level: CredentialRiskLevel =
+    encryption && encryption.points === 0 ? "critical" : levelFor(score);
+
+  return { score, level, factors };
 }

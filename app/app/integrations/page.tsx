@@ -1,6 +1,7 @@
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { getAppSession, assertActive } from "@/lib/auth/session";
 import PageHeader from "@/components/ui/PageHeader";
+import NoPhiWarning from "@/components/ui/NoPhiWarning";
 import { Card } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { ButtonLink } from "@/components/ui/Button";
@@ -212,6 +213,10 @@ export default async function IntegrationsPage({
         title="Integrations"
         description="Connect your environment so Fortify collects compliance evidence on a schedule. Every integration produces evidence + findings + tasks + dashboard updates + audit-log entries via the unified evidence flow. Credentials sealed via the KMS helper — no plaintext storage."
       />
+
+      <div className="mb-5">
+        <NoPhiWarning />
+      </div>
 
       {params.connected && (
         <Card variant="raised" className="mb-5 px-4 py-3">

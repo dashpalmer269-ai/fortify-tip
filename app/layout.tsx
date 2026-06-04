@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, JetBrains_Mono, IBM_Plex_Serif, Fraunces } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-sans", subsets: ["latin"] });
@@ -37,7 +38,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       className={`${geistSans.variable} ${plexSerif.variable} ${fraunces.variable} ${jetbrainsMono.variable}`}
     >
-      <body className="min-h-screen bg-canvas text-primary antialiased">{children}</body>
+      <body className="min-h-screen bg-canvas text-primary antialiased">
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }

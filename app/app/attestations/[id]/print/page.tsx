@@ -257,6 +257,14 @@ export default async function AttestationPrint({
         <p className="mono">Attestation ID: {att.id}</p>
       </footer>
 
+      {/* Screen-only reminder banner — hidden on print */}
+      <div className="print-instructions">
+        <p>
+          <strong>Save as PDF:</strong> In your browser&apos;s Print dialog, choose &ldquo;Save as PDF&rdquo; as the destination.
+          This document is letter-sized and styled for both print and PDF export.
+        </p>
+      </div>
+
       {autoprint !== "0" && (
         <script
           dangerouslySetInnerHTML={{
@@ -295,7 +303,10 @@ export default async function AttestationPrint({
         .stmt-list li:last-child { border-bottom:none; }
         .stmt-key { display:inline-block; font-family:'Courier New',monospace; font-size:10.5px; color:#555; background:#f5f5f5; padding:1px 5px; border-radius:2px; margin-right:6px; }
         .stmt-text { color:#222; }
-        @media print { .att-doc { padding:0; } }
+        .print-instructions { position:fixed; top:10px; right:10px; max-width:280px; padding:10px 14px; background:#fef3c7; border:1px solid #fbbf24; border-radius:8px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:11px; line-height:1.5; color:#92400e; box-shadow:0 4px 12px rgba(0,0,0,0.08); z-index:9999; }
+        .print-instructions p { margin:0; }
+        .print-instructions strong { color:#78350f; }
+        @media print { .att-doc { padding:0; } .print-instructions { display:none; } }
       `}</style>
     </div>
   );

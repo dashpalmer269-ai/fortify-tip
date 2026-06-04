@@ -16,6 +16,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/app/coverage",        label: "Coverage",       icon: ComplianceIcon, minRole: "officer" },
   { href: "/app/risk-assessment", label: "Risk",           icon: RiskIcon,     minRole: "officer" },
   { href: "/app/policies",        label: "Policies",       icon: PolicyIcon },
+  { href: "/app/training",        label: "Training",       icon: PolicyIcon },
   { href: "/app/vendors",         label: "Vendors",        icon: VendorIcon },
   { href: "/app/threats",         label: "Threat intel",   icon: ThreatIcon },
   { href: "/app/reports",         label: "Reports",        icon: ReportIcon,   minRole: "officer" },
@@ -29,6 +30,7 @@ const SETTINGS_ITEMS: NavItem[] = [
   { href: "/app/team",         label: "Team",         icon: DashboardIcon },
   { href: "/app/billing",      label: "Billing",      icon: DashboardIcon, minRole: "admin" },
   { href: "/app/settings",     label: "Settings",     icon: DashboardIcon },
+  { href: "/app/help",         label: "Help",         icon: DashboardIcon },
 ];
 
 function canSeeItem(item: NavItem, role: Role | null | undefined): boolean {

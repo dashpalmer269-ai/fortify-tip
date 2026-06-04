@@ -47,7 +47,10 @@ export default function TopBar({ userEmail, role }: Props) {
       <div className="relative" ref={ref}>
         <button
           onClick={() => setOpen((s) => !s)}
-          className="flex items-center gap-3 px-2 py-1 rounded-md hover:bg-[var(--color-surface)] transition-colors"
+          aria-label="Account menu"
+          aria-expanded={open}
+          aria-haspopup="menu"
+          className="flex items-center gap-3 px-2 py-1 rounded-md hover:bg-[var(--color-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-2 focus:ring-offset-[var(--color-canvas)] transition-colors"
         >
           <div className="w-7 h-7 rounded-full surface-raised flex items-center justify-center text-[12px] font-medium text-[var(--color-primary)]">
             {initial}

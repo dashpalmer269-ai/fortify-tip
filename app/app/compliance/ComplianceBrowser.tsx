@@ -7,6 +7,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import NoPhiWarning from "@/components/ui/NoPhiWarning";
 
 interface MappingDetail {
   framework: string;
@@ -143,7 +144,29 @@ export default function ComplianceBrowser({
   const [savingId, setSavingId] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [attestingId, setAttestingId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  async function downloadEvidenceFile(control: ControlRow) {
+    if (!control.latest_evidence_file) return;
+    setActionError(null);
+    setDownloadingId(control.id);
+    try {
+      const res = await fetch(
+        `/api/evidence/download?path=${encodeURIComponent(control.latest_evidence_file)}`
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? `Download failed (${res.status})`);
+      }
+      const { signed_url } = (await res.json()) as { signed_url: string };
+      window.open(signed_url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      setActionError((e as Error).message);
+    } finally {
+      setDownloadingId(null);
+    }
+  }
 
   async function uploadEvidenceFor(control: ControlRow, file: File) {
     if (!control.primary_evidence_check_id) return;
@@ -520,7 +543,17 @@ export default function ComplianceBrowser({
                           {" · "}
                           {new Date(c.latest_evidence_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
                           {c.latest_evidence_file && (
-                            <span className="text-[var(--color-tertiary)] ml-2">· file on record</span>
+                            <>
+                              {" · "}
+                              <button
+                                type="button"
+                                onClick={() => downloadEvidenceFile(c)}
+                                disabled={downloadingId === c.id}
+                                className="text-[var(--color-accent)] hover:text-[var(--color-primary)] disabled:opacity-50 underline-offset-2 hover:underline"
+                              >
+                                {downloadingId === c.id ? "Opening…" : "View file"}
+                              </button>
+                            </>
                           )}
                         </p>
                       )}
@@ -537,26 +570,29 @@ export default function ComplianceBrowser({
                     <div className="space-y-2 pt-1">
                       {/* Document upload (only when this control has a document_upload check) */}
                       {c.automation_status === "document_upload" && c.primary_evidence_check_id && (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <label
-                            className={`text-[12px] px-3 py-1.5 rounded-md border border-[var(--color-border-default)] cursor-pointer hover:border-[var(--color-border-strong)] transition-colors ${
-                              uploadingId === c.id ? "opacity-50 cursor-wait" : ""
-                            }`}
-                          >
-                            {uploadingId === c.id ? "Uploading…" : "Upload evidence document"}
-                            <input
-                              type="file"
-                              className="hidden"
-                              disabled={uploadingId === c.id}
-                              accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.txt"
-                              onChange={(e) => {
-                                const f = e.target.files?.[0];
-                                if (f) uploadEvidenceFor(c, f);
-                                e.target.value = "";
-                              }}
-                            />
-                          </label>
-                          <span className="text-[11px] text-[var(--color-quaternary)]">PDF / image / document</span>
+                        <div className="space-y-2">
+                          <NoPhiWarning />
+                          <div className="flex flex-wrap items-center gap-2">
+                            <label
+                              className={`text-[12px] px-3 py-1.5 rounded-md border border-[var(--color-border-default)] cursor-pointer hover:border-[var(--color-border-strong)] transition-colors ${
+                                uploadingId === c.id ? "opacity-50 cursor-wait" : ""
+                              }`}
+                            >
+                              {uploadingId === c.id ? "Uploading…" : "Upload evidence document"}
+                              <input
+                                type="file"
+                                className="hidden"
+                                disabled={uploadingId === c.id}
+                                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.txt"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) uploadEvidenceFor(c, f);
+                                  e.target.value = "";
+                                }}
+                              />
+                            </label>
+                            <span className="text-[11px] text-[var(--color-quaternary)]">PDF / image / document — no PHI</span>
+                          </div>
                         </div>
                       )}
 

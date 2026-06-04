@@ -6,6 +6,7 @@ import { isAdmin } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/schemas/api";
 import { runEvidenceFlow } from "@/lib/compliance/evidence-flow";
 import type { EvidenceCheckRow, CheckResult } from "@/lib/compliance/runner";
+import { scanFields, phiBlockReason } from "@/lib/compliance/phi-scanner";
 
 /**
  * Step 2 of the document-upload flow: once the browser PUTs the file to
@@ -40,6 +41,23 @@ export async function POST(req: NextRequest) {
   // Path must start with this practice's ID (defense-in-depth on top of storage RLS)
   if (!path.startsWith(`${session.membership.practice_id}/`)) {
     return NextResponse.json({ error: "Path does not belong to this practice" }, { status: 403 });
+  }
+
+  // PHI-detection scan on the filename + notes. We can't scan file contents
+  // here without downloading + parsing the binary, which is expensive; this
+  // catches the most common abuse vectors (files literally named after a
+  // patient, or admins pasting PHI into the notes field).
+  const phiScan = scanFields({ file_name, notes });
+  if (!phiScan.clean) {
+    // Delete the just-uploaded file from storage so the data doesn't linger.
+    await db.storage.from("evidence").remove([path]).catch(() => {});
+    return NextResponse.json(
+      {
+        error: phiBlockReason(phiScan),
+        findings: phiScan.findings.map((f) => f.pattern),
+      },
+      { status: 400 }
+    );
   }
 
   // Load the check

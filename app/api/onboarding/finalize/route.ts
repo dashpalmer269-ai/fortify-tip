@@ -6,12 +6,22 @@ import { OnboardingFinalizeSchema, parseBody } from "@/lib/schemas/api";
 import type { Inserts } from "@/lib/supabase/types";
 
 /**
- * Finalize onboarding.
+ * Finalize onboarding — creates the practice + the founder's
+ * practice_users row + initial controls/safeguards.
  *
- * DEMO WORKAROUND (TODO: revisit after beta): writes via service-role to
- * dodge the auth.uid() RLS issue on Supabase ES256/JWKS projects. The
- * authenticated user.id is what we tie membership/audit-log rows to —
- * service-role isn't trusted with body data.
+ * Service-role usage justification:
+ *   The user has no practice_users membership at this point (we're
+ *   creating the practice for the first time). RLS on `practices` and
+ *   `practice_users` requires membership the user doesn't yet have.
+ *   Service-role is the correct pattern for bootstrap operations.
+ *
+ * Safety invariants verified in this handler:
+ *   - user.id is pulled from the authenticated JWT, never from the body
+ *   - The founder's practice_users row pins user_id = auth.uid()
+ *   - All audit_log entries pin actor_user_id = auth.uid()
+ *   - Free-text fields scanned for PHI via scanFieldsForPhi before write
+ *   - If existing_practice_id is supplied, membership is verified before
+ *     any update path proceeds
  */
 export async function POST(req: NextRequest) {
   const userClient = await createAuthedServerClient();

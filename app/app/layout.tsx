@@ -35,13 +35,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-[var(--color-canvas)] text-[var(--color-primary)] flex">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:rounded-md focus:bg-[var(--color-accent)] focus:text-white focus:text-sm focus:outline-none"
+      >
+        Skip to main content
+      </a>
       <Sidebar
         practiceName={session.membership.practice_name}
         role={session.membership.role}
       />
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar userEmail={session.user.email ?? ""} role={session.membership.role} />
-        <main className="flex-1 overflow-y-auto page-enter">{children}</main>
+        <main id="main-content" className="flex-1 overflow-y-auto page-enter">{children}</main>
       </div>
     </div>
   );

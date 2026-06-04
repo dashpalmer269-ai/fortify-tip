@@ -3,6 +3,7 @@ import Link from "next/link";
 import { renderMarkdown } from "@/lib/sanitize";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { getAppSession, assertActive } from "@/lib/auth/session";
+import AckButton from "./AckButton";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,17 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
     .eq("practice_id", session.membership.practice_id)
     .maybeSingle();
   if (!policy) notFound();
+
+  const policyVersion = policy.version ?? 1;
+
+  // Has the current user already acknowledged this version?
+  const { data: existingAck } = await supabase
+    .from("policy_acknowledgments")
+    .select("acknowledged_at")
+    .eq("policy_id", policy.id)
+    .eq("user_id", session.user.id)
+    .eq("policy_version", policyVersion)
+    .maybeSingle();
 
   return (
     <div className="px-8 py-8 max-w-3xl mx-auto">
@@ -62,9 +74,15 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
         .policy-prose code { font-family: var(--font-mono); font-size: 13px; background: var(--color-surface); padding: 1px 6px; border-radius: 4px; }
       `}</style>
 
-      <div className="mt-6 rounded-xl surface px-4 py-3 text-xs text-[var(--color-tertiary)]">
-        Acknowledgment tracking lands in the next iteration. Copy and export to Word still works for now.
-      </div>
+      {policy.status === "active" && (
+        <div className="mt-6">
+          <AckButton
+            policyId={policy.id}
+            policyVersion={policyVersion}
+            initialAcknowledgedAt={existingAck?.acknowledged_at ?? null}
+          />
+        </div>
+      )}
     </div>
   );
 }

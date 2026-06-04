@@ -9,10 +9,11 @@
  * Side effects (notifications, suspensions, audit logs) are handled here
  * so route handlers stay thin. Every state transition writes to audit_logs.
  *
- * DEMO WORKAROUND alignment: this service uses the passed-in service-role
- * client, consistent with the rest of the codebase. Once the auth.uid()
- * RLS issue is resolved, callers can switch to the user-authed client and
- * the service has no opinion either way.
+ * Service-role usage: this service is called from contexts where the
+ * subject_user (the workforce member being screened) may have no
+ * practice membership yet (onboarding flow). Callers pass a service-role
+ * client. The service has no opinion about the client type — pass an
+ * authed client wherever RLS permits.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";

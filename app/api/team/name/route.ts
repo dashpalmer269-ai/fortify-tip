@@ -6,12 +6,19 @@ import { TeamRenameSchema, parseBody } from "@/lib/schemas/api";
 /**
  * Update a team member's display name (user_profiles.full_name).
  *
- * Caller must be an owner/admin of the same practice as the target.
- * Upserts user_profiles so admins (who may not have a profile row yet) get
- * one created with their name.
+ * Service-role usage justification:
+ *   Admin is updating ANOTHER user's profile (target_user_id !== caller).
+ *   The user_profiles RLS policy is "user_id = auth.uid()" — i.e. users
+ *   may only modify their OWN profile. Admin-managing-other-users
+ *   requires service-role, which is the correct pattern for this kind
+ *   of administrative operation.
  *
- * DEMO WORKAROUND: writes via service-role to bypass the auth.uid() RLS
- * issue. Caller's admin status is verified explicitly.
+ * Safety invariants verified in this handler:
+ *   - user.id from authenticated JWT, not body
+ *   - Caller's owner/admin membership verified against the same practice
+ *     before any write
+ *   - Target's membership in the same practice verified before update
+ *   - audit_log entry pins actor_user_id = auth.uid()
  */
 export async function POST(req: NextRequest) {
   const userClient = await createAuthedServerClient();

@@ -13,9 +13,21 @@ import { joinRequestCreatedEmail } from "@/lib/email/templates";
  *  - If matched, stores matched_practice_id and notifies every admin/owner
  *  - Audit log entry
  *
- * DEMO WORKAROUND: writes through service-role to dodge the auth.uid() RLS
- * issue documented in /api/onboarding/finalize. The user_id is pinned to
- * the authenticated caller so service-role isn't trusted with body data.
+ * Service-role usage justification:
+ *   The submitting user has no practice_users membership at this point in
+ *   the flow (they're requesting to join one). RLS on `notifications` and
+ *   `audit_logs` requires practice_id membership; service-role bypasses
+ *   that for the legitimate cross-practice case of notifying admins.
+ *
+ * Safety invariants verified in this handler:
+ *   - user.id is pulled from the authenticated JWT (line below), never
+ *     from the request body
+ *   - matchedPracticeId is resolved server-side from a name lookup, not
+ *     trusted from the body
+ *   - Body fields scanned for PHI patterns via scanFieldsForPhi
+ *   - The user_profiles upsert pins user_id=auth.uid() — RLS would also
+ *     enforce this if authed client were used; service-role honors it by
+ *     explicit code
  */
 export async function POST(req: NextRequest) {
   const userClient = await createAuthedServerClient();

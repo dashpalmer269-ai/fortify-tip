@@ -9,6 +9,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "db:types": "supabase gen types typescript --project-id cqxvzsbyoeporgyjmrcp > lib/supabase/database.types.ts && echo 'Wrote lib/supabase/database.types.ts. Review the diff and commit.'",
     "test:no-phi": "tsx scripts/test-no-phi.ts",
     "test:no-phi-e2e": "tsx scripts/test-no-phi-e2e.ts",
@@ -28,6 +30,7 @@
     "@aws-sdk/client-sts": "^3.1057.0",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.3",
+    "@vercel/analytics": "^2.0.1",
     "dotenv": "^17.4.2",
     "isomorphic-dompurify": "^3.15.0",
     "marked": "^18.0.3",
@@ -45,11 +48,13 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/xml2js": "^0.4.14",
+    "@vitest/coverage-v8": "^4.1.8",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "supabase": "^2.101.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.8"
   }
 }
