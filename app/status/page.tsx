@@ -132,7 +132,7 @@ export default async function StatusPage() {
         </div>
 
         <p className="text-xs text-gray-600 mt-10 leading-relaxed">
-          Incident reports are posted to <a href="mailto:status@fortify.example" className="text-violet-400 hover:text-white">status@fortify.example</a> within 30 minutes of detection.
+          Incident reports are posted to <a href="mailto:status@fortifynow.xyz" className="text-violet-400 hover:text-white">status@fortifynow.xyz</a> within 30 minutes of detection.
           Architecture review available at <a href="/architecture" className="text-violet-400 hover:text-white">/architecture</a>.
         </p>
       </div>

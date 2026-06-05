@@ -178,7 +178,7 @@ export default function ArchitectureReviewPage() {
             </ul>
             <p>
               A read-only repository review under NDA is available to enterprise
-              customers&apos; security teams. Contact <a href="mailto:security@fortify.example">security@fortify.example</a>.
+              customers&apos; security teams. Contact <a href="mailto:security@fortifynow.xyz">security@fortifynow.xyz</a>.
             </p>
           </section>
 

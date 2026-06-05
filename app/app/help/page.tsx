@@ -60,14 +60,14 @@ export default async function HelpPage() {
         <CardBody>
           <p className="text-sm text-[var(--color-secondary)] mb-3">
             <strong className="text-[var(--color-primary)]">Direct support:</strong>{" "}
-            <a href="mailto:support@fortify.example" className="text-[var(--color-accent)] hover:text-[var(--color-primary)]">
-              support@fortify.example
+            <a href="mailto:support@fortifynow.xyz" className="text-[var(--color-accent)] hover:text-[var(--color-primary)]">
+              support@fortifynow.xyz
             </a>
           </p>
           <p className="text-xs text-[var(--color-tertiary)] leading-relaxed">
             For security or compliance questions involving how Fortify is architected, write to{" "}
-            <a href="mailto:security@fortify.example" className="text-[var(--color-accent)] hover:text-[var(--color-primary)]">
-              security@fortify.example
+            <a href="mailto:security@fortifynow.xyz" className="text-[var(--color-accent)] hover:text-[var(--color-primary)]">
+              security@fortifynow.xyz
             </a>{" "}
             — we&apos;ll arrange a call with our engineering team. Public architecture review is at{" "}
             <a href="/architecture" className="text-[var(--color-accent)] hover:text-[var(--color-primary)]">

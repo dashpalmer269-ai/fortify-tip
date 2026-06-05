@@ -41,7 +41,7 @@ export default async function PricingPage() {
         <div className="mt-12 max-w-3xl mx-auto px-6 py-5 surface rounded-xl text-center">
           <p className="text-sm text-[var(--color-secondary)]">
             Need on-prem, custom integrations, or multi-region deployment?{" "}
-            <a href="mailto:sales@fortify.example" className="text-[var(--color-accent)] hover:text-[var(--color-primary)] transition-colors">
+            <a href="mailto:sales@fortifynow.xyz" className="text-[var(--color-accent)] hover:text-[var(--color-primary)] transition-colors">
               Talk to us
             </a>.
           </p>

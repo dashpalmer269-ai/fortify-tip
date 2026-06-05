@@ -7,7 +7,7 @@
  *
  * To enable: get a Resend API key (https://resend.com), then
  *   1) add RESEND_API_KEY to Vercel + .env.local
- *   2) verify a sending domain (fortify.example) and set RESEND_FROM_EMAIL
+ *   2) verify a sending domain (fortifynow.xyz) and set RESEND_FROM_EMAIL
  */
 
 const RESEND_API_URL = "https://api.resend.com/emails";
@@ -30,7 +30,7 @@ export interface SendResult {
 
 export async function sendEmail(msg: EmailMessage): Promise<SendResult> {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL ?? "no-reply@fortify.example";
+  const from = process.env.RESEND_FROM_EMAIL ?? "Fortify <noreply@fortifynow.xyz>";
 
   if (!apiKey) {
     console.log(`[email:noop] skipping ${msg.subject} -> ${stringifyRecipients(msg.to)}`);
