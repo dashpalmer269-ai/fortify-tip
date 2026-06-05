@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    name: typecheck · build · lint · test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: stub-anon-key-for-build-time
+      SUPABASE_SERVICE_ROLE_KEY: stub-service-role-for-build-time
+      CRON_SECRET: stub
+      CREDENTIAL_KMS_KEY: stub-kms-key-must-be-at-least-32-characters
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci --no-audit --no-fund
+      - run: npx tsc -p tsconfig.json --noEmit
+      - run: npx eslint . --ext .ts,.tsx --max-warnings 200
+      - run: npm test
+      - run: npx next build
