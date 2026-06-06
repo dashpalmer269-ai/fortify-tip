@@ -32,6 +32,8 @@ export default async function StatusPage() {
   if (!db) {
     health.push({ label: "Platform", state: "degraded", detail: "Service client unavailable" });
   } else {
+    // Server component renders once per request; Date.now is acceptable.
+    // eslint-disable-next-line react-hooks/purity
     const now = Date.now();
     const day = 24 * 60 * 60 * 1000;
     const since = new Date(now - day).toISOString();

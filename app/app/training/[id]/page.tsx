@@ -35,8 +35,9 @@ export default async function TrainingTakePage({
       .maybeSingle(),
   ]);
 
-  const module = moduleRes.data;
-  if (!module) notFound();
+  // Don't shadow Node's global `module` — Next/ESLint flags assignment to it.
+  const moduleData = moduleRes.data;
+  if (!moduleData) notFound();
 
   return (
     <div className="px-8 py-8 max-w-3xl mx-auto">
@@ -48,15 +49,15 @@ export default async function TrainingTakePage({
 
       <div className="mb-6">
         <p className="text-[10px] uppercase tracking-[0.3em] text-violet-400 mb-2">
-          {module.module_type.replace(/_/g, " ")} · ~{module.duration_minutes ?? 15} min
+          {moduleData.module_type.replace(/_/g, " ")} · ~{moduleData.duration_minutes ?? 15} min
         </p>
-        <h1 className="text-2xl font-bold text-white mb-2">{module.title}</h1>
-        <p className="text-sm text-[var(--color-secondary)]">{module.description}</p>
+        <h1 className="text-2xl font-bold text-white mb-2">{moduleData.title}</h1>
+        <p className="text-sm text-[var(--color-secondary)]">{moduleData.description}</p>
       </div>
 
       <article
         className="glass-card rounded-2xl p-8 text-gray-200 leading-relaxed training-prose"
-        dangerouslySetInnerHTML={{ __html: renderMarkdown(module.content_markdown) }}
+        dangerouslySetInnerHTML={{ __html: renderMarkdown(moduleData.content_markdown) }}
       />
 
       <style>{`
@@ -70,8 +71,8 @@ export default async function TrainingTakePage({
 
       <div className="mt-8">
         <CompleteButton
-          moduleId={module.id}
-          moduleTitle={module.title}
+          moduleId={moduleData.id}
+          moduleTitle={moduleData.title}
           initialCompletedAt={latestRes.data?.completed_at ?? null}
           initialExpiresOn={latestRes.data?.expires_on ?? null}
         />
