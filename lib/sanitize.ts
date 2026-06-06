@@ -40,10 +40,28 @@ const PURIFY_CONFIG = {
     "table", "thead", "tbody", "tr", "th", "td",
     "img",
   ] as string[],
-  ALLOWED_ATTR: ["href", "title", "alt", "src", "class", "id"] as string[],
+  // Added target + rel so we can open external links in a new tab without
+  // them being stripped out of the sanitized output below.
+  ALLOWED_ATTR: ["href", "title", "alt", "src", "class", "id", "target", "rel"] as string[],
   // Force-treat http:, https:, mailto:; javascript: and others stripped.
   ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
 };
+
+/**
+ * Post-process: for every anchor whose href is http(s) and doesn't already
+ * carry a target, inject target="_blank" rel="noopener noreferrer". This
+ * keeps the source markdown clean (just plain `[text](url)` syntax) while
+ * still opening external resources in a new tab with the safe rel value.
+ *
+ * Run AFTER DOMPurify so we know the input is already validated; the
+ * regex only adds attributes, never removes or escapes content.
+ */
+function externalizeLinks(html: string): string {
+  return html.replace(
+    /<a\s+(?![^>]*\btarget=)([^>]*\bhref=["']https?:\/\/[^"']+["'][^>]*)>/gi,
+    '<a target="_blank" rel="noopener noreferrer" $1>'
+  );
+}
 
 /**
  * Parse markdown and return sanitized HTML safe for dangerouslySetInnerHTML.
@@ -55,5 +73,6 @@ export function renderMarkdown(input: string | null | undefined): string {
   // sanitize() returns string when RETURN_TRUSTED_TYPE isn't set (which it
   // isn't here). The TS type union includes TrustedHTML; cast for the
   // dangerouslySetInnerHTML consumer.
-  return DOMPurify.sanitize(raw, PURIFY_CONFIG) as unknown as string;
+  const clean = DOMPurify.sanitize(raw, PURIFY_CONFIG) as unknown as string;
+  return externalizeLinks(clean);
 }

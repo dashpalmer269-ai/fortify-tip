@@ -3,7 +3,7 @@ import Link from "next/link";
 import { renderMarkdown } from "@/lib/sanitize";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { getAppSession, assertActive } from "@/lib/auth/session";
-import CompleteButton from "./CompleteButton";
+import QuizButton from "./QuizButton";
 
 export const dynamic = "force-dynamic";
 
@@ -70,8 +70,9 @@ export default async function TrainingTakePage({
       `}</style>
 
       <div className="mt-8">
-        <CompleteButton
+        <QuizButton
           moduleId={moduleData.id}
+          moduleType={moduleData.module_type}
           moduleTitle={moduleData.title}
           initialCompletedAt={latestRes.data?.completed_at ?? null}
           initialExpiresOn={latestRes.data?.expires_on ?? null}

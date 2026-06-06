@@ -51,4 +51,17 @@ describe("markdown sanitizer", () => {
     expect(html).toContain("<ol>");
     expect(html).toContain("<li>first</li>");
   });
+
+  it("auto-adds target=_blank + rel=noopener on external links", () => {
+    const html = renderMarkdown("[YouTube](https://youtube.com/watch?v=abc)");
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noopener noreferrer"');
+    expect(html).toContain('href="https://youtube.com/watch?v=abc"');
+  });
+
+  it("does NOT add target on relative links", () => {
+    const html = renderMarkdown("[home](/app)");
+    expect(html).not.toContain('target="_blank"');
+    expect(html).toContain('href="/app"');
+  });
 });
