@@ -30,6 +30,3 @@ jobs:
       - run: npx eslint . --ext .ts,.tsx --max-warnings 200
       - run: npm test
       - run: npx next build
-      - run: npx eslint . --ext .ts,.tsx --max-warnings 200
-      - run: npm test
-      - run: npx next build
