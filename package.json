@@ -28,6 +28,7 @@
     "@aws-sdk/client-iam": "^3.1057.0",
     "@aws-sdk/client-s3": "^3.1057.0",
     "@aws-sdk/client-sts": "^3.1057.0",
+    "@sentry/nextjs": "^10.56.0",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.3",
     "@vercel/analytics": "^2.0.1",
