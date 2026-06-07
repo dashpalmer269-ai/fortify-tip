@@ -151,12 +151,16 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Pre-seed healthcare baseline controls (idempotent)
-  const { data: existingPC } = await db
+  // Pre-seed healthcare baseline controls — idempotent.
+  // With { count: "exact", head: true } Supabase returns `data: null` and
+  // the row count on the separate `count` field. Destructuring `data` here
+  // would always be null, so the old code re-seeded the baseline on every
+  // re-finalize (creating duplicates). Use `count` instead.
+  const { count: existingControlCount } = await db
     .from("practice_controls")
     .select("id", { count: "exact", head: true })
     .eq("practice_id", practiceId);
-  if (!existingPC || (existingPC as unknown as { length: number }).length === 0) {
+  if ((existingControlCount ?? 0) === 0) {
     const { data: baseline } = await db
       .from("controls")
       .select("id")

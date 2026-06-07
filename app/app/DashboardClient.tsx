@@ -22,6 +22,14 @@ interface ActivityRow {
   actor_service: string | null;
 }
 
+interface ReadinessSignals {
+  open_critical_tasks: number;
+  overdue_tasks: number;
+  expired_baas: number;
+  stale_screenings: number;
+  drift_alerts_open: number;
+}
+
 const FRAMEWORK_META: Record<string, { name: string; tone: string }> = {
   HIPAA:    { name: "HIPAA Security Rule",     tone: "var(--color-fw-hipaa)" },
   SOC2:     { name: "SOC 2 Trust Services",    tone: "var(--color-fw-soc2)" },
@@ -36,6 +44,7 @@ export default function DashboardClient({
   recentActivity,
   narrative,
   tasks,
+  readinessSignals,
 }: {
   practiceName: string;
   readiness: ReadinessRow[];
@@ -43,6 +52,12 @@ export default function DashboardClient({
   recentActivity: ActivityRow[];
   narrative?: string | null;
   tasks?: TaskItem[];
+  /**
+   * Practice-wide risk signals from audit_readiness_v2. Optional so any
+   * older caller of DashboardClient continues to render — those just don't
+   * see the v2 signal strip.
+   */
+  readinessSignals?: ReadinessSignals;
 }) {
   const overallPct =
     readiness.length > 0
@@ -130,6 +145,45 @@ export default function DashboardClient({
           )}
         </Card>
       </div>
+
+      {/* v2 risk signals — a single strip of small at-a-glance cards
+          showing the practice-wide totals returned by audit_readiness_v2.
+          Renders only when readinessSignals is supplied AND at least one
+          signal is non-zero (otherwise it's noise). */}
+      {readinessSignals && hasAnySignal(readinessSignals) && (
+        <section className="mb-10 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <SignalCard
+            label="Overdue tasks"
+            value={readinessSignals.overdue_tasks}
+            href="/app/tasks?filter=overdue"
+            tone={readinessSignals.overdue_tasks > 0 ? "danger" : "neutral"}
+          />
+          <SignalCard
+            label="Critical tasks open"
+            value={readinessSignals.open_critical_tasks}
+            href="/app/tasks?severity=critical"
+            tone={readinessSignals.open_critical_tasks > 0 ? "warn" : "neutral"}
+          />
+          <SignalCard
+            label="Expired BAAs"
+            value={readinessSignals.expired_baas}
+            href="/app/vendors?filter=expired"
+            tone={readinessSignals.expired_baas > 0 ? "warn" : "neutral"}
+          />
+          <SignalCard
+            label="Stale screenings"
+            value={readinessSignals.stale_screenings}
+            href="/app/team"
+            tone={readinessSignals.stale_screenings > 0 ? "warn" : "neutral"}
+          />
+          <SignalCard
+            label="Drift alerts open"
+            value={readinessSignals.drift_alerts_open}
+            href="/app/threats"
+            tone={readinessSignals.drift_alerts_open > 0 ? "warn" : "neutral"}
+          />
+        </section>
+      )}
 
       {/* Per-framework scorecards */}
       <section className="mb-10">
@@ -263,4 +317,48 @@ function QuickAction({ href, label, hint }: { href: string; label: string; hint:
 
 function formatAction(a: string): string {
   return a.replace(/[._]/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+}
+
+function hasAnySignal(s: ReadinessSignals): boolean {
+  return (
+    s.overdue_tasks > 0 ||
+    s.open_critical_tasks > 0 ||
+    s.expired_baas > 0 ||
+    s.stale_screenings > 0 ||
+    s.drift_alerts_open > 0
+  );
+}
+
+function SignalCard({
+  label,
+  value,
+  href,
+  tone,
+}: {
+  label: string;
+  value: number;
+  href: string;
+  tone: "neutral" | "warn" | "danger";
+}) {
+  const color =
+    tone === "danger"
+      ? "var(--color-danger)"
+      : tone === "warn"
+      ? "var(--color-warn, #d97706)"
+      : "var(--color-secondary)";
+  return (
+    <Link href={href}>
+      <Card variant="interactive" className="p-4 h-full">
+        <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--color-tertiary)] mb-2">
+          {label}
+        </p>
+        <p
+          className="font-display text-2xl leading-none tabular-nums"
+          style={{ color: value > 0 ? color : "var(--color-tertiary)", letterSpacing: "-0.03em" }}
+        >
+          {value}
+        </p>
+      </Card>
+    </Link>
+  );
 }

@@ -1331,6 +1331,22 @@ export interface Database {
           total: number;
         }>;
       };
+      // Added by 038_readiness_v2
+      audit_readiness_v2: {
+        Args: { p_practice_id: string };
+        Returns: Array<{
+          framework_code: string;
+          weighted_pct: number;
+          satisfied_count: number;
+          total_count: number;
+          category_breakdown: Json;
+          open_critical_tasks: number;
+          overdue_tasks: number;
+          expired_baas: number;
+          stale_screenings: number;
+          drift_alerts_open: number;
+        }>;
+      };
       search_threats: {
         Args: { query: string };
         Returns: Array<Database["public"]["Tables"]["threats"]["Row"]>;

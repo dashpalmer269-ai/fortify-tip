@@ -154,9 +154,18 @@ export default async function DashboardPage() {
     );
   }
 
-  // ── Admin / officer dashboard — every query independent, fan out in parallel
+  // ── Admin / officer dashboard — every query independent, fan out in parallel.
+  //    audit_readiness_v2 returns:
+  //      framework_code, weighted_pct, satisfied_count, total_count,
+  //      category_breakdown
+  //    PLUS five practice-wide totals replicated across every framework row:
+  //      open_critical_tasks, overdue_tasks, expired_baas, stale_screenings,
+  //      drift_alerts_open
+  //    We still keep the criticalRes query for the *control-level* critical
+  //    surface (different semantics from open_critical_tasks, which counts
+  //    open critical *remediation tasks*).
   const [readinessRes, criticalRes, activityRes, practiceTasksRes] = await Promise.all([
-    supabase.rpc("audit_readiness_summary", { p_practice_id: practiceId }),
+    supabase.rpc("audit_readiness_v2", { p_practice_id: practiceId }),
     supabase
       .from("practice_controls")
       .select("id, status, controls(control_key, title, default_priority, category)")
@@ -183,12 +192,37 @@ export default async function DashboardPage() {
       .returns<TaskRow[]>(),
   ]);
 
-  const readinessRows = (readinessRes.data ?? []) as Array<{
+  interface ReadinessRowV2 {
     framework_code: string;
     weighted_pct: number;
-    satisfied: number;
-    total: number;
-  }>;
+    satisfied_count: number;
+    total_count: number;
+    category_breakdown: unknown;
+    open_critical_tasks: number;
+    overdue_tasks: number;
+    expired_baas: number;
+    stale_screenings: number;
+    drift_alerts_open: number;
+  }
+  const v2Rows = (readinessRes.data ?? []) as ReadinessRowV2[];
+  // The dashboard client still consumes the simpler {satisfied, total} shape;
+  // map v2 → that shape so we don't churn the client interface.
+  const readinessRows = v2Rows.map((r) => ({
+    framework_code: r.framework_code,
+    weighted_pct: r.weighted_pct,
+    satisfied: r.satisfied_count,
+    total: r.total_count,
+  }));
+  // v2's practice-wide totals are replicated across every framework row;
+  // take them from the first row, default to zero if there are no frameworks.
+  const v2Summary = v2Rows[0] ?? {
+    open_critical_tasks: 0,
+    overdue_tasks: 0,
+    expired_baas: 0,
+    stale_screenings: 0,
+    drift_alerts_open: 0,
+  };
+
   const critical = criticalRes.data ?? [];
   const sortedTasks = sortTasks(practiceTasksRes.data ?? []);
 
@@ -245,6 +279,13 @@ export default async function DashboardPage() {
       recentActivity={activityRes.data ?? []}
       narrative={narrative}
       tasks={toTaskItems(sortedTasks, emailByUser)}
+      readinessSignals={{
+        open_critical_tasks: v2Summary.open_critical_tasks,
+        overdue_tasks: v2Summary.overdue_tasks,
+        expired_baas: v2Summary.expired_baas,
+        stale_screenings: v2Summary.stale_screenings,
+        drift_alerts_open: v2Summary.drift_alerts_open,
+      }}
     />
   );
 }
