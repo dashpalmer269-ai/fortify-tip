@@ -1,15 +1,20 @@
 /**
  * Source-of-truth for pricing tiers. Used by:
  *   - the marketing landing
+ *   - the /pricing page
  *   - the in-app /app/billing screen
  *   - the Stripe checkout route handler
+ *   - the invite-link demo grant
  *
  * Each tier maps to a Stripe Price ID that you create in the Stripe dashboard
  * and inject via env vars. Until those env vars are set, the checkout route
  * returns a 503 and surfaces a clear "billing not configured yet" message.
+ *
+ * Pricing is "Early Bird" — these rates lock in for the customer's lifetime
+ * (or until we publicly publish them as the new standard, whichever first).
  */
 export interface Plan {
-  id: "solo" | "practice" | "multisite";
+  id: "software" | "full_service";
   name: string;
   description: string;
   monthly_price_usd: number;
@@ -20,49 +25,38 @@ export interface Plan {
 
 export const PLANS: Plan[] = [
   {
-    id: "solo",
-    name: "Solo",
-    description: "For solo practitioners",
-    monthly_price_usd: 1800,
+    id: "software",
+    name: "Software",
+    description: "All-inclusive Fortify platform",
+    monthly_price_usd: 555,
+    badge: "Early bird",
     features: [
-      "Unified HIPAA / SOC 2 / ISO / GDPR controls",
-      "Automated evidence collection",
-      "Daily drift monitoring",
-      "Live threat intelligence",
-      "Up to 3 team members",
-    ],
-    stripe_price_env: "STRIPE_PRICE_SOLO",
-  },
-  {
-    id: "practice",
-    name: "Practice",
-    description: "For 2–25 staff",
-    monthly_price_usd: 3500,
-    badge: "Most popular",
-    features: [
-      "Everything in Solo, plus:",
-      "Vendor & BAA management",
-      "Microsoft 365 integration",
-      "Quarterly auditor exports",
-      "Up to 25 team members",
-      "Priority support",
-    ],
-    stripe_price_env: "STRIPE_PRICE_PRACTICE",
-  },
-  {
-    id: "multisite",
-    name: "Multi-site",
-    description: "For MSPs & specialty groups",
-    monthly_price_usd: 6000,
-    features: [
-      "Everything in Practice, plus:",
+      "Unified HIPAA / SOC 2 / ISO 27001 / GDPR control library",
+      "Automated evidence collection from M365, Google, AWS, Okta, DocuSign",
+      "Daily drift monitoring + live threat intelligence",
+      "Policy authoring + acknowledgment tracking",
+      "Workforce training (HIPAA Security, Privacy, Breach, Phishing)",
+      "Quarterly auditor-ready exports",
       "Unlimited team members",
-      "Multi-practice workspace",
-      "Custom integrations",
-      "Dedicated success manager",
-      "Annual on-site audit prep",
+      "Email support",
     ],
-    stripe_price_env: "STRIPE_PRICE_MULTISITE",
+    stripe_price_env: "STRIPE_PRICE_SOFTWARE",
+  },
+  {
+    id: "full_service",
+    name: "Full Service",
+    description: "Software + in-person IT & help desk",
+    monthly_price_usd: 1333,
+    badge: "Early bird",
+    features: [
+      "Everything in Software, plus:",
+      "On-site IT services (regional)",
+      "Dedicated help desk",
+      "White-glove onboarding",
+      "Quarterly on-site compliance review",
+      "Direct line to your compliance officer",
+    ],
+    stripe_price_env: "STRIPE_PRICE_FULL_SERVICE",
   },
 ];
 
@@ -77,3 +71,10 @@ export function priceIdFor(plan: Plan): string | null {
 export function isBillingConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY) && PLANS.every((p) => priceIdFor(p));
 }
+
+/**
+ * What a redeemed invite grants — same access surface as the Software tier
+ * for the duration of the demo. Distinguished from a real subscription by
+ * the practice's plan_source = 'invite' flag.
+ */
+export const DEMO_PLAN_ID: Plan["id"] = "software";

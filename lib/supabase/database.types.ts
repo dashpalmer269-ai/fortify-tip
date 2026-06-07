@@ -53,7 +53,10 @@ export interface Database {
             | "within_90_days"
             | "beyond_90_days"
             | null;
-          selected_plan: "solo" | "practice" | "multisite" | null;
+          selected_plan: "software" | "full_service" | null;
+          // Added by 041_invite_codes
+          access_expires_at: string | null;
+          plan_source: "unpaid" | "invite" | "stripe";
           onboarding_step:
             | "information"
             | "fortification"
@@ -88,6 +91,8 @@ export interface Database {
           current_status?: Database["public"]["Tables"]["practices"]["Row"]["current_status"];
           upcoming_audit_window?: Database["public"]["Tables"]["practices"]["Row"]["upcoming_audit_window"];
           selected_plan?: Database["public"]["Tables"]["practices"]["Row"]["selected_plan"];
+          access_expires_at?: string | null;
+          plan_source?: "unpaid" | "invite" | "stripe";
           onboarding_step?: Database["public"]["Tables"]["practices"]["Row"]["onboarding_step"];
           onboarding_completed_at?: string | null;
           stripe_customer_id?: string | null;
@@ -1253,6 +1258,55 @@ export interface Database {
           ran_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["ingestion_logs"]["Insert"]>;
+        Relationships: [];
+      };
+      // Added by 041_invite_codes
+      invite_codes: {
+        Row: {
+          id: string;
+          code: string;
+          granted_by: string;
+          granted_at: string;
+          access_duration_minutes: number;
+          used_count: number;
+          max_uses: number;
+          link_expires_at: string;
+          revoked_at: string | null;
+          note: string | null;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          granted_by: string;
+          granted_at?: string;
+          access_duration_minutes: number;
+          used_count?: number;
+          max_uses?: number;
+          link_expires_at: string;
+          revoked_at?: string | null;
+          note?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["invite_codes"]["Insert"]>;
+        Relationships: [];
+      };
+      invite_redemptions: {
+        Row: {
+          id: string;
+          code_id: string;
+          user_id: string;
+          practice_id: string;
+          redeemed_at: string;
+          access_expires_at: string;
+        };
+        Insert: {
+          id?: string;
+          code_id: string;
+          user_id: string;
+          practice_id: string;
+          redeemed_at?: string;
+          access_expires_at: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["invite_redemptions"]["Insert"]>;
         Relationships: [];
       };
     };

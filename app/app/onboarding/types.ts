@@ -39,7 +39,7 @@ export interface SafeguardsData {
 }
 
 export interface PaymentData {
-  selected_plan: "solo" | "practice" | "multisite" | "";
+  selected_plan: "software" | "full_service" | "";
 }
 
 export interface OnboardingState {

@@ -29,17 +29,25 @@ export async function POST(req: NextRequest) {
 
   const parsed = await parseBody(SignupSchema, req);
   if (!parsed.ok) return parsed.response;
-  const { email, password, account_type = "admin" } = parsed.data;
+  const { email, password, account_type = "admin", invite_code } = parsed.data;
 
   const supabase = await createAuthedServerClient();
   const origin = req.nextUrl.origin;
+
+  // user_metadata persists across the email-confirm round trip; the URL
+  // ?invite=... param does NOT. We stash it here so /api/onboarding/finalize
+  // can read it back and redeem the code after the practice is created.
+  const userData: Record<string, string> = { account_type };
+  if (invite_code && /^[A-Za-z0-9_-]{8,64}$/.test(invite_code)) {
+    userData.invite_code = invite_code;
+  }
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       emailRedirectTo: `${origin}/auth/callback?account_type=${account_type}`,
-      data: { account_type },
+      data: userData,
     },
   });
 

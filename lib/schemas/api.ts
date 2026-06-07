@@ -64,7 +64,7 @@ export const OnboardingFinalizeSchema = z.object({
       assistance_notes: z.string(),
     }),
     payment: z.object({
-      selected_plan: z.enum(["solo", "practice", "multisite"]),
+      selected_plan: z.enum(["software", "full_service"]),
     }),
   }),
   existing_practice_id: z.string().uuid().nullable().optional(),
@@ -135,6 +135,9 @@ export const SignupSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   account_type: z.enum(["admin", "employee"]).optional(),
+  // Optional — URL-safe demo invite code stashed into user_metadata so it
+  // survives email-confirm. Validated again at redemption time.
+  invite_code: z.string().regex(/^[A-Za-z0-9_-]{8,64}$/).optional(),
 });
 export type SignupBody = z.infer<typeof SignupSchema>;
 

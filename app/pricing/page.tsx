@@ -25,16 +25,19 @@ export default async function PricingPage() {
             className="font-display text-[var(--text-display-2)] text-[var(--color-primary)] leading-[1.05]"
             style={{ letterSpacing: "-0.025em" }}
           >
-            One-tenth of enterprise <br/> compliance suites.
+            Two plans. No add-ons.
           </h1>
           <p className="text-[var(--color-secondary)] text-[15px] mt-4 max-w-2xl mx-auto leading-relaxed">
-            All plans include HIPAA, SOC 2, ISO 27001, and GDPR. Cancel any time. Healthcare-focused support included.
+            All-inclusive software, or all-inclusive software with in-person IT. Both include HIPAA, SOC 2, ISO 27001, and GDPR. Satisfaction guarantee — full refund within 30 days, no questions asked.
+          </p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-violet-400 mt-5">
+            Early bird · rate locks for the lifetime of your subscription
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-4xl mx-auto">
           {PLANS.map((p) => (
-            <PricingCard key={p.id} plan={p} featured={p.id === "practice"} />
+            <PricingCard key={p.id} plan={p} featured={p.id === "full_service"} />
           ))}
         </div>
 

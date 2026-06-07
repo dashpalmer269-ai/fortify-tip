@@ -60,8 +60,8 @@ export async function POST(req: NextRequest) {
         if (!membership) break;
 
         const planFromMeta = session.metadata?.plan_id;
-        const planNarrowed = ["solo", "practice", "multisite"].includes(planFromMeta ?? "")
-          ? (planFromMeta as "solo" | "practice" | "multisite")
+        const planNarrowed = ["software", "full_service"].includes(planFromMeta ?? "")
+          ? (planFromMeta as "software" | "full_service")
           : null;
         await db
           .from("practices")
@@ -98,8 +98,8 @@ export async function POST(req: NextRequest) {
           event.type === "customer.subscription.deleted" ? "canceled" : sub.status;
 
         const subPlan = sub.metadata?.plan_id;
-        const subPlanNarrowed = ["solo", "practice", "multisite"].includes(subPlan ?? "")
-          ? (subPlan as "solo" | "practice" | "multisite")
+        const subPlanNarrowed = ["software", "full_service"].includes(subPlan ?? "")
+          ? (subPlan as "software" | "full_service")
           : undefined;
         await db
           .from("practices")

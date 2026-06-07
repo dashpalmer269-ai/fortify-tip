@@ -172,6 +172,59 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ── Invite redemption ──────────────────────────────────────────────────
+  // The signup page stashed the invite code in user_metadata.invite_code
+  // (it survives the email-confirm round trip; URL params don't). Redeem
+  // atomically: bump used_count, insert redemption, set practice's
+  // access_expires_at + plan_source.
+  const inviteCode = typeof user.user_metadata?.invite_code === "string"
+    ? user.user_metadata.invite_code
+    : null;
+
+  let demoMinutes: number | null = null;
+  if (inviteCode && !existing_practice_id) {
+    const { data: code } = await db
+      .from("invite_codes")
+      .select("id, access_duration_minutes, used_count, max_uses, link_expires_at, revoked_at")
+      .eq("code", inviteCode)
+      .maybeSingle();
+
+    const valid =
+      code &&
+      !code.revoked_at &&
+      code.used_count < code.max_uses &&
+      new Date(code.link_expires_at).getTime() > Date.now();
+
+    if (valid && code) {
+      const now = Date.now();
+      const expiresAt = new Date(now + code.access_duration_minutes * 60 * 1000).toISOString();
+      // Increment used_count by selecting + updating (Supabase JS doesn't have atomic increment;
+      // a unique (code_id, user_id) constraint on invite_redemptions prevents double-grant per user).
+      const { error: redErr } = await db.from("invite_redemptions").insert({
+        code_id: code.id,
+        user_id: user.id,
+        practice_id: practiceId!,
+        access_expires_at: expiresAt,
+      });
+      if (!redErr) {
+        await db.from("invite_codes").update({ used_count: code.used_count + 1 }).eq("id", code.id);
+        await db.from("practices").update({
+          plan_source: "invite",
+          access_expires_at: expiresAt,
+        }).eq("id", practiceId!);
+        demoMinutes = code.access_duration_minutes;
+        await db.from("audit_logs").insert({
+          practice_id: practiceId,
+          actor_user_id: user.id,
+          action: "invite.redeemed",
+          resource_type: "invite_code",
+          resource_id: code.id,
+          metadata: { access_duration_minutes: code.access_duration_minutes },
+        });
+      }
+    }
+  }
+
   await db.from("audit_logs").insert({
     practice_id: practiceId,
     actor_user_id: user.id,
@@ -183,8 +236,9 @@ export async function POST(req: NextRequest) {
       employee_range: info.employee_range,
       location_count: validLocations.length,
       safeguards_mode: safe.mode,
+      demo_minutes: demoMinutes,
     }),
   });
 
-  return NextResponse.json({ ok: true, practice_id: practiceId });
+  return NextResponse.json({ ok: true, practice_id: practiceId, demo_minutes: demoMinutes });
 }
