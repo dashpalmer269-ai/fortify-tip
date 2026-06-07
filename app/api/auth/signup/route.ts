@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
+import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { SignupSchema, parseBody } from "@/lib/schemas/api";
 import { checkRateLimit, clientKey, RATE_LIMITS } from "@/lib/security/rate-limit";
 
 /**
- * Demo signup: creates an auto-confirmed user via service-role so we skip
- * the Supabase email-confirmation flow (rate-limited to 4/hour on free
- * tier and was blocking demos). The client signs in normally afterward to
- * establish a cookie-based session.
+ * Email signup.
  *
- * Pairs with the /api/onboarding/finalize RLS bypass — these are demo-only.
- * Post-beta, restore the standard signUp() + email-confirm flow once SMTP
- * is wired through Resend.
+ * Calls supabase.auth.signUp() through the anon-key client, which:
+ *   - Creates the user with email_confirmed_at = NULL
+ *   - Sends the confirmation email through whatever SMTP is configured
+ *     in the Supabase dashboard (we route through Resend)
+ *   - Leaves the caller signed-out until they click the link in the email
+ *
+ * The /auth/callback route handles the click — it exchanges the code for
+ * a session and routes the user into onboarding.
+ *
+ * Server-side wrapper instead of letting the client call signUp() directly
+ * so we can rate-limit by client IP (and never trust client-side limits).
  */
 export async function POST(req: NextRequest) {
   const rl = checkRateLimit(`signup:${clientKey(req)}`, RATE_LIMITS.signup);
@@ -26,14 +31,16 @@ export async function POST(req: NextRequest) {
   if (!parsed.ok) return parsed.response;
   const { email, password, account_type = "admin" } = parsed.data;
 
-  const db = createServerClient();
-  if (!db) return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
+  const supabase = await createAuthedServerClient();
+  const origin = req.nextUrl.origin;
 
-  const { data, error } = await db.auth.admin.createUser({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    email_confirm: true,
-    user_metadata: { account_type },
+    options: {
+      emailRedirectTo: `${origin}/auth/callback?account_type=${account_type}`,
+      data: { account_type },
+    },
   });
 
   if (error) {
@@ -41,5 +48,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status });
   }
 
-  return NextResponse.json({ ok: true, user_id: data.user?.id ?? null });
+  // Supabase returns user but no session — confirmation pending.
+  return NextResponse.json({
+    ok: true,
+    user_id: data.user?.id ?? null,
+    confirmation_required: true,
+  });
 }
