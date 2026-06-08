@@ -16,6 +16,7 @@ import {
   DEFAULT_ACCESS_MINUTES,
   DEFAULT_LINK_WINDOW_HOURS,
 } from "@/lib/billing/invites";
+import { logPlatformEvent } from "@/lib/audit/platform";
 
 export const runtime = "nodejs";
 
@@ -62,6 +63,19 @@ export async function POST(req: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await logPlatformEvent(db, {
+    event: "invite.created",
+    actor_user_id: user.id,
+    actor_email: user.email ?? null,
+    actor_role: "fortify_admin",
+    payload: {
+      invite_code_id: inserted.id,
+      access_duration_minutes: accessMinutes,
+      link_window_hours: linkHours,
+      note,
+    },
+  });
 
   return NextResponse.json({
     ...inserted,

@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { getAppSession } from "@/lib/auth/session";
 import Sidebar from "@/components/app/Sidebar";
 import TopBar from "@/components/app/TopBar";
-import AccessBanner from "@/components/app/AccessBanner";
 import { createServerClient } from "@/lib/supabase/server";
 import { computeAccessState } from "@/lib/billing/access";
 
@@ -16,6 +15,13 @@ export const dynamic = "force-dynamic";
  *   - pending (standard, onboarded) → /pending
  *   - no_practice → /app/onboarding (which then branches by account_type)
  *   - active → render the page with Sidebar + TopBar
+ *
+ * After session resolution we check the practice's access state. An
+ * expired demo or unpaid subscription has ZERO access to the in-app
+ * surface — no read-only view, no banner — the user is redirected to
+ * /pricing?expired=demo (or unpaid). This is intentional: a demo grants
+ * a controlled window of evaluation access and ends cleanly; staying in
+ * the app post-expiry would muddy the value of the demo invitation.
  *
  * Per-page checks were removed; assertActive() inside each page is the
  * failsafe that catches anything that slips through.
@@ -36,17 +42,26 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       break;
   }
 
-  // Read access state once per page render so the banner reflects current
-  // billing/demo status. Cheap — same practice row is hot in the cache.
+  // Read access state once per page render. If the practice has no active
+  // subscription or its demo grant has lapsed, kick the user OUT of the
+  // app entirely — they can subscribe or contact us, but they can't
+  // continue browsing tenant data.
   const db = createServerClient();
-  let accessState = null;
   if (db) {
     const { data: practice } = await db
       .from("practices")
       .select("plan_source, access_expires_at, billing_status")
       .eq("id", session.membership.practice_id)
       .maybeSingle();
-    if (practice) accessState = computeAccessState(practice);
+    if (practice) {
+      const state = computeAccessState(practice);
+      if (state.kind === "demo_expired") {
+        redirect("/pricing?expired=demo");
+      }
+      if (state.kind === "unpaid") {
+        redirect("/pricing?expired=unpaid");
+      }
+    }
   }
 
   return (
@@ -63,7 +78,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       />
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar userEmail={session.user.email ?? ""} role={session.membership.role} />
-        {accessState && <AccessBanner state={accessState} />}
         <main id="main-content" className="flex-1 overflow-y-auto page-enter">{children}</main>
       </div>
     </div>

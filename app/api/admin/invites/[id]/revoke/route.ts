@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { createServerClient } from "@/lib/supabase/server";
 import { isFortifyAdmin } from "@/lib/billing/admin";
+import { logPlatformEvent } from "@/lib/audit/platform";
 
 export const runtime = "nodejs";
 
@@ -45,7 +46,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // No practice-scoped audit_log entry — invite_codes.revoked_at + the
-  // calling user (granter) constitute the audit trail.
+  await logPlatformEvent(db, {
+    event: "invite.revoked",
+    actor_user_id: user.id,
+    actor_email: user.email ?? null,
+    actor_role: "fortify_admin",
+    payload: { invite_code_id: id },
+  });
+
   return NextResponse.json({ ok: true });
 }

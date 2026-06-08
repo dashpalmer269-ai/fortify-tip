@@ -7,8 +7,14 @@ import PricingCard from "./PricingCard";
 
 export const dynamic = "force-dynamic";
 
-export default async function PricingPage() {
+export default async function PricingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ expired?: string; canceled?: string }>;
+}) {
   const viewer = await getMarketingViewer();
+  const params = await searchParams;
+  const expiredKind = params.expired === "demo" || params.expired === "unpaid" ? params.expired : null;
 
   return (
     <div className="relative min-h-screen bg-[var(--color-canvas)] text-[var(--color-primary)] overflow-hidden grain">
@@ -17,6 +23,22 @@ export default async function PricingPage() {
       <MarketingNav viewer={viewer} />
 
       <main className="relative z-10 mx-auto max-w-6xl px-8 py-16">
+        {expiredKind && (
+          <div
+            role="alert"
+            className="max-w-3xl mx-auto mb-10 rounded-xl border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/5 px-6 py-4"
+          >
+            <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--color-danger)] mb-1">
+              {expiredKind === "demo" ? "Demo ended" : "No active subscription"}
+            </p>
+            <p className="text-[14px] text-[var(--color-primary)] leading-relaxed">
+              {expiredKind === "demo"
+                ? "Your demo window has closed. Pick a plan below to keep using Fortify with the same workspace, or reach out for an extended evaluation."
+                : "Your subscription is no longer active. Pick a plan below to restore access."}
+            </p>
+          </div>
+        )}
+
         <div className="text-center mb-14">
           <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-[var(--color-tertiary)] mb-3">
             Pricing

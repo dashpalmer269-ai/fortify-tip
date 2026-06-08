@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as Sentry from "@sentry/nextjs";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { createServerClient } from "@/lib/supabase/server";
 import { isOwner } from "@/lib/auth/permissions";
+import { logPlatformEvent } from "@/lib/audit/platform";
 
 /**
  * Permanently delete a practice and ALL its data.
@@ -53,23 +54,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Emit a Sentry breadcrumb BEFORE the cascade. The DB audit_logs row
-  // would be deleted along with the practice (foreign-key cascade), so
-  // we rely on an external system to retain the record of this
-  // highest-stakes destructive action. Sentry was chosen because the
-  // tunnel + capture is already wired up; this surfaces as an Issue
-  // tagged `practice.deletion` and is searchable by practice_id /
-  // actor_user_id from the metadata.
-  Sentry.captureMessage("practice.deleted", {
-    level: "warning",
-    tags: { event: "practice.deletion", practice_id: body.practice_id },
-    extra: {
-      practice_id: body.practice_id,
-      practice_name: practice.name,
-      actor_user_id: user.id,
-      actor_email: user.email,
-      occurred_at: new Date().toISOString(),
-    },
+  // Durable platform audit row BEFORE the cascade. The per-tenant
+  // audit_logs row would be deleted along with the practice (foreign-key
+  // cascade), so the canonical forensic record lives in
+  // platform_audit_logs (no practice FK; survives tenant deletion).
+  // logPlatformEvent also mirrors the event to Sentry as a breadcrumb.
+  const platformDb = createServerClient();
+  await logPlatformEvent(platformDb, {
+    event: "practice.deleted",
+    practice_id: body.practice_id,
+    practice_name: practice.name,
+    actor_user_id: user.id,
+    actor_email: user.email ?? null,
+    actor_role: "owner",
+    payload: { confirm_name: body.confirm_name },
   });
 
   // Cascade delete

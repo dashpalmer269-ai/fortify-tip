@@ -7,6 +7,7 @@ import {
   type StripeSubscription,
   type StripeInvoice,
 } from "@/lib/billing/stripe-webhook";
+import { logPlatformEvent } from "@/lib/audit/platform";
 
 /**
  * Stripe webhook handler.
@@ -81,6 +82,19 @@ export async function POST(req: NextRequest) {
           resource_id: session.subscription ?? null,
           metadata: { plan_id: session.metadata?.plan_id, customer: session.customer },
         });
+
+        // Mirror to the durable platform log so the billing trail
+        // survives any future practice deletion.
+        await logPlatformEvent(db, {
+          event: "billing.subscription_started",
+          practice_id: membership.practice_id,
+          actor_role: "stripe",
+          payload: {
+            plan_id: session.metadata?.plan_id,
+            customer: session.customer,
+            subscription: session.subscription,
+          },
+        });
         break;
       }
 
@@ -120,6 +134,16 @@ export async function POST(req: NextRequest) {
           resource_type: "subscription",
           resource_id: sub.id,
           metadata: { status: newStatus, cancel_at_period_end: sub.cancel_at_period_end },
+        });
+
+        await logPlatformEvent(db, {
+          event:
+            event.type === "customer.subscription.deleted"
+              ? "billing.subscription_canceled"
+              : "billing.subscription_changed",
+          practice_id: practice.id,
+          actor_role: "stripe",
+          payload: { subscription_id: sub.id, status: newStatus },
         });
         break;
       }

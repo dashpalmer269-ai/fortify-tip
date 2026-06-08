@@ -1309,6 +1309,59 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["invite_redemptions"]["Insert"]>;
         Relationships: [];
       };
+      // Added by 043_platform_audit_and_richer_rules
+      platform_audit_logs: {
+        Row: {
+          id: string;
+          event: string;
+          practice_id: string | null;
+          practice_name: string | null;
+          actor_user_id: string | null;
+          actor_email: string | null;
+          actor_role: string | null;
+          payload: Json;
+          occurred_at: string;
+        };
+        Insert: {
+          id?: string;
+          event: string;
+          practice_id?: string | null;
+          practice_name?: string | null;
+          actor_user_id?: string | null;
+          actor_email?: string | null;
+          actor_role?: string | null;
+          payload?: Json;
+          occurred_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["platform_audit_logs"]["Insert"]>;
+        Relationships: [];
+      };
+      control_exceptions: {
+        Row: {
+          id: string;
+          practice_id: string;
+          control_id: string;
+          granted_by: string | null;
+          granted_at: string;
+          expires_at: string | null;
+          reason: string;
+          is_critical_override: boolean;
+          revoked_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          practice_id: string;
+          control_id: string;
+          granted_by?: string | null;
+          granted_at?: string;
+          expires_at?: string | null;
+          reason: string;
+          is_critical_override?: boolean;
+          revoked_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["control_exceptions"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -1359,6 +1412,11 @@ export interface Database {
       recompute_practice_control_status: {
         Args: { p_practice_id: string };
         Returns: number;
+      };
+      // Added by 043_platform_audit_and_richer_rules
+      evaluate_satisfaction_rule_v2: {
+        Args: { p_practice_id: string; p_evidence_check_id: string };
+        Returns: boolean;
       };
       search_threats: {
         Args: { query: string };

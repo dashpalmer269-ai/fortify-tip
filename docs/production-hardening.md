@@ -1,5 +1,7 @@
 # Production hardening — full route audit + verification
 
+**Last reviewed: 2026-06-08** — covers the codebase up to migration 043.
+
 A single-source-of-truth audit of every API route in `app/api/`. 52 route
 files inspected; ~70 HTTP handlers across them. Each handler is classified
 across **eleven** dimensions plus a recommended action. Sections below
@@ -7,7 +9,8 @@ break out the cross-cutting concerns (service-role, access gate, audit
 logs, PHI, demo invites, satisfaction/readiness).
 
 This document is meant to be **edited in place** as the codebase changes
-— when you add a new route, fill in its row before merging.
+— when you add a new route, fill in its row before merging. When you do
+a sweep through the matrix, bump the "Last reviewed" date.
 
 ## Status legend
 
@@ -92,13 +95,19 @@ This document is meant to be **edited in place** as the codebase changes
 | `/api/cron/task-reminders` | GET | Email overdue task reminders | Bearer CRON_SECRET | — | — | — | ✓ (system) | — | — | IS | none |
 | `/api/cron/recompute-control-status` | GET | Daily satisfaction-rule recompute | Bearer CRON_SECRET | — | — | — | ✓ (system) | — | — | IS | none |
 
-¹ Manual task create/update: low-volume, admin-driven. Task itself has
-  `created_at`, `assigned_to`, etc. — the DB row is self-auditing. Not a
-  blocker; nice-to-have.
+¹ Manual task create/update: low-volume, admin-driven. The
+  `remediation_tasks` row itself is self-auditing — `created_at`,
+  `assigned_to`, `completed_at`, status history. Recording a separate
+  `audit_logs` entry is nice-to-have for a unified activity feed but
+  not a forensic blocker since the DB row is already the system of
+  record. Tracked as an open follow-up; not blocking ship.
 
-² Practice deletion: the audit_logs row cascades along with the practice
-  row, leaving no DB trail. Recommended: emit a Sentry breadcrumb so an
-  external system retains the event. (Implemented in this pass.)
+² Practice deletion: the per-tenant audit_logs row cascades along with
+  the practice row, leaving no DB trail. Resolved in migration 043 by
+  adding `platform_audit_logs` (no tenant FK; survives deletion) and
+  wiring `/api/practice/delete` to write to it before the cascade. The
+  helper also mirrors to Sentry as a breadcrumb so the event survives
+  even a DB-level write failure.
 
 ## 2. Service-role usage
 
@@ -283,21 +292,86 @@ DashboardClient + report PDF + attestation snapshot
 | Step | Implemented? | Wired up? |
 |---|---|---|
 | Satisfaction rule jsonb on evidence_checks | ✓ migration 034 | ✓ backfilled in 035 |
-| Rule evaluator SQL function | ✓ migration 042 | ✓ called by recompute |
+| Rule evaluator v1 (any_of) | ✓ migration 042 | ✓ delegates to v2 since 043 |
+| Rule evaluator v2 (any_of + all_of + reviewer + priority + type + integration + exception) | ✓ migration 043 | ✓ called by recompute |
+| Control exceptions table | ✓ migration 043 | ✓ honored by v2 evaluator |
 | Recompute SQL function | ✓ migration 042 | ✓ daily cron + on-demand from reports/attestations |
 | Daily cron | ✓ `/api/cron/recompute-control-status` | ✓ scheduled in vercel.json 05:15 UTC |
 | On-demand recompute before reads | ✓ in `/api/reports/generate` | ✓ also `lib/attestation/generate.ts::buildSnapshot` |
 | Readiness penalties on tasks/BAAs/screenings/drift | ✓ migration 042 audit_readiness rewrite | ✓ flows through audit_readiness_summary + v2 |
 | Dashboard surfaces v2 signals | ✓ `app/app/page.tsx` calls v2 | ✓ DashboardClient renders signal strip |
-| Tests for rule behavior | ✓ `scripts/test-satisfaction-rule.sql` (7 cases) | runnable, transactional |
+| Tests for rule behavior — basic | ✓ `scripts/test-satisfaction-rule.sql` (7 cases) | runnable, transactional |
+| Tests for rule behavior — richer DSL | ✓ `scripts/test-satisfaction-rule-v2.sql` (6 cases) | runnable, transactional |
 | Tests for access state | ✓ `tests/access-state.test.ts` + `tests/require-access.test.ts` | 19 cases |
-| Tests for invite token + rule | ✓ `tests/invite-token.test.ts` | 6 cases |
+| Tests for invite token | ✓ `tests/invite-token.test.ts` | 6 cases |
+| Tests for satisfaction-rule TS shape + recompute-first wiring | ✓ `tests/satisfaction-rule.test.ts` | covers contract |
+| Tests for route-level access gating across 27 routes | ✓ `tests/route-access-gating.test.ts` | covers active/expired/unpaid for every paid-value route |
 
 **Loop check:** running the SQL self-check script (transactional rollback)
 asserts the chain end-to-end. Vitest covers the TypeScript surface
 (access-state, require-access, invite tokens, sanitizer, scoring).
 
-## 8. Open follow-ups (NOT addressed in this pass)
+## 8. Durable platform audit log
+
+Added in migration 043. The `platform_audit_logs` table is the operator
+forensic record for events that must survive tenant deletion:
+
+| Event | Source | When written |
+|---|---|---|
+| `practice.deleted` | `/api/practice/delete` | Before the cascade |
+| `invite.created` | `/api/admin/invites` | After insert |
+| `invite.revoked` | `/api/admin/invites/:id/revoke` | After update |
+| `billing.subscription_started` | `/api/billing/webhook` | On checkout.session.completed |
+| `billing.subscription_changed` | `/api/billing/webhook` | On customer.subscription.updated |
+| `billing.subscription_canceled` | `/api/billing/webhook` | On customer.subscription.deleted |
+| `billing.invoice_failed` | reserved | (not yet wired) |
+| `platform.impersonation_started` | reserved | (no impersonation endpoint today) |
+| `platform.impersonation_ended` | reserved | (no impersonation endpoint today) |
+| `platform.manual_data_export` | reserved | (no export endpoint today) |
+
+**Schema choices:**
+
+- `practice_id` is `text`, NOT a foreign key. Survives the practice
+  being deleted. The display name is captured in `practice_name` for
+  human-readable audit views.
+- `actor_user_id` is a FK to `auth.users` but `on delete set null`, so
+  user deletion only nulls the link, doesn't drop the row.
+- `payload jsonb` carries event-specific detail. Loose schema by design.
+- RLS denies all authenticated reads. The table is operator-facing;
+  reach it via the service-role client or directly via Supabase studio.
+
+**Helper:** `lib/audit/platform.ts::logPlatformEvent(db, event)` writes
+the row AND mirrors to Sentry as a breadcrumb so the forensic trail
+survives even a DB write failure.
+
+## 9. Expired-demo enforcement (zero-access policy)
+
+**Decision (2026-06-08):** an expired demo grants NO access to the in-app
+surface. Not even read-only. The user is redirected from `/app/*` to
+`/pricing?expired=demo` (or `?expired=unpaid` for canceled subscriptions).
+This is enforced in `app/app/layout.tsx` and runs once per page render.
+
+Rationale: a demo grant is a controlled-window evaluation, not an
+indefinite read-only tier. Allowing post-expiry browsing dilutes the
+value of the demo invitation and creates ambiguity about what counts as
+a "trial" — Fortify has no free trial; it has a satisfaction guarantee.
+
+Previously (before this revision) the gate was mutation-only and an
+expired demo could still view the dashboard. The current code:
+
+```
+app/app/layout.tsx → computeAccessState(practice) → if not active, redirect("/pricing?expired=…")
+```
+
+The mutating route gates (`requirePracticeAccess`) remain as defense in
+depth — they catch any API call from a stale browser session that
+hasn't been redirected yet.
+
+The deleted `components/app/AccessBanner.tsx` is gone with this change;
+its job is now done by the redirect + a notice block at the top of
+`/pricing` that reads the `expired` query parameter.
+
+## 10. Open follow-ups (NOT addressed in this pass)
 
 Each of these is real but doesn't meet the "safe cleanup" bar — they
 involve schema changes or behavior shifts that warrant their own PRs.
