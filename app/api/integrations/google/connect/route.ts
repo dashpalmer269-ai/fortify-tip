@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { authorizationUrl, isConfigured } from "@/lib/integrations/google-workspace";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * Begin Google Workspace OAuth. Stores a short-lived state token in a cookie
@@ -31,6 +32,9 @@ export async function GET(req: NextRequest) {
   if (!["owner", "admin"].includes(membership.role)) {
     return NextResponse.json({ error: "Only admins can connect integrations" }, { status: 403 });
   }
+
+  const guard = await requirePracticeAccess(supabase, membership.practice_id);
+  if (!guard.ok) return guard.response;
 
   const nonce = crypto.randomUUID();
   const state = `${membership.practice_id}:${nonce}`;

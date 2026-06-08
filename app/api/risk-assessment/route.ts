@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { computeBaselineRiskScore } from "@/lib/compliance/risk-questions";
 import { summarizeRiskAssessment } from "@/lib/ai/compliance-ai";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 export const maxDuration = 60;
 
@@ -16,6 +17,9 @@ export async function POST(req: NextRequest) {
   if (!body?.practice_id || !body.answers) {
     return NextResponse.json({ error: "practice_id and answers required" }, { status: 400 });
   }
+
+  const guard = await requirePracticeAccess(supabase, body.practice_id);
+  if (!guard.ok) return guard.response;
 
   // Pull practice context for the AI summary
   const { data: practice } = await supabase

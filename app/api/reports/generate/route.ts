@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { generateReportSummary } from "@/lib/ai/compliance-ai";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 export const maxDuration = 60;
 
@@ -20,6 +21,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "practice_id required" }, { status: 400 });
   }
   const reportType = body.report_type ?? "audit_readiness";
+
+  const guard = await requirePracticeAccess(supabase, body.practice_id);
+  if (!guard.ok) return guard.response;
 
   // Pull live state for the snapshot
   const { data: practice } = await supabase

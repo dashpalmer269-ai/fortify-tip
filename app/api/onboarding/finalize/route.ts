@@ -187,45 +187,31 @@ export async function POST(req: NextRequest) {
 
   let demoMinutes: number | null = null;
   if (inviteCode && !existing_practice_id) {
-    const { data: code } = await db
-      .from("invite_codes")
-      .select("id, access_duration_minutes, used_count, max_uses, link_expires_at, revoked_at")
-      .eq("code", inviteCode)
-      .maybeSingle();
-
-    const valid =
-      code &&
-      !code.revoked_at &&
-      code.used_count < code.max_uses &&
-      new Date(code.link_expires_at).getTime() > Date.now();
-
-    if (valid && code) {
-      const now = Date.now();
-      const expiresAt = new Date(now + code.access_duration_minutes * 60 * 1000).toISOString();
-      // Increment used_count by selecting + updating (Supabase JS doesn't have atomic increment;
-      // a unique (code_id, user_id) constraint on invite_redemptions prevents double-grant per user).
-      const { error: redErr } = await db.from("invite_redemptions").insert({
-        code_id: code.id,
-        user_id: user.id,
-        practice_id: practiceId!,
-        access_expires_at: expiresAt,
+    // Atomic redemption via SQL function (migration 042). Takes a row lock
+    // on the code, validates, writes redemption + counter + practice in one
+    // transaction. Eliminates the prior check-then-act race that could
+    // over-redeem a single-use code if two users redeemed simultaneously.
+    const { data: redeemResult } = await db.rpc("redeem_invite_code", {
+      p_user_id: user.id,
+      p_practice_id: practiceId!,
+      p_plaintext_code: inviteCode,
+    });
+    // redeem_invite_code returns a single record (access_expires_at, reason).
+    // The Supabase JS client surfaces SETOF/RECORD returns as an array.
+    const r = (Array.isArray(redeemResult) ? redeemResult[0] : redeemResult) as
+      | { access_expires_at: string | null; reason: string }
+      | null;
+    if (r?.reason === "ok" && r.access_expires_at) {
+      const expires = new Date(r.access_expires_at).getTime();
+      demoMinutes = Math.round((expires - Date.now()) / 60_000);
+      await db.from("audit_logs").insert({
+        practice_id: practiceId,
+        actor_user_id: user.id,
+        action: "invite.redeemed",
+        resource_type: "invite_code",
+        resource_id: null,
+        metadata: { access_duration_minutes: demoMinutes },
       });
-      if (!redErr) {
-        await db.from("invite_codes").update({ used_count: code.used_count + 1 }).eq("id", code.id);
-        await db.from("practices").update({
-          plan_source: "invite",
-          access_expires_at: expiresAt,
-        }).eq("id", practiceId!);
-        demoMinutes = code.access_duration_minutes;
-        await db.from("audit_logs").insert({
-          practice_id: practiceId,
-          actor_user_id: user.id,
-          action: "invite.redeemed",
-          resource_type: "invite_code",
-          resource_id: code.id,
-          metadata: { access_duration_minutes: code.access_duration_minutes },
-        });
-      }
     }
   }
 

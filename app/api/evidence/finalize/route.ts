@@ -7,6 +7,7 @@ import { parseBody } from "@/lib/schemas/api";
 import { runEvidenceFlow } from "@/lib/compliance/evidence-flow";
 import type { EvidenceCheckRow, CheckResult } from "@/lib/compliance/runner";
 import { scanFields, phiBlockReason } from "@/lib/compliance/phi-scanner";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * Step 2 of the document-upload flow: once the browser PUTs the file to
@@ -33,6 +34,10 @@ export async function POST(req: NextRequest) {
 
   const db = createServerClient();
   if (!db) return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
+
+  // Block mutations on expired demos / unpaid practices.
+  const guard = await requirePracticeAccess(db, session.membership.practice_id);
+  if (!guard.ok) return guard.response;
 
   const parsed = await parseBody(FinalizeSchema, req, { phiFields: ["notes"] });
   if (!parsed.ok) return parsed.response;

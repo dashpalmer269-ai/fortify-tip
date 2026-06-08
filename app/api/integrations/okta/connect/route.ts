@@ -6,6 +6,7 @@ import { OktaConnectSchema } from "@/lib/schemas/integrations";
 import { validateConnection } from "@/lib/integrations/okta";
 import { writeCredentials } from "@/lib/security/credentials";
 import { isAdmin } from "@/lib/auth/permissions";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * Connect Okta via org URL + API token (SSWS).
@@ -35,6 +36,9 @@ export async function POST(req: NextRequest) {
   if (!isAdmin(membership.role)) {
     return NextResponse.json({ error: "Only admins can connect integrations" }, { status: 403 });
   }
+
+  const guard = await requirePracticeAccess(db, membership.practice_id);
+  if (!guard.ok) return guard.response;
 
   // Validate the credentials before persisting.
   const check = await validateConnection({ org_url, api_token });

@@ -11,8 +11,9 @@ interface InviteRedemption {
 
 interface InviteCode {
   id: string;
-  code: string;
-  url: string;
+  // url + plaintext code are NOT present on list responses — they only
+  // appear in the POST /api/admin/invites response when the code is first
+  // generated (because the DB stores only sha256(code), per migration 042).
   access_duration_minutes: number;
   used_count: number;
   max_uses: number;
@@ -161,7 +162,7 @@ export default function InvitesClient() {
         {justCreatedUrl && (
           <div className="mt-4 rounded-lg border border-emerald-400/30 bg-emerald-400/5 px-4 py-3">
             <p className="text-[11px] font-mono uppercase tracking-wider text-emerald-400 mb-1">
-              New invite created
+              New invite created — copy now, this is the only time you&apos;ll see it
             </p>
             <div className="flex items-center gap-2">
               <code className="flex-1 text-[12px] text-[var(--color-primary)] bg-black/30 px-2 py-1 rounded break-all">
@@ -174,6 +175,9 @@ export default function InvitesClient() {
                 Copy
               </button>
             </div>
+            <p className="text-[10px] text-[var(--color-tertiary)] mt-2 leading-relaxed">
+              The plaintext code is not stored in the database. If you lose this URL you&apos;ll need to revoke + regenerate.
+            </p>
           </div>
         )}
       </section>
@@ -190,7 +194,7 @@ export default function InvitesClient() {
         ) : (
           <div className="space-y-2">
             {codes.map((c) => (
-              <InviteRow key={c.id} code={c} onRevoke={() => revoke(c.id)} onCopy={() => copy(c.url)} />
+              <InviteRow key={c.id} code={c} onRevoke={() => revoke(c.id)} />
             ))}
           </div>
         )}
@@ -215,11 +219,9 @@ export default function InvitesClient() {
 function InviteRow({
   code,
   onRevoke,
-  onCopy,
 }: {
   code: InviteCode;
   onRevoke: () => void;
-  onCopy: () => void;
 }) {
   // Render-time Date.now() comparison is intentional — the row reflects
   // the moment of viewing. Re-rendering on data refresh re-evaluates
@@ -259,18 +261,12 @@ function InviteRow({
               </>
             )}
           </div>
-          <code className="text-[11px] text-[var(--color-tertiary)] truncate block">
-            {code.url}
-          </code>
+          <p className="text-[10px] text-[var(--color-quaternary)] font-mono">
+            Granted {new Date(code.granted_at).toLocaleDateString()} · expires{" "}
+            {new Date(code.link_expires_at).toLocaleString()}
+          </p>
         </div>
         <div className="flex gap-2 shrink-0">
-          <button
-            onClick={onCopy}
-            disabled={revoked || depleted || linkDead}
-            className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider border border-[var(--color-border-default)] rounded text-[var(--color-secondary)] hover:border-violet-400/40 hover:text-violet-400 disabled:opacity-40 disabled:hover:border-[var(--color-border-default)] disabled:hover:text-[var(--color-secondary)] transition-colors"
-          >
-            Copy link
-          </button>
           {!revoked && !depleted && (
             <button
               onClick={onRevoke}

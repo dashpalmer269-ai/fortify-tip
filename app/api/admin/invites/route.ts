@@ -12,6 +12,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { isFortifyAdmin } from "@/lib/billing/admin";
 import {
   generateInviteCode,
+  hashInviteCode,
   DEFAULT_ACCESS_MINUTES,
   DEFAULT_LINK_WINDOW_HOURS,
 } from "@/lib/billing/invites";
@@ -37,33 +38,36 @@ export async function POST(req: NextRequest) {
   const linkHours = Math.max(1, Math.min(720, body.link_window_hours ?? DEFAULT_LINK_WINDOW_HOURS));
   const note = body.note?.trim().slice(0, 500) ?? null;
 
-  const code = generateInviteCode();
+  const plaintext = generateInviteCode();
   const linkExpiresAt = new Date(Date.now() + linkHours * 60 * 60 * 1000).toISOString();
 
   const db = createServerClient();
   if (!db) return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
 
+  // Only the sha256 hash persists in the DB. The plaintext exists in this
+  // response and in the granter's clipboard — never read back from the
+  // database. The list endpoint cannot show URLs because of this.
   const { data: inserted, error } = await db
     .from("invite_codes")
     .insert({
-      code,
+      code_hash: hashInviteCode(plaintext),
       granted_by: user.id,
       access_duration_minutes: accessMinutes,
       link_expires_at: linkExpiresAt,
       note,
     })
-    .select("id, code, access_duration_minutes, link_expires_at, note, granted_at")
+    .select("id, access_duration_minutes, link_expires_at, note, granted_at")
     .single();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // No practice-scoped audit_log entry — invite_codes itself records
-  // granted_by + granted_at, and audit_logs.practice_id is non-null.
   return NextResponse.json({
     ...inserted,
-    url: `${req.nextUrl.origin}/signup?invite=${encodeURIComponent(code)}`,
+    url: `${req.nextUrl.origin}/signup?invite=${encodeURIComponent(plaintext)}`,
+    plaintext_warning:
+      "Save the URL now — for security the plaintext code is not stored and cannot be retrieved.",
   });
 }
 
@@ -81,7 +85,7 @@ export async function GET(req: NextRequest) {
   const { data: codes } = await db
     .from("invite_codes")
     .select(
-      "id, code, access_duration_minutes, used_count, max_uses, link_expires_at, revoked_at, note, granted_at"
+      "id, access_duration_minutes, used_count, max_uses, link_expires_at, revoked_at, note, granted_at"
     )
     .eq("granted_by", user.id)
     .order("granted_at", { ascending: false })
@@ -103,9 +107,11 @@ export async function GET(req: NextRequest) {
     byCode.set(r.code_id, arr);
   }
 
+  // No `url` field — codes are hashed, plaintext is unrecoverable. Granter
+  // had to save the URL at creation time (the warning is in the POST
+  // response).
   const enriched = (codes ?? []).map((c) => ({
     ...c,
-    url: `${req.nextUrl.origin}/signup?invite=${encodeURIComponent(c.code)}`,
     redemptions: byCode.get(c.id) ?? [],
   }));
 

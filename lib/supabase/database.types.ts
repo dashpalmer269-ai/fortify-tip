@@ -1260,11 +1260,11 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["ingestion_logs"]["Insert"]>;
         Relationships: [];
       };
-      // Added by 041_invite_codes
+      // Added by 041_invite_codes, hashed by 042_invite_hash_readiness_satisfaction
       invite_codes: {
         Row: {
           id: string;
-          code: string;
+          code_hash: string;
           granted_by: string;
           granted_at: string;
           access_duration_minutes: number;
@@ -1276,7 +1276,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          code: string;
+          code_hash: string;
           granted_by: string;
           granted_at?: string;
           access_duration_minutes: number;
@@ -1346,6 +1346,19 @@ export interface Database {
           stale_screenings: number;
           drift_alerts_open: number;
         }>;
+      };
+      // Added by 042_invite_hash_readiness_satisfaction
+      redeem_invite_code: {
+        Args: { p_user_id: string; p_practice_id: string; p_plaintext_code: string };
+        Returns: { access_expires_at: string | null; reason: string };
+      };
+      evaluate_satisfaction_rule: {
+        Args: { p_practice_id: string; p_evidence_check_id: string };
+        Returns: boolean;
+      };
+      recompute_practice_control_status: {
+        Args: { p_practice_id: string };
+        Returns: number;
       };
       search_threats: {
         Args: { query: string };

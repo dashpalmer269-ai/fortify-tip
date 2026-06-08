@@ -6,6 +6,7 @@ import { AwsConnectSchema } from "@/lib/schemas/integrations";
 import { validateConnection } from "@/lib/integrations/aws";
 import { writeCredentials } from "@/lib/security/credentials";
 import { isAdmin } from "@/lib/auth/permissions";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * Connect AWS via IAM access key + secret + default region.
@@ -44,6 +45,9 @@ export async function POST(req: NextRequest) {
   if (!isAdmin(membership.role)) {
     return NextResponse.json({ error: "Only admins can connect integrations" }, { status: 403 });
   }
+
+  const guard = await requirePracticeAccess(db, membership.practice_id);
+  if (!guard.ok) return guard.response;
 
   // 1. Validate against AWS before persisting
   const check = await validateConnection({ access_key_id, secret_access_key, region });

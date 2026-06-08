@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { createServerClient as createServiceClient } from "@/lib/supabase/server";
 import { isAdmin, isAssignableRole, type Role } from "@/lib/auth/permissions";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * Add an existing Supabase Auth user to the current practice by email.
@@ -41,6 +42,9 @@ export async function POST(req: NextRequest) {
       { status: 403 }
     );
   }
+
+  const guard = await requirePracticeAccess(supabase, body.practice_id);
+  if (!guard.ok) return guard.response;
 
   // Find the target user via the admin API (needs service role)
   const service = createServiceClient();

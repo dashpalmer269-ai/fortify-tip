@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { createServerClient } from "@/lib/supabase/server";
 import { getAppSession } from "@/lib/auth/session";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * Record a workforce member's acknowledgment of a policy at its current
@@ -23,6 +24,9 @@ export async function POST(
   const supabase = await createAuthedServerClient();
   const db = createServerClient();
   if (!db) return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
+
+  const guard = await requirePracticeAccess(db, session.membership.practice_id);
+  if (!guard.ok) return guard.response;
 
   // Load the policy + verify it belongs to the practice
   const { data: policy } = await supabase

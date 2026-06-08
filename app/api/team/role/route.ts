@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { isAdmin, isOwner, type Role } from "@/lib/auth/permissions";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * Change a member's role.
@@ -40,6 +41,9 @@ export async function POST(req: NextRequest) {
   if (!callerMembership || !isAdmin(callerMembership.role)) {
     return NextResponse.json({ error: "Admin or owner permission required." }, { status: 403 });
   }
+
+  const guard = await requirePracticeAccess(supabase, body.practice_id);
+  if (!guard.ok) return guard.response;
 
   // Granting or revoking Owner requires the caller themselves to be Owner
   const { data: target } = await supabase

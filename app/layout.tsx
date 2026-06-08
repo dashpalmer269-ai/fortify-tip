@@ -1,4 +1,9 @@
 import type { Metadata } from "next";
+// next/font/google fetches font files at build time and inlines them into
+// the output bundle. Vercel + GitHub Actions both have reliable egress to
+// fonts.googleapis.com so this works today. If we ever change build envs
+// without that egress, swap to local TTF files under public/fonts and
+// use next/font/local instead — no other call site changes required.
 import { Geist, JetBrains_Mono, IBM_Plex_Serif, Fraunces } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";

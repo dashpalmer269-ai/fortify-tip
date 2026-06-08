@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * Stub for the invite queue. Real implementation persists pending invites
@@ -19,6 +20,9 @@ export async function POST(req: NextRequest) {
   if (!body?.practice_id || !Array.isArray(body.invites)) {
     return NextResponse.json({ error: "practice_id and invites[] required" }, { status: 400 });
   }
+
+  const guard = await requirePracticeAccess(supabase, body.practice_id);
+  if (!guard.ok) return guard.response;
 
   // Audit log so the action is visible even before email goes out.
   await supabase.from("audit_logs").insert({

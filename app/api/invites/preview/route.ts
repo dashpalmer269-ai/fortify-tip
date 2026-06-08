@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { checkRateLimit, clientKey, RATE_LIMITS } from "@/lib/security/rate-limit";
+import { hashInviteCode } from "@/lib/billing/invites";
 
 export const runtime = "nodejs";
 
@@ -33,10 +34,12 @@ export async function GET(req: NextRequest) {
   const db = createServerClient();
   if (!db) return NextResponse.json({ valid: false, reason: "service_unavailable" }, { status: 503 });
 
+  // The DB stores only sha256(code) — hash the URL param + compare.
+  const codeHash = hashInviteCode(code);
   const { data: row } = await db
     .from("invite_codes")
     .select("id, access_duration_minutes, used_count, max_uses, link_expires_at, revoked_at")
-    .eq("code", code)
+    .eq("code_hash", codeHash)
     .maybeSingle();
 
   if (!row) return NextResponse.json({ valid: false, reason: "not_found" });

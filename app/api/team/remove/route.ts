@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { isAdmin } from "@/lib/auth/permissions";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * Remove a team member from a practice. Admin/owner only.
@@ -36,6 +37,9 @@ export async function POST(req: NextRequest) {
       { status: 403 }
     );
   }
+
+  const guard = await requirePracticeAccess(supabase, body.practice_id);
+  if (!guard.ok) return guard.response;
 
   // Look up the target's role + count owners to protect last owner
   const { data: target } = await supabase

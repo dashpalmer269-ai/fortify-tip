@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { draftPolicy } from "@/lib/ai/compliance-ai";
 import { PolicyGenerateSchema, parseBody } from "@/lib/schemas/api";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 export const maxDuration = 60;
 
@@ -17,6 +18,9 @@ export async function POST(req: NextRequest) {
   });
   if (!parsed.ok) return parsed.response;
   const body = parsed.data;
+
+  const guard = await requirePracticeAccess(supabase, body.practice_id);
+  if (!guard.ok) return guard.response;
 
   const { data: practice } = await supabase
     .from("practices")

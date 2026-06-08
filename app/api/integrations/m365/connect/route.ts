@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { authorizationUrl, isConfigured } from "@/lib/integrations/microsoft-graph";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * Begin Microsoft 365 OAuth. Stores a short-lived state token in the session
@@ -30,6 +31,9 @@ export async function GET(req: NextRequest) {
     .limit(1)
     .maybeSingle();
   if (!membership) return NextResponse.json({ error: "No practice membership" }, { status: 400 });
+
+  const guard = await requirePracticeAccess(supabase, membership.practice_id);
+  if (!guard.ok) return guard.response;
 
   const nonce = crypto.randomUUID();
   const state = `${membership.practice_id}:${nonce}`;

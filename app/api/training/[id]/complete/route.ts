@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { createServerClient } from "@/lib/supabase/server";
 import { getAppSession } from "@/lib/auth/session";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * Record the calling user's completion of a training module. Idempotent
@@ -23,6 +24,9 @@ export async function POST(
   const supabase = await createAuthedServerClient();
   const db = createServerClient();
   if (!db) return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
+
+  const guard = await requirePracticeAccess(db, session.membership.practice_id);
+  if (!guard.ok) return guard.response;
 
   // Verify the module exists and is active
   const { data: module } = await supabase

@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { getAppSession } from "@/lib/auth/session";
 import Sidebar from "@/components/app/Sidebar";
 import TopBar from "@/components/app/TopBar";
+import AccessBanner from "@/components/app/AccessBanner";
+import { createServerClient } from "@/lib/supabase/server";
+import { computeAccessState } from "@/lib/billing/access";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +36,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       break;
   }
 
+  // Read access state once per page render so the banner reflects current
+  // billing/demo status. Cheap — same practice row is hot in the cache.
+  const db = createServerClient();
+  let accessState = null;
+  if (db) {
+    const { data: practice } = await db
+      .from("practices")
+      .select("plan_source, access_expires_at, billing_status")
+      .eq("id", session.membership.practice_id)
+      .maybeSingle();
+    if (practice) accessState = computeAccessState(practice);
+  }
+
   return (
     <div className="min-h-screen bg-[var(--color-canvas)] text-[var(--color-primary)] flex">
       <a
@@ -47,6 +63,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       />
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar userEmail={session.user.email ?? ""} role={session.membership.role} />
+        {accessState && <AccessBanner state={accessState} />}
         <main id="main-content" className="flex-1 overflow-y-auto page-enter">{children}</main>
       </div>
     </div>
