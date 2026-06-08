@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { isOwner } from "@/lib/auth/permissions";
 
@@ -52,6 +53,25 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Emit a Sentry breadcrumb BEFORE the cascade. The DB audit_logs row
+  // would be deleted along with the practice (foreign-key cascade), so
+  // we rely on an external system to retain the record of this
+  // highest-stakes destructive action. Sentry was chosen because the
+  // tunnel + capture is already wired up; this surfaces as an Issue
+  // tagged `practice.deletion` and is searchable by practice_id /
+  // actor_user_id from the metadata.
+  Sentry.captureMessage("practice.deleted", {
+    level: "warning",
+    tags: { event: "practice.deletion", practice_id: body.practice_id },
+    extra: {
+      practice_id: body.practice_id,
+      practice_name: practice.name,
+      actor_user_id: user.id,
+      actor_email: user.email,
+      occurred_at: new Date().toISOString(),
+    },
+  });
+
   // Cascade delete
   const { error: delErr } = await supabase
     .from("practices")
@@ -61,6 +81,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: delErr.message }, { status: 500 });
   }
 
-  // (Audit log row was cascaded with the practice; can't insert post-delete.)
   return NextResponse.json({ ok: true });
 }
