@@ -25,6 +25,15 @@ export async function POST(req: NextRequest) {
   const guard = await requirePracticeAccess(supabase, body.practice_id);
   if (!guard.ok) return guard.response;
 
+  // Recompute control statuses from satisfaction_rule + evidence currency
+  // BEFORE reading them for the report. Without this the report can ship
+  // a "compliant" status for a control whose evidence aged out yesterday.
+  // Cheap on a per-practice scale; cron runs nightly but explicit recompute
+  // here means the report is always self-consistent at write time.
+  await supabase.rpc("recompute_practice_control_status", {
+    p_practice_id: body.practice_id,
+  });
+
   // Pull live state for the snapshot
   const { data: practice } = await supabase
     .from("practices")

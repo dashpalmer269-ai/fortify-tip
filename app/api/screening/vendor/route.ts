@@ -6,6 +6,7 @@ import { VendorScreeningSchema } from "@/lib/schemas/screening";
 import { startPreliminary } from "@/lib/screening/service";
 import { SCREENING_MESSAGES } from "@/lib/screening/user-message";
 import { isAdmin } from "@/lib/auth/permissions";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * Screen a vendor contact at BAA addition time. Same flow as the workforce
@@ -45,6 +46,9 @@ export async function POST(req: NextRequest) {
   if (!membership || !isAdmin(membership.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const guard = await requirePracticeAccess(db, vendor.practice_id);
+  if (!guard.ok) return guard.response;
 
   try {
     const result = await startPreliminary(db, {

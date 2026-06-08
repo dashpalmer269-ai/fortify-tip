@@ -6,6 +6,7 @@ import { isAdmin } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/schemas/api";
 import { runEvidenceFlow } from "@/lib/compliance/evidence-flow";
 import type { EvidenceCheckRow, CheckResult } from "@/lib/compliance/runner";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * Manual attestation: practice admin clicks "Attest now" for a
@@ -34,6 +35,9 @@ export async function POST(req: NextRequest) {
 
   const db = createServerClient();
   if (!db) return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
+
+  const guard = await requirePracticeAccess(db, session.membership.practice_id);
+  if (!guard.ok) return guard.response;
 
   const parsed = await parseBody(AttestSchema, req, { phiFields: ["statement"] });
   if (!parsed.ok) return parsed.response;

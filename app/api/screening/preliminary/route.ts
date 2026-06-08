@@ -6,6 +6,7 @@ import { PreliminaryScreeningSchema } from "@/lib/schemas/screening";
 import { startPreliminary } from "@/lib/screening/service";
 import { SCREENING_MESSAGES } from "@/lib/screening/user-message";
 import { checkRateLimit, clientKey, RATE_LIMITS } from "@/lib/security/rate-limit";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * Run a tier-1 exclusion screening on first + last + DOB.
@@ -43,6 +44,13 @@ export async function POST(req: NextRequest) {
   });
   if (!parsed.ok) return parsed.response;
   const body = parsed.data;
+
+  // Only gate when a practice context is present. A self-screening without
+  // a practice (e.g. an onboarding pre-check) is allowed without billing.
+  if (body.practice_id) {
+    const guard = await requirePracticeAccess(db, body.practice_id);
+    if (!guard.ok) return guard.response;
+  }
 
   try {
     const result = await startPreliminary(db, {

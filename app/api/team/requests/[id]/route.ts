@@ -5,6 +5,7 @@ import { RequestDecisionSchema, parseBody } from "@/lib/schemas/api";
 import { sendEmail } from "@/lib/email/provider";
 import { joinRequestApprovedEmail, joinRequestDeniedEmail } from "@/lib/email/templates";
 import { ROLE_LABELS } from "@/lib/auth/permissions";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * Approve or deny a pending Standard-user request.
@@ -65,6 +66,9 @@ export async function POST(
   if (!callerMembership || !["owner", "admin"].includes(callerMembership.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const guard = await requirePracticeAccess(db, profile.matched_practice_id);
+  if (!guard.ok) return guard.response;
 
   const now = new Date().toISOString();
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { createServerClient } from "@/lib/supabase/server";
 import { TeamRenameSchema, parseBody } from "@/lib/schemas/api";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * Update a team member's display name (user_profiles.full_name).
@@ -44,6 +45,9 @@ export async function POST(req: NextRequest) {
   if (!callerMembership || !["owner", "admin"].includes(callerMembership.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const guard = await requirePracticeAccess(db, practice_id);
+  if (!guard.ok) return guard.response;
 
   // Target must be in the same practice
   const { data: targetMembership } = await db

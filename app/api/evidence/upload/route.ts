@@ -4,6 +4,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { getAppSession } from "@/lib/auth/session";
 import { isAdmin } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/schemas/api";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * Step 1 of the document-upload flow: mint a signed upload URL.
@@ -31,6 +32,9 @@ export async function POST(req: NextRequest) {
 
   const db = createServerClient();
   if (!db) return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
+
+  const guard = await requirePracticeAccess(db, session.membership.practice_id);
+  if (!guard.ok) return guard.response;
 
   const parsed = await parseBody(UploadRequestSchema, req);
   if (!parsed.ok) return parsed.response;

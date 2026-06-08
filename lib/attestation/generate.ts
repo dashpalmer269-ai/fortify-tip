@@ -69,6 +69,13 @@ export async function buildSnapshot(
   const now = new Date();
   const periodStart = new Date(now.getTime() - 365 * 86400_000);
 
+  // Recompute control statuses from satisfaction_rule + evidence currency
+  // BEFORE we read them for the attestation. Without this an attestation
+  // can attest to "compliant" for a control whose underlying evidence
+  // aged out yesterday. Cheap on a per-practice scale; matches the
+  // pattern in /api/reports/generate for the same reason.
+  await db.rpc("recompute_practice_control_status", { p_practice_id: practiceId });
+
   const { data: readinessRows } = await db.rpc("audit_readiness_summary", { p_practice_id: practiceId });
   const readiness = ((readinessRows ?? []) as AttestationSnapshot["readiness"]).map((r) => ({
     framework_code: r.framework_code,

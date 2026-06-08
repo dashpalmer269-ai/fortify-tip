@@ -4,6 +4,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { parseBody } from "@/lib/schemas/api";
 import { z } from "zod";
 import { isAdmin } from "@/lib/auth/permissions";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 const SignSchema = z.object({
   method: z.enum(["e_signature", "print_and_sign"]),
@@ -69,6 +70,9 @@ export async function POST(
   if (!membership || !isAdmin(membership.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const guard = await requirePracticeAccess(db, att.practice_id);
+  if (!guard.ok) return guard.response;
 
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??

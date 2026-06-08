@@ -4,6 +4,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { parseBody } from "@/lib/schemas/api";
 import { VerifyScreeningSchema } from "@/lib/schemas/screening";
 import { completeVerification } from "@/lib/screening/service";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * Tier-2 verification. The user supplies middle name and/or their last
@@ -54,6 +55,14 @@ export async function POST(
     if (!membership || !["owner", "admin"].includes(membership.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+  }
+
+  // Verification is a workforce action, but if there's a practice context,
+  // an expired demo should still be blocked. Self-verification with no
+  // practice context (e.g. during onboarding) is allowed.
+  if (screening.practice_id) {
+    const guard = await requirePracticeAccess(db, screening.practice_id);
+    if (!guard.ok) return guard.response;
   }
 
   try {

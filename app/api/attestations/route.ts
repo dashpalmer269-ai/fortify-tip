@@ -5,6 +5,7 @@ import { parseBody } from "@/lib/schemas/api";
 import { z } from "zod";
 import { isAdmin, type Role } from "@/lib/auth/permissions";
 import { generateAttestation } from "@/lib/attestation/generate";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 export const maxDuration = 120;
 
@@ -34,6 +35,9 @@ export async function POST(req: NextRequest) {
   if (!membership || !isAdmin(membership.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const guard = await requirePracticeAccess(db, membership.practice_id);
+  if (!guard.ok) return guard.response;
 
   try {
     const { id } = await generateAttestation(

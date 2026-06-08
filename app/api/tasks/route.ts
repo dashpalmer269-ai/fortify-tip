@@ -4,6 +4,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { parseBody } from "@/lib/schemas/api";
 import { TaskCreateSchema } from "@/lib/schemas/tasks";
 import { isAdmin } from "@/lib/auth/permissions";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * GET /api/tasks?scope=mine|practice  → list tasks
@@ -67,6 +68,9 @@ export async function POST(req: NextRequest) {
   if (!membership || !isAdmin(membership.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const guard = await requirePracticeAccess(db, membership.practice_id);
+  if (!guard.ok) return guard.response;
 
   const { data: row, error } = await db
     .from("remediation_tasks")

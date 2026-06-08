@@ -5,6 +5,7 @@ import { parseBody } from "@/lib/schemas/api";
 import { OverrideScreeningSchema } from "@/lib/schemas/screening";
 import { overrideBlocked } from "@/lib/screening/service";
 import { isAdmin } from "@/lib/auth/permissions";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * Override a blocked screening. Owner/admin only. Always audit-logs the
@@ -53,6 +54,9 @@ export async function POST(
   if (!membership || !isAdmin(membership.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const guard = await requirePracticeAccess(db, screening.practice_id);
+  if (!guard.ok) return guard.response;
 
   try {
     await overrideBlocked(db, id, user.id, parsed.data.reason);

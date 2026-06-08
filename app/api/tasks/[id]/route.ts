@@ -5,6 +5,7 @@ import { parseBody } from "@/lib/schemas/api";
 import { TaskUpdateSchema } from "@/lib/schemas/tasks";
 import { isAdmin } from "@/lib/auth/permissions";
 import type { Updates } from "@/lib/supabase/types";
+import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**
  * PATCH-like POST /api/tasks/[id] — update a task.
@@ -35,6 +36,9 @@ export async function POST(
     .eq("id", id)
     .maybeSingle();
   if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+
+  const guard = await requirePracticeAccess(db, task.practice_id);
+  if (!guard.ok) return guard.response;
 
   const { data: membership } = await db
     .from("practice_users")
