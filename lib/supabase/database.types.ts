@@ -1418,6 +1418,15 @@ export interface Database {
         Args: { p_practice_id: string; p_evidence_check_id: string };
         Returns: boolean;
       };
+      // Added by 044_recompute_notstarted_and_policy_rpc
+      acknowledge_policy: {
+        Args: { p_policy_id: string; p_user_id: string };
+        Returns: {
+          acknowledgment_id: string;
+          resolved_task_id: string | null;
+          already_acknowledged: boolean;
+        };
+      };
       search_threats: {
         Args: { query: string };
         Returns: Array<Database["public"]["Tables"]["threats"]["Row"]>;

@@ -1,6 +1,6 @@
 # Production hardening — full route audit + verification
 
-**Last reviewed: 2026-06-08** — covers the codebase up to migration 043.
+**Last reviewed: 2026-06-08** — covers the codebase up to migration 044.
 
 A single-source-of-truth audit of every API route in `app/api/`. 52 route
 files inspected; ~70 HTTP handlers across them. Each handler is classified
@@ -52,8 +52,8 @@ a sweep through the matrix, bump the "Last reviewed" date.
 | `/api/attestations/:id/sign` | POST | Sign attestation (e-sig or print) | ✓ JWT | ✓ practice match | ✓ isAdmin | ✓ gate | ✓ (write signature) | ✓ attestation.signed | — | PR | none |
 | **Tasks** ||||||||||||
 | `/api/tasks` | GET | List tasks (mine/practice) | ✓ JWT | ✓ membership | conditional | — (read) | ✓ | — | — | PR | none |
-| `/api/tasks` | POST | Admin creates manual task | ✓ JWT | ✓ membership | ✓ isAdmin | ✓ gate | ✓ | — | ✓ phiFields on title + notes | PR | add `task.created` audit log¹ |
-| `/api/tasks/:id` | POST | Update task | ✓ JWT | ✓ (via task.practice_id) | assignee-or-admin | ✓ gate | ✓ | — | ✓ phiFields on notes | PR | add `task.updated` audit log¹ |
+| `/api/tasks` | POST | Admin creates manual task | ✓ JWT | ✓ membership | ✓ isAdmin | ✓ gate | ✓ | ✓ `task.created` | ✓ phiFields on title + notes | PR | none |
+| `/api/tasks/:id` | POST | Update task | ✓ JWT | ✓ (via task.practice_id) | assignee-or-admin | ✓ gate | ✓ | ✓ `task.updated` | ✓ phiFields on notes | PR | none |
 | **Integrations — connect (initiate)** ||||||||||||
 | `/api/integrations/m365/connect` | GET | Begin M365 OAuth | ✓ JWT | ✓ membership | implicit (state cookie) | ✓ gate | — | — (callback logs) | — | PR | none |
 | `/api/integrations/google/connect` | GET | Begin Google Workspace OAuth | ✓ JWT | ✓ membership | ✓ owner/admin | ✓ gate | — | — | — | PR | none |
@@ -95,12 +95,8 @@ a sweep through the matrix, bump the "Last reviewed" date.
 | `/api/cron/task-reminders` | GET | Email overdue task reminders | Bearer CRON_SECRET | — | — | — | ✓ (system) | — | — | IS | none |
 | `/api/cron/recompute-control-status` | GET | Daily satisfaction-rule recompute | Bearer CRON_SECRET | — | — | — | ✓ (system) | — | — | IS | none |
 
-¹ Manual task create/update: low-volume, admin-driven. The
-  `remediation_tasks` row itself is self-auditing — `created_at`,
-  `assigned_to`, `completed_at`, status history. Recording a separate
-  `audit_logs` entry is nice-to-have for a unified activity feed but
-  not a forensic blocker since the DB row is already the system of
-  record. Tracked as an open follow-up; not blocking ship.
+¹ Manual task create/update: now logs `task.created` and `task.updated`
+  to audit_logs. Stale doc text removed.
 
 ² Practice deletion: the per-tenant audit_logs row cascades along with
   the practice row, leaving no DB trail. Resolved in migration 043 by
@@ -126,7 +122,7 @@ justified. Below is every file that uses it and why.
 | `app/api/evidence/finalize/route.ts` | Upload commit + storage cleanup | Path-prefix RLS already exists; service-role for `runEvidenceFlow` cross-flow writes | Practice-id verified from session | RPC `commit_evidence()` |
 | `app/api/evidence/attest/route.ts` | Persist attestation evidence | Cross-flow writes | Session-based admin check | Same |
 | `app/api/evidence/download/route.ts` | Sign download URL | Storage signing | Path-prefix check | n/a |
-| `app/api/policies/:id/acknowledge/route.ts` | Auto-resolve linked remediation task | RLS would block cross-user task update | Caller can only acknowledge their own policy | RPC `acknowledge_policy()` |
+| `app/api/policies/:id/acknowledge/route.ts` | (removed) — now delegates to `acknowledge_policy()` SECURITY DEFINER RPC (migration 044) | n/a | n/a | ✅ done |
 | `app/api/attestations/route.ts` | `buildSnapshot()` reads + writes across tables | Multi-table batch | Admin role verified | n/a |
 | `app/api/attestations/:id/sign/route.ts` | Write signature | Cross-user signature record | Admin role verified | RPC `sign_attestation()` |
 | `app/api/tasks/route.ts`, `tasks/:id/route.ts` | Read membership + create tasks | Membership lookup + practice-scoped write | JWT user.id pinned | Could be authed-client only |
@@ -201,7 +197,7 @@ Actions that MUST write `audit_logs` and whether they do:
 | Risk assessment | ✓ | `/api/risk-assessment` |
 | Attestation generated | ✓ via generateAttestation | `/api/attestations` |
 | Attestation signed | ✓ | `/api/attestations/:id/sign` |
-| Task created / updated | partial (DB row self-auditing) | `/api/tasks/*` — nice-to-have for audit_logs |
+| Task created / updated | ✓ | `/api/tasks/*` writes `task.created` + `task.updated` |
 | Screening run / verified / overridden | ✓ via service helpers | `/api/screening/*` |
 | Subscription state change | ✓ | `/api/billing/webhook` |
 | Cron readiness digest | ✓ | `/api/cron/readiness-digest` |
@@ -295,7 +291,7 @@ DashboardClient + report PDF + attestation snapshot
 | Rule evaluator v1 (any_of) | ✓ migration 042 | ✓ delegates to v2 since 043 |
 | Rule evaluator v2 (any_of + all_of + reviewer + priority + type + integration + exception) | ✓ migration 043 | ✓ called by recompute |
 | Control exceptions table | ✓ migration 043 | ✓ honored by v2 evaluator |
-| Recompute SQL function | ✓ migration 042 | ✓ daily cron + on-demand from reports/attestations |
+| Recompute SQL function | ✓ migration 042; not_started bug fixed in 044 | ✓ daily cron + on-demand from reports/attestations |
 | Daily cron | ✓ `/api/cron/recompute-control-status` | ✓ scheduled in vercel.json 05:15 UTC |
 | On-demand recompute before reads | ✓ in `/api/reports/generate` | ✓ also `lib/attestation/generate.ts::buildSnapshot` |
 | Readiness penalties on tasks/BAAs/screenings/drift | ✓ migration 042 audit_readiness rewrite | ✓ flows through audit_readiness_summary + v2 |
