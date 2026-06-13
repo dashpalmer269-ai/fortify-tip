@@ -1,6 +1,6 @@
 # Production hardening — full route audit + verification
 
-**Last reviewed: 2026-06-08** — covers the codebase up to migration 044.
+**Last reviewed: 2026-06-12** — covers the codebase up to migration 044.
 
 A single-source-of-truth audit of every API route in `app/api/`. 52 route
 files inspected; ~70 HTTP handlers across them. Each handler is classified
@@ -42,7 +42,7 @@ a sweep through the matrix, bump the "Last reviewed" date.
 | `/api/evidence/download` | GET | Get signed download URL | ✓ session | ✓ path-prefix check | — | — | ✓ (storage signing) | — (read-only) | — | PR | none |
 | **Policies** ||||||||||||
 | `/api/policies/generate` | POST | AI-draft a policy | ✓ JWT | ✓ membership | — | ✓ gate | — | ✓ policy.generated | ✓ phiFields on title + type | PR | none |
-| `/api/policies/:id/acknowledge` | POST | Workforce acknowledges current version | ✓ session | ✓ | — | ✓ gate | ✓ (auto-resolve task) | ✓ policy.acknowledged | — | PR | none |
+| `/api/policies/:id/acknowledge` | POST | Workforce acknowledges current version | ✓ session | ✓ | — | ✓ gate | ✓ (gate read only; ack+auto-resolve+audit are inside the `acknowledge_policy` RPC) | ✓ policy.acknowledged (in RPC) | — | PR | none |
 | **Training** ||||||||||||
 | `/api/training/:id/complete` | POST | Record quiz pass | ✓ session | ✓ | — | ✓ gate | ✓ (audit row) | ✓ training.completed | — | PR | none |
 | **Reports & attestations** ||||||||||||
@@ -53,7 +53,7 @@ a sweep through the matrix, bump the "Last reviewed" date.
 | **Tasks** ||||||||||||
 | `/api/tasks` | GET | List tasks (mine/practice) | ✓ JWT | ✓ membership | conditional | — (read) | ✓ | — | — | PR | none |
 | `/api/tasks` | POST | Admin creates manual task | ✓ JWT | ✓ membership | ✓ isAdmin | ✓ gate | ✓ | ✓ `task.created` | ✓ phiFields on title + notes | PR | none |
-| `/api/tasks/:id` | POST | Update task | ✓ JWT | ✓ (via task.practice_id) | assignee-or-admin | ✓ gate | ✓ | ✓ `task.updated` | ✓ phiFields on notes | PR | none |
+| `/api/tasks/:id` | POST | Update task | ✓ JWT | ✓ (via task.practice_id) | assignee-or-admin | ✓ gate | ✓ | ✓ `task.<status>` on status change only³ | ✓ phiFields on notes | PR | none |
 | **Integrations — connect (initiate)** ||||||||||||
 | `/api/integrations/m365/connect` | GET | Begin M365 OAuth | ✓ JWT | ✓ membership | implicit (state cookie) | ✓ gate | — | — (callback logs) | — | PR | none |
 | `/api/integrations/google/connect` | GET | Begin Google Workspace OAuth | ✓ JWT | ✓ membership | ✓ owner/admin | ✓ gate | — | — | — | PR | none |
@@ -95,8 +95,8 @@ a sweep through the matrix, bump the "Last reviewed" date.
 | `/api/cron/task-reminders` | GET | Email overdue task reminders | Bearer CRON_SECRET | — | — | — | ✓ (system) | — | — | IS | none |
 | `/api/cron/recompute-control-status` | GET | Daily satisfaction-rule recompute | Bearer CRON_SECRET | — | — | — | ✓ (system) | — | — | IS | none |
 
-¹ Manual task create/update: now logs `task.created` and `task.updated`
-  to audit_logs. Stale doc text removed.
+¹ Manual task creation logs `task.created` to audit_logs. (See ³ for the
+  update path.)
 
 ² Practice deletion: the per-tenant audit_logs row cascades along with
   the practice row, leaving no DB trail. Resolved in migration 043 by
@@ -104,6 +104,15 @@ a sweep through the matrix, bump the "Last reviewed" date.
   wiring `/api/practice/delete` to write to it before the cascade. The
   helper also mirrors to Sentry as a breadcrumb so the event survives
   even a DB-level write failure.
+
+³ Task update audit: `/api/tasks/:id` writes `task.<status>` (e.g.
+  `task.done`, `task.in_progress`) with `{from, to}` metadata, and ONLY
+  when the request changes the status field. A notes-only or due-date-only
+  edit does NOT write an audit row — by design, since those are not
+  state transitions. If a future requirement needs every edit audited,
+  add a `task.edited` write on the non-status branch. The
+  `remediation_tasks` row itself records `completed_at` / `assigned_to`
+  regardless.
 
 ## 2. Service-role usage
 
@@ -197,7 +206,8 @@ Actions that MUST write `audit_logs` and whether they do:
 | Risk assessment | ✓ | `/api/risk-assessment` |
 | Attestation generated | ✓ via generateAttestation | `/api/attestations` |
 | Attestation signed | ✓ | `/api/attestations/:id/sign` |
-| Task created / updated | ✓ | `/api/tasks/*` writes `task.created` + `task.updated` |
+| Task created | ✓ | `/api/tasks` writes `task.created` |
+| Task status change | ✓ | `/api/tasks/:id` writes `task.<status>` (status changes only — see ³) |
 | Screening run / verified / overridden | ✓ via service helpers | `/api/screening/*` |
 | Subscription state change | ✓ | `/api/billing/webhook` |
 | Cron readiness digest | ✓ | `/api/cron/readiness-digest` |
@@ -293,7 +303,7 @@ DashboardClient + report PDF + attestation snapshot
 | Control exceptions table | ✓ migration 043 | ✓ honored by v2 evaluator |
 | Recompute SQL function | ✓ migration 042; not_started bug fixed in 044 | ✓ daily cron + on-demand from reports/attestations |
 | Daily cron | ✓ `/api/cron/recompute-control-status` | ✓ scheduled in vercel.json 05:15 UTC |
-| On-demand recompute before reads | ✓ in `/api/reports/generate` | ✓ also `lib/attestation/generate.ts::buildSnapshot` |
+| On-demand recompute before reads | ✓ in `/api/reports/generate`, `lib/attestation/generate.ts::buildSnapshot`, AND `app/app/page.tsx` (dashboard) | ✓ dashboard recompute added 2026-06-12 so the critical-findings badge count can't under-report risk between nightly cron runs |
 | Readiness penalties on tasks/BAAs/screenings/drift | ✓ migration 042 audit_readiness rewrite | ✓ flows through audit_readiness_summary + v2 |
 | Dashboard surfaces v2 signals | ✓ `app/app/page.tsx` calls v2 | ✓ DashboardClient renders signal strip |
 | Tests for rule behavior — basic | ✓ `scripts/test-satisfaction-rule.sql` (7 cases) | runnable, transactional |

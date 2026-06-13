@@ -154,6 +154,18 @@ export default async function DashboardPage() {
     );
   }
 
+  // Recompute control statuses from satisfaction_rule + evidence currency
+  // BEFORE reading them, so the dashboard never under-reports risk. The
+  // weighted_pct + satisfied_count already self-correct via freshness_factor
+  // inside audit_readiness, but the discrete critical-findings count below
+  // reads practice_controls.status directly — without this recompute a
+  // control whose evidence expired earlier today would not appear in the
+  // critical count until the nightly cron runs. recompute is a no-op when
+  // nothing changed (only writes on an actual status transition), and the
+  // dashboard already does conditional writes via the narrative cache, so
+  // this is consistent with the existing render side-effects.
+  await supabase.rpc("recompute_practice_control_status", { p_practice_id: practiceId });
+
   // ── Admin / officer dashboard — every query independent, fan out in parallel.
   //    audit_readiness_v2 returns:
   //      framework_code, weighted_pct, satisfied_count, total_count,
