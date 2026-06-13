@@ -80,12 +80,64 @@ export async function POST(req: NextRequest) {
     baasMissing = vendorIds.filter((id) => !haveBaa.has(id)).length;
   }
 
+  // ── Open + overdue remediation tasks ──────────────────────────────────
+  const nowIso = new Date().toISOString();
+  const { data: openTasks } = await supabase
+    .from("remediation_tasks")
+    .select("id, title, severity, due_date, status")
+    .eq("practice_id", body.practice_id)
+    .in("status", ["open", "in_progress", "blocked"])
+    .returns<Array<{ id: string; title: string | null; severity: string | null; due_date: string | null; status: string }>>();
+  const tasksOpen = openTasks?.length ?? 0;
+  const tasksOverdue = (openTasks ?? []).filter(
+    (t) => t.due_date && t.due_date < nowIso
+  ).length;
+  const tasksCritical = (openTasks ?? []).filter((t) => t.severity === "critical").length;
+
+  // ── Workforce training currency ───────────────────────────────────────
+  // Completions whose expiry is still in the future are "current".
+  const { data: trainingRows } = await supabase
+    .from("training_completions")
+    .select("user_id, expires_on")
+    .eq("practice_id", body.practice_id)
+    .returns<Array<{ user_id: string; expires_on: string | null }>>();
+  const trainingCurrent = (trainingRows ?? []).filter(
+    (t) => !t.expires_on || t.expires_on > nowIso
+  ).length;
+  const trainingExpired = (trainingRows ?? []).filter(
+    (t) => t.expires_on && t.expires_on <= nowIso
+  ).length;
+
+  // ── Exclusion screening posture ───────────────────────────────────────
+  const { data: screeningRows } = await supabase
+    .from("exclusion_screenings")
+    .select("status, screened_at")
+    .eq("practice_id", body.practice_id)
+    .returns<Array<{ status: string; screened_at: string | null }>>();
+  const screeningsTotal = screeningRows?.length ?? 0;
+  const screeningsBlocked = (screeningRows ?? []).filter((s) => s.status === "blocked").length;
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+  const screeningsStale = (screeningRows ?? []).filter(
+    (s) => !s.screened_at || s.screened_at < thirtyDaysAgo
+  ).length;
+
   const snapshot = {
     practice_name: practice.name,
     readiness,
     critical_open: criticalOpen,
     recent_drift_alerts_30d: recentDrift?.length ?? 0,
     vendors_missing_baa: baasMissing,
+    // Remediation workload
+    tasks_open: tasksOpen,
+    tasks_overdue: tasksOverdue,
+    tasks_critical: tasksCritical,
+    // Workforce training
+    training_current: trainingCurrent,
+    training_expired: trainingExpired,
+    // Exclusion screening
+    screenings_total: screeningsTotal,
+    screenings_blocked: screeningsBlocked,
+    screenings_stale: screeningsStale,
     generated_at: new Date().toISOString(),
   };
 
@@ -115,6 +167,11 @@ export async function POST(req: NextRequest) {
       critical_open: criticalOpen,
       recent_drift_alerts: recentDrift?.length ?? 0,
       baas_missing: baasMissing,
+      tasks_open: tasksOpen,
+      tasks_overdue: tasksOverdue,
+      training_expired: trainingExpired,
+      screenings_blocked: screeningsBlocked,
+      screenings_stale: screeningsStale,
     });
 
     await supabase

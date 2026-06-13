@@ -47,6 +47,13 @@ interface ControlRow {
   latest_evidence_at: string | null;
   latest_evidence_status: string | null;
   latest_evidence_file: string | null;
+  evidence_guidance?: {
+    required: boolean;
+    can_auto_verify: boolean;
+    upload_allowed: boolean;
+    attestation_ok: boolean;
+    currency: "current" | "expired" | "missing";
+  };
 }
 
 type Variant = "default" | "muted" | "success" | "danger" | "warning" | "info" | "accent";
@@ -535,6 +542,47 @@ export default function ComplianceBrowser({
                     </div>
                   )}
 
+                  {/* Evidence guidance (#3): what proof this needs, how it
+                      can be satisfied, and whether it's current. */}
+                  {c.evidence_guidance && (
+                    <div className="pt-1">
+                      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-quaternary)] mb-1.5">
+                        Evidence
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        <EvidenceChip
+                          label={c.evidence_guidance.required ? "Required" : "Optional"}
+                          tone={c.evidence_guidance.required ? "neutral" : "muted"}
+                        />
+                        {c.evidence_guidance.can_auto_verify && (
+                          <EvidenceChip label="Auto-verify available" tone="good" />
+                        )}
+                        {c.evidence_guidance.upload_allowed && (
+                          <EvidenceChip label="Upload allowed" tone="neutral" />
+                        )}
+                        {c.evidence_guidance.attestation_ok && (
+                          <EvidenceChip label="Attestation accepted" tone="neutral" />
+                        )}
+                        <EvidenceChip
+                          label={
+                            c.evidence_guidance.currency === "current"
+                              ? "Evidence current"
+                              : c.evidence_guidance.currency === "expired"
+                              ? "Evidence expired"
+                              : "No evidence yet"
+                          }
+                          tone={
+                            c.evidence_guidance.currency === "current"
+                              ? "good"
+                              : c.evidence_guidance.currency === "expired"
+                              ? "bad"
+                              : "muted"
+                          }
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   {(c.last_verified_at || c.latest_evidence_at) && (
                     <div className="font-mono text-[11px] text-[var(--color-quaternary)] space-y-0.5">
                       {c.latest_evidence_at && (
@@ -659,6 +707,28 @@ function Section({ label, children }: { label: string; children: React.ReactNode
       <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-quaternary)] mb-2">{label}</div>
       {children}
     </div>
+  );
+}
+
+function EvidenceChip({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: "good" | "bad" | "neutral" | "muted";
+}) {
+  const cls =
+    tone === "good"
+      ? "bg-emerald-400/10 text-emerald-300 border-emerald-400/30"
+      : tone === "bad"
+      ? "bg-[var(--color-danger)]/10 text-[var(--color-danger)] border-[var(--color-danger)]/30"
+      : tone === "neutral"
+      ? "bg-violet-500/10 text-violet-300 border-violet-400/30"
+      : "bg-[var(--color-surface)] text-[var(--color-tertiary)] border-[var(--color-border-default)]";
+  return (
+    <span className={`font-mono text-[10px] tracking-wider px-2 py-0.5 rounded border ${cls}`}>
+      {label}
+    </span>
   );
 }
 

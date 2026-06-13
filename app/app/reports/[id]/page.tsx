@@ -18,6 +18,14 @@ interface ReportRow {
     critical_open?: number;
     recent_drift_alerts_30d?: number;
     vendors_missing_baa?: number;
+    tasks_open?: number;
+    tasks_overdue?: number;
+    tasks_critical?: number;
+    training_current?: number;
+    training_expired?: number;
+    screenings_total?: number;
+    screenings_blocked?: number;
+    screenings_stale?: number;
   } | null;
   ai_executive_summary: string | null;
 }
@@ -108,6 +116,36 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
             <SnapStat label="Critical controls open" value={snap.critical_open ?? 0} hot={(snap.critical_open ?? 0) > 0} />
             <SnapStat label="Drift alerts (30d)" value={snap.recent_drift_alerts_30d ?? 0} hot={(snap.recent_drift_alerts_30d ?? 0) > 0} />
             <SnapStat label="BAAs missing" value={snap.vendors_missing_baa ?? 0} hot={(snap.vendors_missing_baa ?? 0) > 0} />
+          </CardBody>
+        </Card>
+
+        {/* Remediation workload */}
+        <Card>
+          <CardBody>
+            <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-tertiary)] mb-4">
+              Open work
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <SnapStat label="Open tasks" value={snap.tasks_open ?? 0} hot={false} />
+              <SnapStat label="Overdue tasks" value={snap.tasks_overdue ?? 0} hot={(snap.tasks_overdue ?? 0) > 0} />
+              <SnapStat label="Critical tasks" value={snap.tasks_critical ?? 0} hot={(snap.tasks_critical ?? 0) > 0} />
+            </div>
+          </CardBody>
+        </Card>
+
+        {/* Workforce: training + screening */}
+        <Card>
+          <CardBody>
+            <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-tertiary)] mb-4">
+              Workforce
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+              <SnapStat label="Training current" value={snap.training_current ?? 0} hot={false} />
+              <SnapStat label="Training expired" value={snap.training_expired ?? 0} hot={(snap.training_expired ?? 0) > 0} />
+              <SnapStat label="Screenings on file" value={snap.screenings_total ?? 0} hot={false} />
+              <SnapStat label="Screenings blocked" value={snap.screenings_blocked ?? 0} hot={(snap.screenings_blocked ?? 0) > 0} />
+              <SnapStat label="Screenings stale (30d+)" value={snap.screenings_stale ?? 0} hot={(snap.screenings_stale ?? 0) > 0} />
+            </div>
           </CardBody>
         </Card>
       </section>

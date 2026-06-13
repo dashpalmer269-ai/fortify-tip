@@ -18,6 +18,10 @@ export interface TaskItem {
   control_key?: string | null;
   remediation_guide?: string | null;
   responsible_role?: string | null;
+  /** Plain-English evidence that will clear this control once done. */
+  evidence_to_clear?: string | null;
+  /** Framework codes this task improves when completed. */
+  frameworks_impacted?: string[];
   risk_score?: number;
 }
 
@@ -86,15 +90,19 @@ export default function TaskList({
         const tone = SEVERITY_TONE[task.severity ?? "low"] ?? SEVERITY_TONE.low!;
         const overdue = isOverdue(task.due_date);
         const hasGuide = !!task.remediation_guide && task.remediation_guide.trim().length > 0;
+        const hasEvidence = !!task.evidence_to_clear && task.evidence_to_clear.trim().length > 0;
+        const hasFrameworks = !!task.frameworks_impacted && task.frameworks_impacted.length > 0;
+        // Expand when there's anything useful to show, not just a guide.
+        const hasDetail = hasGuide || hasEvidence || hasFrameworks;
         const isOpen = openId === task.id;
         return (
           <Card key={task.id} className="overflow-hidden">
             <CardBody className="flex items-center justify-between gap-4 py-3.5">
               <button
                 type="button"
-                onClick={() => hasGuide && setOpenId(isOpen ? null : task.id)}
-                className={`flex items-start gap-3 min-w-0 text-left ${hasGuide ? "cursor-pointer" : "cursor-default"}`}
-                disabled={!hasGuide}
+                onClick={() => hasDetail && setOpenId(isOpen ? null : task.id)}
+                className={`flex items-start gap-3 min-w-0 text-left ${hasDetail ? "cursor-pointer" : "cursor-default"}`}
+                disabled={!hasDetail}
                 aria-expanded={isOpen}
               >
                 <span
@@ -124,9 +132,9 @@ export default function TaskList({
                     {showAssignee && task.assignee_email && (
                       <span className="text-[var(--color-tertiary)] ml-2">· {task.assignee_email}</span>
                     )}
-                    {hasGuide && (
+                    {hasDetail && (
                       <span className="text-[var(--color-accent)] ml-2">
-                        {isOpen ? "Hide fix" : "How to fix →"}
+                        {isOpen ? "Hide details" : "What to do →"}
                       </span>
                     )}
                   </p>
@@ -151,15 +159,48 @@ export default function TaskList({
                 )}
               </div>
             </CardBody>
-            {hasGuide && isOpen && (
-              <div className="border-t border-[var(--color-border-subtle)] px-5 py-4 bg-[var(--color-surface)]">
-                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-quaternary)] mb-2">
-                  How to fix
-                </div>
-                <div
-                  className="task-remediation text-sm text-[var(--color-secondary)] leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(task.remediation_guide) }}
-                />
+            {hasDetail && isOpen && (
+              <div className="border-t border-[var(--color-border-subtle)] px-5 py-4 bg-[var(--color-surface)] space-y-4">
+                {hasGuide && (
+                  <div>
+                    <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-quaternary)] mb-2">
+                      How to fix
+                    </div>
+                    <div
+                      className="task-remediation text-sm text-[var(--color-secondary)] leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: renderMarkdown(task.remediation_guide) }}
+                    />
+                  </div>
+                )}
+
+                {hasEvidence && (
+                  <div>
+                    <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-quaternary)] mb-1.5">
+                      What proves it&apos;s fixed
+                    </div>
+                    <p className="text-sm text-[var(--color-secondary)] leading-relaxed">
+                      {task.evidence_to_clear}
+                    </p>
+                  </div>
+                )}
+
+                {hasFrameworks && (
+                  <div>
+                    <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-quaternary)] mb-1.5">
+                      Completing this improves
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {task.frameworks_impacted!.map((fw) => (
+                        <span
+                          key={fw}
+                          className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-violet-500/10 text-violet-300 border border-violet-400/30"
+                        >
+                          {fw}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </Card>

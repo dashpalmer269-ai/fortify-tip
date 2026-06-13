@@ -25,11 +25,23 @@ interface TaskRow {
     remediation_guide: string | null;
     default_weight: number | null;
     responsible_role: string | null;
+    evidence_summary: string | null;
+    framework_mappings:
+      | Array<{ framework_requirements: { frameworks: { code: string } | null } | null }>
+      | null;
   } | null;
 }
 
+/** Distinct framework codes a control maps to, from its mapping chain. */
+function frameworksForControl(c: TaskRow["controls"]): string[] {
+  const codes = (c?.framework_mappings ?? [])
+    .map((m) => m.framework_requirements?.frameworks?.code)
+    .filter((x): x is string => !!x);
+  return Array.from(new Set(codes)).sort();
+}
+
 const TASK_SELECT =
-  "id, title, source, status, severity, due_date, subject_ref, assigned_to, controls(control_key, remediation_guide, default_weight, responsible_role)";
+  "id, title, source, status, severity, due_date, subject_ref, assigned_to, controls(control_key, remediation_guide, default_weight, responsible_role, evidence_summary, framework_mappings(framework_requirements(frameworks(code))))";
 
 /**
  * Risk score = severity multiplier × control weight × overdue multiplier.
@@ -59,6 +71,8 @@ function toTaskItems(rows: TaskRow[], emailByUser?: Map<string, string>): TaskIt
     control_key: t.controls?.control_key ?? null,
     remediation_guide: t.controls?.remediation_guide ?? null,
     responsible_role: t.controls?.responsible_role ?? null,
+    evidence_to_clear: t.controls?.evidence_summary ?? null,
+    frameworks_impacted: frameworksForControl(t.controls),
     risk_score: riskScore(t, now),
   }));
 }

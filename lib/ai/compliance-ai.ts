@@ -141,6 +141,12 @@ export interface ReportContext {
   critical_open: number;
   recent_drift_alerts: number;
   baas_missing: number;
+  /** Optional richer workload + workforce context (added 2026-06). */
+  tasks_open?: number;
+  tasks_overdue?: number;
+  training_expired?: number;
+  screenings_blocked?: number;
+  screenings_stale?: number;
 }
 
 export async function generateReportSummary(ctx: ReportContext): Promise<string> {
@@ -157,6 +163,9 @@ ${ctx.readiness_summary
 - Critical controls open: ${ctx.critical_open}
 - Recent configuration-drift alerts: ${ctx.recent_drift_alerts}
 - Vendors with missing or expired BAAs: ${ctx.baas_missing}
+- Open remediation tasks: ${ctx.tasks_open ?? "n/a"} (overdue: ${ctx.tasks_overdue ?? 0})
+- Workforce training expired: ${ctx.training_expired ?? 0}
+- Exclusion screenings blocked: ${ctx.screenings_blocked ?? 0}; stale (30d+): ${ctx.screenings_stale ?? 0}
 
 YOUR TASK
 Write a 4-paragraph executive summary suitable for the front page of a monthly compliance report.

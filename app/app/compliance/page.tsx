@@ -46,7 +46,9 @@ export default async function CompliancePage({
       .eq("practice_id", session.membership.practice_id),
     supabase
       .from("evidence_checks")
-      .select("id, control_id, check_key, collection_method"),
+      .select(
+        "id, control_id, check_key, collection_method, automation_level, evidence_required, manual_upload_allowed, attestation_acceptable, frequency_hours"
+      ),
     supabase
       .from("practice_evidence")
       .select("evidence_check_id, status, collected_at, evidence_file_url")
@@ -57,14 +59,21 @@ export default async function CompliancePage({
   const statusByControlId = new Map(
     (practiceControlsRes.data ?? []).map((pc) => [pc.control_id, pc])
   );
-  const checksByControlId = new Map<string, Array<{ id: string; check_key: string; collection_method: string }>>();
-  for (const ec of evidenceChecksRes.data ?? []) {
+  interface CheckShape {
+    id: string;
+    control_id: string;
+    check_key: string;
+    collection_method: string;
+    automation_level: string | null;
+    evidence_required: boolean | null;
+    manual_upload_allowed: boolean | null;
+    attestation_acceptable: boolean | null;
+    frequency_hours: number | null;
+  }
+  const checksByControlId = new Map<string, CheckShape[]>();
+  for (const ec of (evidenceChecksRes.data ?? []) as unknown as CheckShape[]) {
     if (!checksByControlId.has(ec.control_id)) checksByControlId.set(ec.control_id, []);
-    checksByControlId.get(ec.control_id)!.push({
-      id: ec.id,
-      check_key: ec.check_key,
-      collection_method: ec.collection_method,
-    });
+    checksByControlId.get(ec.control_id)!.push(ec);
   }
   const latestByCheckId = new Map(
     (latestEvidenceRes.data ?? []).map((e) => [e.evidence_check_id, e])
@@ -104,6 +113,40 @@ export default async function CompliancePage({
     const primaryCheck =
       checks.find((ec) => ec.collection_method === c.automation_status) ?? checks[0] ?? null;
     const latestEvidence = primaryCheck ? latestByCheckId.get(primaryCheck.id) ?? null : null;
+
+    // ── Evidence guidance (#3): for this control, what's possible + current?
+    // Roll up across all checks so a control with any auto-verifiable check
+    // shows "auto-verify available", etc.
+    const anyAuto = checks.some(
+      (ec) => ec.automation_level === "auto_verified" || ec.automation_level === "partially_verified"
+    );
+    const anyUpload = checks.some(
+      (ec) => ec.manual_upload_allowed === true || ec.collection_method === "document_upload"
+    );
+    const anyAttest = checks.some(
+      (ec) =>
+        ec.attestation_acceptable === true ||
+        ec.collection_method === "manual_attestation" ||
+        ec.automation_level === "admin_attestation"
+    );
+    const required = checks.length === 0 ? true : checks.some((ec) => ec.evidence_required !== false);
+    // Currency: based on the freshest current-evidence collected_at vs the
+    // tightest check frequency (×3 = stale, matching the readiness engine).
+    let currency: "current" | "expired" | "missing" = "missing";
+    if (latestEvidence?.collected_at) {
+      const freqHours = primaryCheck?.frequency_hours ?? 24;
+      // Server component renders once per request; Date.now() is stable here.
+      // eslint-disable-next-line react-hooks/purity
+      const ageHours = (Date.now() - new Date(latestEvidence.collected_at).getTime()) / 3_600_000;
+      currency = ageHours > freqHours * 3 ? "expired" : "current";
+    }
+    const evidence_guidance = {
+      required,
+      can_auto_verify: anyAuto,
+      upload_allowed: anyUpload,
+      attestation_ok: anyAttest,
+      currency,
+    };
     return {
       id: c.id,
       control_key: c.control_key,
@@ -132,6 +175,7 @@ export default async function CompliancePage({
       latest_evidence_at: latestEvidence?.collected_at ?? null,
       latest_evidence_status: latestEvidence?.status ?? null,
       latest_evidence_file: latestEvidence?.evidence_file_url ?? null,
+      evidence_guidance,
     };
   });
 

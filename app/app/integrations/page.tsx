@@ -11,6 +11,7 @@ import {
 } from "@/lib/security/credential-scoring";
 import AwsConnectForm from "./AwsConnectForm";
 import CredentialHealthCard from "./CredentialHealthCard";
+import { INTEGRATION_GUIDANCE } from "@/lib/integrations/setup-guidance";
 
 export const dynamic = "force-dynamic";
 
@@ -299,6 +300,10 @@ export default async function IntegrationsPage({
                       </div>
 
                       {connected && score && <CredentialHealthCard score={score} />}
+
+                      {/* Guided "How to connect" — plain-language steps,
+                          permissions, what we check, evidence produced. */}
+                      <IntegrationGuidancePanel providerKey={p.key} connected={connected} />
                     </div>
                   </Card>
                 );
@@ -308,5 +313,87 @@ export default async function IntegrationsPage({
         );
       })}
     </div>
+  );
+}
+
+/**
+ * Expandable guided-setup panel. Native <details> so it stays a server
+ * component (no client JS). Renders nothing for providers without
+ * guidance content.
+ */
+function IntegrationGuidancePanel({
+  providerKey,
+  connected,
+}: {
+  providerKey: string;
+  connected: boolean;
+}) {
+  const g = INTEGRATION_GUIDANCE[providerKey];
+  if (!g) return null;
+
+  return (
+    <details className="mt-4 group">
+      <summary className="cursor-pointer list-none flex items-center gap-2 text-[12px] font-mono uppercase tracking-wider text-violet-400 hover:text-violet-300 transition-colors">
+        <span className="inline-block transition-transform group-open:rotate-90">▸</span>
+        {connected ? "What Fortify checks here" : "How to connect"}
+        <span className="text-[var(--color-quaternary)] normal-case tracking-normal">· {g.timeEstimate}</span>
+      </summary>
+
+      <div className="mt-3 pl-4 border-l border-[var(--color-border-subtle)] space-y-4 text-[13px]">
+        <p className="text-[var(--color-secondary)] leading-relaxed">{g.summary}</p>
+
+        {!connected && (
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--color-tertiary)] mb-1.5">
+              Steps
+            </p>
+            <ol className="space-y-1.5 list-none">
+              {g.steps.map((s, i) => (
+                <li key={i} className="flex gap-2 text-[var(--color-secondary)] leading-relaxed">
+                  <span className="font-mono text-[11px] text-violet-400 shrink-0">{i + 1}.</span>
+                  <span>{s}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--color-tertiary)] mb-1.5">
+            Access you&apos;re granting
+          </p>
+          <p className="text-[var(--color-secondary)] leading-relaxed">{g.permissions}</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--color-tertiary)] mb-1.5">
+              What Fortify checks
+            </p>
+            <ul className="space-y-1">
+              {g.whatWeCheck.map((w, i) => (
+                <li key={i} className="flex gap-1.5 text-[var(--color-secondary)] leading-relaxed">
+                  <span className="text-violet-400 shrink-0">·</span>
+                  <span>{w}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--color-tertiary)] mb-1.5">
+              Evidence it creates
+            </p>
+            <ul className="space-y-1">
+              {g.evidenceCreated.map((e, i) => (
+                <li key={i} className="flex gap-1.5 text-[var(--color-secondary)] leading-relaxed">
+                  <span className="text-emerald-400 shrink-0">·</span>
+                  <span>{e}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </details>
   );
 }
