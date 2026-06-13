@@ -94,11 +94,11 @@ export default async function OnboardingWelcomePage() {
               className="flex flex-col sm:flex-row items-center justify-center gap-3 animate-fade-up"
               style={{ animationDelay: "300ms" }}
             >
-              <ButtonLink href="/" variant="secondary" size="lg" className="min-w-[180px]">
-                Return Home
+              <ButtonLink href="/app" variant="secondary" size="lg" className="min-w-[180px]">
+                View Dashboard
               </ButtonLink>
-              <ButtonLink href="/app" variant="primary" size="lg" className="min-w-[180px]">
-                View Dashboard →
+              <ButtonLink href="/app/setup" variant="primary" size="lg" className="min-w-[180px]">
+                Start your setup checklist →
               </ButtonLink>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { loadSetupChecklist } from "@/lib/setup/checklist";
 import { createServerClient } from "@/lib/supabase/server";
 import { getAppSession, assertActive } from "@/lib/auth/session";
 import { isOfficer, type Role } from "@/lib/auth/permissions";
@@ -283,6 +284,21 @@ export default async function DashboardPage() {
       )) || fallbackNarrative
     : fallbackNarrative;
 
+  // Setup checklist summary — drives the "finish setup" action card. Only
+  // the compact summary is passed to the client; the full guided list
+  // lives at /app/setup. Cheap head-only count queries.
+  const checklist = await loadSetupChecklist(supabase, practiceId);
+  const setupSummary = checklist.allComplete
+    ? null
+    : {
+        completedCount: checklist.completedCount,
+        totalCount: checklist.totalCount,
+        percentComplete: checklist.percentComplete,
+        nextStepTitle: checklist.nextStep?.title ?? null,
+        nextStepWhatToDo: checklist.nextStep?.whatToDo ?? null,
+        nextStepHref: checklist.nextStep?.href ?? "/app/setup",
+      };
+
   return (
     <DashboardClient
       practiceName={practiceName}
@@ -298,6 +314,7 @@ export default async function DashboardPage() {
         stale_screenings: v2Summary.stale_screenings,
         drift_alerts_open: v2Summary.drift_alerts_open,
       }}
+      setupSummary={setupSummary}
     />
   );
 }

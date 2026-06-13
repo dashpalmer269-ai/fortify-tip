@@ -37,6 +37,15 @@ const FRAMEWORK_META: Record<string, { name: string; tone: string }> = {
   GDPR:     { name: "GDPR Article 32",         tone: "var(--color-fw-gdpr)" },
 };
 
+interface SetupSummary {
+  completedCount: number;
+  totalCount: number;
+  percentComplete: number;
+  nextStepTitle: string | null;
+  nextStepWhatToDo: string | null;
+  nextStepHref: string;
+}
+
 export default function DashboardClient({
   practiceName,
   readiness,
@@ -45,6 +54,7 @@ export default function DashboardClient({
   narrative,
   tasks,
   readinessSignals,
+  setupSummary,
 }: {
   practiceName: string;
   readiness: ReadinessRow[];
@@ -58,6 +68,12 @@ export default function DashboardClient({
    * see the v2 signal strip.
    */
   readinessSignals?: ReadinessSignals;
+  /**
+   * Setup checklist summary — present (non-null) only while setup is
+   * incomplete. Drives the "finish setup" action card at the top of the
+   * dashboard so a new practice always knows the single next thing to do.
+   */
+  setupSummary?: SetupSummary | null;
 }) {
   const overallPct =
     readiness.length > 0
@@ -74,6 +90,52 @@ export default function DashboardClient({
         title="Audit readiness"
         description="A live view of how your controls map across every enabled framework. Marking one control compliant updates every framework score it satisfies."
       />
+
+      {/* Finish-setup action card — shown only while setup is incomplete.
+          Always points to the single next thing to do, in plain language. */}
+      {setupSummary && (
+        <Card variant="raised" className="mb-6">
+          <div className="px-6 py-5">
+            <div className="flex items-center justify-between gap-4 flex-wrap mb-3">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-violet-300/80 mb-1">
+                  Finish setting up
+                </p>
+                <p className="text-[15px] text-[var(--color-primary)]">
+                  <strong>{setupSummary.completedCount} of {setupSummary.totalCount}</strong> setup
+                  steps complete
+                </p>
+              </div>
+              <span className="font-display text-2xl tabular-nums text-[var(--color-primary)]">
+                {setupSummary.percentComplete}%
+              </span>
+            </div>
+            <div className="h-2 rounded-full bg-[var(--color-surface)] overflow-hidden mb-4">
+              <div
+                className="h-full rounded-full bg-[var(--color-accent)]"
+                style={{ width: `${setupSummary.percentComplete}%` }}
+              />
+            </div>
+            {setupSummary.nextStepTitle && (
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] text-[var(--color-secondary)] leading-relaxed">
+                    <span className="text-[var(--color-tertiary)]">Next: </span>
+                    <strong className="text-[var(--color-primary)]">{setupSummary.nextStepTitle}</strong>
+                    {setupSummary.nextStepWhatToDo ? ` — ${setupSummary.nextStepWhatToDo}` : ""}
+                  </p>
+                </div>
+                <Link
+                  href="/app/setup"
+                  className="shrink-0 text-[11px] font-mono uppercase tracking-wider px-4 py-2 rounded-md bg-violet-500 text-white hover:bg-violet-400 transition-colors"
+                >
+                  Open checklist
+                </Link>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* The "practice in a sentence" — AI narrative from your dedicated compliance officer */}
       {narrative && (

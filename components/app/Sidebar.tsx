@@ -12,6 +12,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/app",                 label: "Dashboard",      icon: DashboardIcon },
+  { href: "/app/setup",           label: "Setup checklist", icon: ComplianceIcon, minRole: "admin" },
   { href: "/app/compliance",      label: "Compliance",     icon: ComplianceIcon },
   { href: "/app/coverage",        label: "Coverage",       icon: ComplianceIcon, minRole: "officer" },
   { href: "/app/risk-assessment", label: "Risk",           icon: RiskIcon,     minRole: "officer" },
