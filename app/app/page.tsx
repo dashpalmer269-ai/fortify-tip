@@ -179,7 +179,16 @@ export default async function DashboardPage() {
   // nothing changed (only writes on an actual status transition), and the
   // dashboard already does conditional writes via the narrative cache, so
   // this is consistent with the existing render side-effects.
-  await supabase.rpc("recompute_practice_control_status", { p_practice_id: practiceId });
+  // Throttled recompute (migration 046): runs the full rule evaluation at
+  // most once per 15 minutes per practice, so the dashboard — the hottest
+  // page — never pays the full cost on every load at scale. Reports +
+  // attestations still call the unconditional recompute for guaranteed
+  // freshness at generation time. Bounds critical-findings staleness to
+  // <= 15 min (vs 24h cron-only).
+  await supabase.rpc("recompute_control_status_if_stale", {
+    p_practice_id: practiceId,
+    p_max_age_minutes: 15,
+  });
 
   // ── Admin / officer dashboard — every query independent, fan out in parallel.
   //    audit_readiness_v2 returns:

@@ -30,13 +30,36 @@ function codeOnly(sql: string): string {
 const ciCode = codeOnly(ciSql);
 
 describe("CI satisfaction SQL test exercises the corrected evaluator", () => {
-  it("uses the collection_method → source mapping (not pe.source)", () => {
+  it("maps EVERY collection_method to a source (no NULL gaps)", () => {
+    // All six collection_method values must map, or a seeded rule becomes
+    // unsatisfiable. This guards the parity the reviewer requires: the DB
+    // never describes a rule the engine can't enforce.
     expect(ciCode).toContain("'automated_api' then 'integration'");
+    expect(ciCode).toContain("'automated_db_query' then 'integration'");
+    expect(ciCode).toContain("'automated_scan' then 'integration'");
     expect(ciCode).toContain("'document_upload' then 'document_upload'");
+    expect(ciCode).toContain("'screenshot' then 'document_upload'");
     expect(ciCode).toContain("'manual_attestation' then 'attestation'");
     expect(ciCode).not.toContain("pe.source");
     expect(ciCode).not.toContain("pe.evidence_type");
     expect(ciCode).not.toContain("collected_by_user_id");
+  });
+
+  it("migration 045 maps every collection_method identically to the CI test", () => {
+    const mig = readFileSync(
+      join(ROOT, "supabase/migrations/045_security_hardening_and_evaluator_fix.sql"),
+      "utf8"
+    );
+    for (const pair of [
+      "'automated_api' then 'integration'",
+      "'automated_db_query' then 'integration'",
+      "'automated_scan' then 'integration'",
+      "'document_upload' then 'document_upload'",
+      "'screenshot' then 'document_upload'",
+      "'manual_attestation' then 'attestation'",
+    ]) {
+      expect(mig).toContain(pair);
+    }
   });
 
   it("uses real reviewer approval (review_status approved by a different user)", () => {
@@ -55,6 +78,7 @@ describe("CI satisfaction SQL test exercises the corrected evaluator", () => {
       "control exception override",
       "all_of",
       "not_started -> compliant",
+      "every collection_method maps to an enforceable source",
     ]) {
       expect(ciSql).toContain(marker);
     }

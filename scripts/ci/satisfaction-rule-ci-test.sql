@@ -93,7 +93,10 @@ begin
     from evidence_checks where id = p_evidence_check_id;
   v_check_source := case v_check_method
     when 'automated_api' then 'integration'
+    when 'automated_db_query' then 'integration'
+    when 'automated_scan' then 'integration'
     when 'document_upload' then 'document_upload'
+    when 'screenshot' then 'document_upload'
     when 'manual_attestation' then 'attestation' else null end;
   if v_source is not null and v_source <> coalesce(v_check_source, '') then return false; end if;
   if p_source_winner is not null and v_check_source is not null and v_check_source <> p_source_winner then return false; end if;
@@ -126,7 +129,11 @@ begin
     from evidence_checks where id = p_evidence_check_id;
   if v_rule is null then return false; end if;
   v_check_source := case v_check_method
-    when 'automated_api' then 'integration' when 'document_upload' then 'document_upload'
+    when 'automated_api' then 'integration'
+    when 'automated_db_query' then 'integration'
+    when 'automated_scan' then 'integration'
+    when 'document_upload' then 'document_upload'
+    when 'screenshot' then 'document_upload'
     when 'manual_attestation' then 'attestation' else null end;
 
   v_required_integration := v_rule->>'integration_disconnected_fail';
@@ -347,6 +354,29 @@ begin
         (select status from practice_controls where id = pc_id);
     end if;
     raise notice 'T9 PASS not_started -> compliant on valid evidence';
+  end;
+
+  -- TEST 10: every collection_method maps to the correct source category.
+  -- Previously automated_db_query / automated_scan / screenshot mapped to
+  -- NULL, making a seeded source:'integration'/'document_upload' rule
+  -- permanently unsatisfiable. Each must now satisfy with valid evidence.
+  declare cm text; ecx uuid; rule jsonb; src text; begin
+    foreach cm in array array['automated_db_query','automated_scan','screenshot'] loop
+      src := case cm when 'screenshot' then 'document_upload' else 'integration' end;
+      insert into controls(control_key) values ('cm_'||cm) returning id into c_id;
+      insert into evidence_checks(control_id, check_key, collection_method, satisfaction_rule)
+        values (c_id, 'cm_'||cm, cm,
+          jsonb_build_object('any_of', jsonb_build_array(
+            jsonb_build_object('source', src, 'status', 'pass'))))
+        returning id into ecx;
+      insert into practice_evidence(practice_id, evidence_check_id, status, collected_at, is_current, collected_by)
+        values (P, ecx, 'pass', now(), true, U1);
+      r := evaluate_satisfaction_rule_v2(P, ecx);
+      if r is not true then
+        raise exception 'T10 FAIL: collection_method % (source %) should satisfy (got %)', cm, src, r;
+      end if;
+    end loop;
+    raise notice 'T10 PASS every collection_method maps to an enforceable source';
   end;
 
   raise notice 'ALL SATISFACTION-RULE DB TESTS PASSED';

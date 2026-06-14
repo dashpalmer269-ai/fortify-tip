@@ -57,6 +57,8 @@ export interface Database {
           // Added by 041_invite_codes
           access_expires_at: string | null;
           plan_source: "unpaid" | "invite" | "stripe";
+          // Added by 046_recompute_throttle
+          controls_recomputed_at: string | null;
           onboarding_step:
             | "information"
             | "fortification"
@@ -93,6 +95,7 @@ export interface Database {
           selected_plan?: Database["public"]["Tables"]["practices"]["Row"]["selected_plan"];
           access_expires_at?: string | null;
           plan_source?: "unpaid" | "invite" | "stripe";
+          controls_recomputed_at?: string | null;
           onboarding_step?: Database["public"]["Tables"]["practices"]["Row"]["onboarding_step"];
           onboarding_completed_at?: string | null;
           stripe_customer_id?: string | null;
@@ -1420,6 +1423,11 @@ export interface Database {
       };
       recompute_practice_control_status: {
         Args: { p_practice_id: string };
+        Returns: number;
+      };
+      // Added by 046_recompute_throttle
+      recompute_control_status_if_stale: {
+        Args: { p_practice_id: string; p_max_age_minutes?: number };
         Returns: number;
       };
       // Added by 043_platform_audit_and_richer_rules

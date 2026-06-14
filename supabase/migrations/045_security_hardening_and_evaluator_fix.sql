@@ -83,9 +83,19 @@ begin
   select collection_method, check_key into v_check_method, v_check_key
     from evidence_checks where id = p_evidence_check_id;
 
+  -- Map EVERY collection_method to the rule "source" category the seed
+  -- (035) assigns. automation_level — and therefore the seeded rule's
+  -- source — is derived from collection_method, so this map must cover
+  -- all six values or a seeded rule becomes permanently unsatisfiable.
+  --   automated_api/db_query/scan -> integration
+  --   document_upload/screenshot   -> document_upload
+  --   manual_attestation           -> attestation
   v_check_source := case v_check_method
     when 'automated_api' then 'integration'
+    when 'automated_db_query' then 'integration'
+    when 'automated_scan' then 'integration'
     when 'document_upload' then 'document_upload'
+    when 'screenshot' then 'document_upload'
     when 'manual_attestation' then 'attestation'
     else null
   end;
@@ -158,9 +168,19 @@ begin
     from evidence_checks where id = p_evidence_check_id;
   if v_rule is null then return false; end if;
 
+  -- Map EVERY collection_method to the rule "source" category the seed
+  -- (035) assigns. automation_level — and therefore the seeded rule's
+  -- source — is derived from collection_method, so this map must cover
+  -- all six values or a seeded rule becomes permanently unsatisfiable.
+  --   automated_api/db_query/scan -> integration
+  --   document_upload/screenshot   -> document_upload
+  --   manual_attestation           -> attestation
   v_check_source := case v_check_method
     when 'automated_api' then 'integration'
+    when 'automated_db_query' then 'integration'
+    when 'automated_scan' then 'integration'
     when 'document_upload' then 'document_upload'
+    when 'screenshot' then 'document_upload'
     when 'manual_attestation' then 'attestation'
     else null
   end;
