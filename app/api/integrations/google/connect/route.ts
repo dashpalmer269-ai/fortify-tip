@@ -7,7 +7,7 @@ import { requirePracticeAccess } from "@/lib/billing/require-access";
  * Begin Google Workspace OAuth. Stores a short-lived state token in a cookie
  * so the callback can verify origin and resolve the practice.
  */
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   if (!isConfigured()) {
     return NextResponse.json(
       {

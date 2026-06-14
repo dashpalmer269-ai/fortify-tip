@@ -1,4 +1,4 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { getAppSession, assertActive } from "@/lib/auth/session";

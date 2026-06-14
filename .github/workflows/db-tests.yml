@@ -1,0 +1,50 @@
+name: DB tests
+
+# Runs the self-contained satisfaction-rule SQL test against a real
+# PostgreSQL service container. The test creates a minimal schema, defines
+# the evaluator functions (mirroring migration 045), seeds fixtures, and
+# RAISE EXCEPTIONs on any failed assertion — so a non-zero psql exit fails
+# the job.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+      - "scripts/ci/**"
+      - ".github/workflows/db-tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+      - "scripts/ci/**"
+      - ".github/workflows/db-tests.yml"
+
+jobs:
+  satisfaction-rules:
+    name: satisfaction-rule evaluator
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: fortify_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run satisfaction-rule DB test
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d fortify_test -v ON_ERROR_STOP=1 \
+            -f scripts/ci/satisfaction-rule-ci-test.sql

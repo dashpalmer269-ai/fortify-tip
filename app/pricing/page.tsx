@@ -1,4 +1,3 @@
-import Link from "next/link";
 import StarfieldBackground from "@/components/StarfieldBackground";
 import MarketingNav from "@/components/marketing/MarketingNav";
 import { PLANS } from "@/lib/billing/plans";

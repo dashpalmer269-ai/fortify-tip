@@ -364,6 +364,11 @@ export interface Database {
           evidence_file_url: string | null;
           notes: string | null;
           is_current: boolean | null;
+          // Added by 045 — explicit reviewer approval
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          review_status: "pending" | "approved" | "rejected" | null;
+          review_reason: string | null;
         };
         Insert: {
           id?: string;
@@ -378,6 +383,10 @@ export interface Database {
           evidence_file_url?: string | null;
           notes?: string | null;
           is_current?: boolean | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          review_status?: "pending" | "approved" | "rejected" | null;
+          review_reason?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["practice_evidence"]["Insert"]>;
         Relationships: [];
@@ -1418,9 +1427,10 @@ export interface Database {
         Args: { p_practice_id: string; p_evidence_check_id: string };
         Returns: boolean;
       };
-      // Added by 044_recompute_notstarted_and_policy_rpc
+      // Added by 044, hardened by 045 — identity now from auth.uid(),
+      // no caller-supplied user id.
       acknowledge_policy: {
-        Args: { p_policy_id: string; p_user_id: string };
+        Args: { p_policy_id: string };
         Returns: {
           acknowledgment_id: string;
           resolved_task_id: string | null;

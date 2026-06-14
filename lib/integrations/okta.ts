@@ -150,7 +150,6 @@ export async function checkSystemLogAccessible(creds: OktaCredentials | null): P
 export async function checkAdminRoleInventory(creds: OktaCredentials | null): Promise<CheckOutcome> {
   if (!creds) return { status: "not_collected", observed_value: null, raw: { note: "no Okta connection" } };
   try {
-    type Role = { id: string; label: string; type: string };
     const { json: rolesJson } = await oktaGet(creds, "/api/v1/iam/assignments?limit=500");
     const roles = rolesJson as Array<{ assignee?: { type: string; id: string }; roleType?: string }>;
     const userRoleMap = new Map<string, Set<string>>();

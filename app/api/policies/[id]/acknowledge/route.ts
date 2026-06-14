@@ -36,13 +36,14 @@ export async function POST(
   const guard = await requirePracticeAccess(db, session.membership.practice_id);
   if (!guard.ok) return guard.response;
 
-  // SECURITY DEFINER RPC — verifies membership again inside the function,
-  // runs the whole acknowledgment + auto-resolve in one transaction.
-  // Call via authed client so the function executes with the caller's
-  // identity context (auth.uid()) even though it's marked DEFINER.
+  // SECURITY DEFINER RPC — derives the acknowledging user from auth.uid()
+  // INSIDE the function (migration 045). We deliberately do NOT pass a
+  // caller-supplied user id: identity comes from the JWT, so one employee
+  // can never acknowledge a policy on behalf of another. The function also
+  // re-verifies membership and runs ack + auto-resolve + audit in one
+  // transaction. Called via the authed client so auth.uid() is the caller.
   const { data, error } = await supabase.rpc("acknowledge_policy", {
     p_policy_id: policyId,
-    p_user_id: session.user.id,
   });
 
   if (error) {

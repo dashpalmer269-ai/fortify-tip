@@ -7,7 +7,7 @@ import { requirePracticeAccess } from "@/lib/billing/require-access";
  * Begin Microsoft 365 OAuth. Stores a short-lived state token in the session
  * cookie set so the callback can verify request origin.
  */
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   if (!isConfigured()) {
     return NextResponse.json(
       {

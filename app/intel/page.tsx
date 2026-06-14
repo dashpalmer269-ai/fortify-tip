@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { createServerClient } from "@/lib/supabase/server";
 import ThreatCard from "@/components/ThreatCard";
 import type { Threat } from "@/lib/types";

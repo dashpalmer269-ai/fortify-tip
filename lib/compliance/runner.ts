@@ -505,7 +505,7 @@ async function checkRiskAnalysisRecency(
 async function checkVendorsHaveBaa(
   supabase: SupabaseClient,
   practiceId: string,
-  check: EvidenceCheckRow
+  _check: EvidenceCheckRow
 ): Promise<CheckResult> {
   // Vendors and baas tables are part of the BAA Vault module.
   const { data: vendors, error: vErr } = await supabase

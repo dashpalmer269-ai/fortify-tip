@@ -5,7 +5,7 @@ import { parseBody } from "@/lib/schemas/api";
 import { PreliminaryScreeningSchema } from "@/lib/schemas/screening";
 import { startPreliminary } from "@/lib/screening/service";
 import { SCREENING_MESSAGES } from "@/lib/screening/user-message";
-import { checkRateLimit, clientKey, RATE_LIMITS } from "@/lib/security/rate-limit";
+import { checkRateLimit, clientKey } from "@/lib/security/rate-limit";
 import { requirePracticeAccess } from "@/lib/billing/require-access";
 
 /**

@@ -15,7 +15,6 @@ import {
   defaultState,
   type StepKey,
   type OnboardingState,
-  type OnboardingLocation,
 } from "./types";
 
 const ORDER: StepKey[] = ["information", "fortification", "safeguards", "payment"];

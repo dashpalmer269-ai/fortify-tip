@@ -2,7 +2,7 @@ export default function RegistryLoading() {
   return <TabPageSkeleton accent="rgba(139,92,246,0.3)" label="Registry" />;
 }
 
-function TabPageSkeleton({ accent, label }: { accent: string; label: string }) {
+function TabPageSkeleton({ accent, label: _label }: { accent: string; label: string }) {
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="border-b border-white/[0.06] px-6 py-5" style={{ background: "rgba(139,92,246,0.04)" }}>

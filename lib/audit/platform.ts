@@ -20,6 +20,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import * as Sentry from "@sentry/nextjs";
 import type { Database } from "@/lib/supabase/database.types";
+import { scanForPhi } from "@/lib/compliance/phi-scanner";
 
 export type PlatformAuditEvent =
   | "practice.deleted"
@@ -43,10 +44,32 @@ export interface PlatformAuditPayload {
   payload?: Record<string, unknown>;
 }
 
+/**
+ * Defense-in-depth PHI scrub for platform-audit payloads. Platform events
+ * are constructed by us from identifiers + amounts — never user free-text —
+ * so PHI exposure should be impossible by design. This scrub is a belt: any
+ * string value that trips the PHI scanner is replaced with "[redacted-phi]"
+ * before the row is written. Keeps the durable, externally-retained audit
+ * log PHI-safe even if a future caller passes something it shouldn't.
+ */
+function scrubPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(payload)) {
+    if (typeof v === "string") {
+      out[k] = scanForPhi(v).clean ? v : "[redacted-phi]";
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
 export async function logPlatformEvent(
   db: SupabaseClient<Database> | null,
   evt: PlatformAuditPayload
 ): Promise<void> {
+  const safePayload = scrubPayload(evt.payload ?? {});
+
   // Mirror to Sentry FIRST so even a DB failure leaves an external trail.
   Sentry.addBreadcrumb({
     category: "platform-audit",
@@ -74,7 +97,7 @@ export async function logPlatformEvent(
       // callers. Cast at the boundary — Supabase serializes via
       // JSON.stringify so structurally any JSON-safe value is fine.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      payload: (evt.payload ?? {}) as any,
+      payload: safePayload as any,
     });
   } catch (err) {
     // Last-resort surfacing: capture as a Sentry exception so the audit

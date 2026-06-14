@@ -306,8 +306,7 @@ DashboardClient + report PDF + attestation snapshot
 | On-demand recompute before reads | ✓ in `/api/reports/generate`, `lib/attestation/generate.ts::buildSnapshot`, AND `app/app/page.tsx` (dashboard) | ✓ dashboard recompute added 2026-06-12 so the critical-findings badge count can't under-report risk between nightly cron runs |
 | Readiness penalties on tasks/BAAs/screenings/drift | ✓ migration 042 audit_readiness rewrite | ✓ flows through audit_readiness_summary + v2 |
 | Dashboard surfaces v2 signals | ✓ `app/app/page.tsx` calls v2 | ✓ DashboardClient renders signal strip |
-| Tests for rule behavior — basic | ✓ `scripts/test-satisfaction-rule.sql` (7 cases) | runnable, transactional |
-| Tests for rule behavior — richer DSL | ✓ `scripts/test-satisfaction-rule-v2.sql` (6 cases) | runnable, transactional |
+| Tests for rule behavior — real DB | ✓ `scripts/ci/satisfaction-rule-ci-test.sql` (9 scenarios) runs in CI against a Postgres service container (`.github/workflows/db-tests.yml`); a vitest guard (`tests/ci-sql-sync.test.ts`) keeps it in sync with the corrected evaluator | superseded the two earlier hand-run scripts, which referenced columns that never existed on practice_evidence (`source`/`evidence_type`/`collected_by_user_id`) and would have errored against the real schema — removed in migration-045 cleanup |
 | Tests for access state | ✓ `tests/access-state.test.ts` + `tests/require-access.test.ts` | 19 cases |
 | Tests for invite token | ✓ `tests/invite-token.test.ts` | 6 cases |
 | Tests for satisfaction-rule TS shape + recompute-first wiring | ✓ `tests/satisfaction-rule.test.ts` | covers contract |
@@ -404,5 +403,7 @@ npm test                                # vitest unit suite
 
 # Live
 npm run build                           # full prod build
-# In Supabase SQL editor: paste scripts/test-satisfaction-rule.sql
+
+# Satisfaction-rule DB test (CI runs this against a Postgres service):
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/ci/satisfaction-rule-ci-test.sql
 ```

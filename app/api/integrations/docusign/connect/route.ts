@@ -7,7 +7,7 @@ import { requirePracticeAccess } from "@/lib/billing/require-access";
  * Begin DocuSign OAuth Authorization Code Grant flow. Stores state in
  * a cookie so the callback can verify origin and resolve practice id.
  */
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   if (!isConfigured()) {
     return NextResponse.json(
       {
