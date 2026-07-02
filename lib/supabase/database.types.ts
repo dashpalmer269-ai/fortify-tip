@@ -1206,72 +1206,6 @@ export interface Database {
         Relationships: [];
       };
 
-      // ── 001: legacy threat-intel core ───────────────────────────────────
-      threats: {
-        Row: {
-          id: string;
-          cve_id: string | null;
-          title: string;
-          summary: string | null;
-          affected_products: string[] | null;
-          exploit_status: "active" | "poc" | "theoretical" | "none" | null;
-          reference_url: string | null;
-          fix_status: "patched" | "workaround" | "fixing" | null;
-          severity: "critical" | "high" | "medium" | "low" | null;
-          source_name: string | null;
-          source_tab: "registry" | "community" | "forums" | null;
-          raw_content: string | null;
-          credibility_score: number | null;
-          is_critical: boolean | null;
-          tags: string[] | null;
-          published_at: string | null;
-          ingested_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          cve_id?: string | null;
-          title: string;
-          summary?: string | null;
-          affected_products?: string[] | null;
-          exploit_status?: Database["public"]["Tables"]["threats"]["Row"]["exploit_status"];
-          reference_url?: string | null;
-          fix_status?: Database["public"]["Tables"]["threats"]["Row"]["fix_status"];
-          severity?: Database["public"]["Tables"]["threats"]["Row"]["severity"];
-          source_name?: string | null;
-          source_tab?: Database["public"]["Tables"]["threats"]["Row"]["source_tab"];
-          raw_content?: string | null;
-          credibility_score?: number | null;
-          is_critical?: boolean | null;
-          tags?: string[] | null;
-          published_at?: string | null;
-          ingested_at?: string | null;
-        };
-        Update: Partial<Database["public"]["Tables"]["threats"]["Insert"]>;
-        Relationships: [];
-      };
-
-      ingestion_logs: {
-        Row: {
-          id: string;
-          source: string | null;
-          items_fetched: number | null;
-          items_new: number | null;
-          status: string | null;
-          error_message: string | null;
-          ran_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          source?: string | null;
-          items_fetched?: number | null;
-          items_new?: number | null;
-          status?: string | null;
-          error_message?: string | null;
-          ran_at?: string | null;
-        };
-        Update: Partial<Database["public"]["Tables"]["ingestion_logs"]["Insert"]>;
-        Relationships: [];
-      };
       // Added by 041_invite_codes, hashed by 042_invite_hash_readiness_satisfaction
       invite_codes: {
         Row: {
@@ -1444,10 +1378,6 @@ export interface Database {
           resolved_task_id: string | null;
           already_acknowledged: boolean;
         };
-      };
-      search_threats: {
-        Args: { query: string };
-        Returns: Array<Database["public"]["Tables"]["threats"]["Row"]>;
       };
       user_is_practice_member: {
         Args: { p_practice_id: string };

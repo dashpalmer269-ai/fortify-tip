@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import UserMenu, { type UserMenuViewer } from "./UserMenu";
 
 /**
- * Public marketing top-nav. Used on /, /pricing, /intel.
+ * Public marketing top-nav. Used on / and /pricing.
  * Mobile-first: hamburger opens a full-screen overlay on small viewports.
  * When `viewer` is provided (signed-in user), shows a profile menu instead of "Login".
  */
@@ -13,7 +13,7 @@ export default function MarketingNav({
   active,
   viewer,
 }: {
-  active?: "features" | "intel" | "about";
+  active?: "features" | "about";
   viewer?: UserMenuViewer | null;
 }) {
   const [open, setOpen] = useState(false);
@@ -64,7 +64,6 @@ export default function MarketingNav({
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-10 text-[15px] font-medium font-sans">
           {navLink("/#features", "Features", "features")}
-          {navLink("/intel", "Intel", "intel")}
           {navLink("/#about", "About", "about")}
         </nav>
 
@@ -125,7 +124,6 @@ export default function MarketingNav({
           </div>
           <nav className="flex-1 flex flex-col justify-center px-8 gap-7 text-3xl font-sans">
             <Link href="/#features" onClick={() => setOpen(false)} className="text-white/80 hover:text-white">Features</Link>
-            <Link href="/intel" onClick={() => setOpen(false)} className="text-white/80 hover:text-white">Intel</Link>
             <Link href="/#about" onClick={() => setOpen(false)} className="text-white/80 hover:text-white">About</Link>
             <Link href="/pricing" onClick={() => setOpen(false)} className="text-white/80 hover:text-white">Pricing</Link>
             <div className="border-t border-white/10 my-2" />

@@ -29,7 +29,7 @@ export default function StepPayment({ data, onChange, onSubmit, onBack, submitti
           </h2>
           <p className="text-sm text-[var(--color-secondary)] leading-[1.7]">
             All plans include the unified control library, AI-assisted remediation,
-            automated evidence collection, and live threat intelligence. You can change
+            and automated evidence collection. You can change
             plans or cancel at any time from <span className="text-[var(--color-secondary)]">Workspace › Billing</span>.
           </p>
         </CardBody>

@@ -33,7 +33,7 @@ export const PLANS: Plan[] = [
     features: [
       "Unified HIPAA / SOC 2 / ISO 27001 / GDPR control library",
       "Automated evidence collection from M365, Google, AWS, Okta, DocuSign",
-      "Daily drift monitoring + live threat intelligence",
+      "Daily drift monitoring",
       "Policy authoring + acknowledgment tracking",
       "Workforce training (HIPAA Security, Privacy, Breach, Phishing)",
       "Quarterly auditor-ready exports",

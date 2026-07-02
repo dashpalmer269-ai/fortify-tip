@@ -218,7 +218,7 @@ export default async function LandingPage() {
           </p>
           <p className="text-[13px] text-white/55 leading-[1.7] max-w-2xl font-sans">
             We operate on the metadata of your compliance program — controls, requirements, vendor
-            risk, threat intel, audit-readiness scoring — not the patient data those controls
+            risk, audit-readiness scoring — not the patient data those controls
             protect. That keeps Fortify out of Business Associate scope under HIPAA
             (<span className="font-mono text-white/65">45 CFR §160.103</span>) and removes an
             entire class of breach exposure from your stack.
@@ -289,7 +289,6 @@ export default async function LandingPage() {
           <FooterCol title="Platform" links={[
             ["Features",   "#features"],
             ["Compliance", "/app/compliance"],
-            ["Intel",      "/intel"],
             ["Pricing",    "/pricing"],
           ]} />
           <FooterCol title="Resources" links={[

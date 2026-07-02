@@ -240,7 +240,7 @@ export default function DashboardClient({
           <SignalCard
             label="Drift alerts open"
             value={readinessSignals.drift_alerts_open}
-            href="/app/threats"
+            href="/app/audit-log"
             tone={readinessSignals.drift_alerts_open > 0 ? "warn" : "neutral"}
           />
         </section>

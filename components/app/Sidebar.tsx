@@ -19,7 +19,6 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/app/policies",        label: "Policies",       icon: PolicyIcon },
   { href: "/app/training",        label: "Training",       icon: PolicyIcon },
   { href: "/app/vendors",         label: "Vendors",        icon: VendorIcon },
-  { href: "/app/threats",         label: "Threat intel",   icon: ThreatIcon },
   { href: "/app/reports",         label: "Reports",        icon: ReportIcon,   minRole: "officer" },
   { href: "/app/attestations",    label: "Attestations",   icon: AttestationIcon, minRole: "officer" },
   { href: "/app/audit-log",       label: "Audit log",      icon: AuditIcon },
@@ -169,13 +168,6 @@ function VendorIcon({ active }: { active: boolean }) {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={active ? "var(--color-accent)" : "currentColor"} strokeWidth={stroke}>
       <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-    </svg>
-  );
-}
-function ThreatIcon({ active }: { active: boolean }) {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={active ? "var(--color-accent)" : "currentColor"} strokeWidth={stroke}>
-      <circle cx="12" cy="12" r="3" /><path d="M3 12a9 9 0 0 0 9 9 9 9 0 0 0 9-9 9 9 0 0 0-9-9 9 9 0 0 0-9 9z" />
     </svg>
   );
 }

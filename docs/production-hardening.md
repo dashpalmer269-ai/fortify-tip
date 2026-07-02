@@ -91,7 +91,6 @@ a sweep through the matrix, bump the "Last reviewed" date.
 | `/api/cron/readiness-digest` | GET | Weekly Monday digest email | Bearer CRON_SECRET | — | — | — | ✓ (system) | ✓ digest.sent | — | IS | none |
 | `/api/cron/exclusion-list-ingest` | GET | Refresh OIG LEIE list | Bearer CRON_SECRET | — | — | — | ✓ (system) | — (load metadata) | — | IS | none |
 | `/api/cron/exclusion-rescreen` | GET | Re-screen workforce against new LEIE | Bearer CRON_SECRET | — | — | — | ✓ (system) | ✓ via service | ✓ name fields scanned | IS | none |
-| `/api/cron/ingest` | GET | Pull RSS threat-intel | Bearer CRON_SECRET | — | — | — | ✓ (system) | — | — | IS | none |
 | `/api/cron/task-reminders` | GET | Email overdue task reminders | Bearer CRON_SECRET | — | — | — | ✓ (system) | — | — | IS | none |
 | `/api/cron/recompute-control-status` | GET | Daily satisfaction-rule recompute | Bearer CRON_SECRET | — | — | — | ✓ (system) | — | — | IS | none |
 

@@ -168,9 +168,6 @@ export default function UserMenu({ viewer }: { viewer: UserMenuViewer }) {
             <MenuItem href="/" onClick={() => setOpen(false)}>
               Home
             </MenuItem>
-            <MenuItem href="/intel" onClick={() => setOpen(false)}>
-              Threat intel
-            </MenuItem>
             <MenuItem href="/pricing" onClick={() => setOpen(false)}>
               Pricing
             </MenuItem>
