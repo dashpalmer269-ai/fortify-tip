@@ -4,6 +4,7 @@ import { createServerClient as createServiceClient } from "@/lib/supabase/server
 import PageHeader from "@/components/ui/PageHeader";
 import TeamClient from "./TeamClient";
 import RequestsQueue, { type PendingRequest } from "./RequestsQueue";
+import InvitesPanel, { type PendingInviteRow } from "./InvitesPanel";
 import type { Role } from "@/lib/auth/permissions";
 import { isAdmin } from "@/lib/auth/permissions";
 
@@ -60,8 +61,22 @@ export default async function TeamPage() {
     is_self: m.user_id === session.user.id,
   }));
 
-  // Pending join requests matched to this practice
+  // Outstanding email invitations (practice_invites, migration 048).
+  // Soft-fail if the table doesn't exist yet so the page never breaks
+  // between deploy and migration run.
   const role = session.membership.role as Role;
+  let pendingInvites: PendingInviteRow[] = [];
+  if (isAdmin(role) && service) {
+    const { data: inviteRows } = await service
+      .from("practice_invites")
+      .select("id, email, role, created_at, expires_at")
+      .eq("practice_id", session.membership.practice_id)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+    pendingInvites = (inviteRows ?? []) as PendingInviteRow[];
+  }
+
+  // Pending join requests matched to this practice
   let pendingRequests: PendingRequest[] = [];
   if (isAdmin(role) && service) {
     const { data: reqRows } = await service
@@ -102,6 +117,8 @@ export default async function TeamPage() {
           requests={pendingRequests}
         />
       )}
+
+      {isAdmin(role) && <InvitesPanel invites={pendingInvites} />}
 
       <TeamClient
         practiceId={session.membership.practice_id}

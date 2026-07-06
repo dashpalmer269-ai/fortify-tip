@@ -1,6 +1,6 @@
 # Production hardening — full route audit + verification
 
-**Last reviewed: 2026-06-12** — covers the codebase up to migration 044.
+**Last reviewed: 2026-07-06** — covers the codebase up to migration 048.
 
 A single-source-of-truth audit of every API route in `app/api/`. 52 route
 files inspected; ~70 HTTP handlers across them. Each handler is classified
@@ -71,7 +71,12 @@ a sweep through the matrix, bump the "Last reviewed" date.
 | `/api/team/leave` | POST | User leaves a practice | ✓ JWT | ✓ self | — | ✗ — must work always | — | ✓ team.member_left | — | PR | none |
 | `/api/team/name` | POST | Edit user's display name | ✓ JWT | ✓ caller in practice | ✓ owner/admin | ✓ gate | ✓ (cross-user write) | ✓ team.name_updated | ✓ phiFields on full_name | PR | none |
 | `/api/team/requests/:id` | POST | Approve / deny join request | ✓ JWT | ✓ caller in matched practice | ✓ owner/admin | ✓ gate | ✓ (cross-tenant) | ✓ join_request.* | ✓ phiFields on denial_reason | PR | none |
-| `/api/invites/queue` | POST | Queue practice invites | ✓ JWT | (caller's practice) | — | ✓ gate | — | ✓ invites.queued | — | PR | none |
+| `/api/invites/queue` | POST | Create + email team invites (practice_invites, m048) | ✓ JWT | ✓ caller in practice | ✓ isAdmin | ✓ gate | ✓ (invite rows + member-email lookup) | ✓ team_invite.sent | — (emails/roles only) | PR | none |
+| `/api/invites/redeem` | POST | Accept a team invite (token or email match) | ✓ JWT | ✗ (creating) | — | — (joining) | ✓ (membership insert) | ✓ team_invite.accepted (in helper) | — | PR | none |
+| `/api/invites/:id/revoke` | POST | Revoke a pending team invite | ✓ JWT | ✓ caller in invite's practice | ✓ isAdmin | ✓ gate | ✓ (status flip) | ✓ team_invite.revoked | — | PR | none |
+| `/api/integrations/disconnect` | POST | Wipe sealed credentials + flip status | ✓ JWT | ✓ caller's practice | ✓ isAdmin | ✗ — revoking access must always work | ✓ (credentials CHECK is service-role-only by design) | ✓ integration.disconnected | — | PR | none |
+| `/api/reports/:id/pdf` | GET | Native PDF download (pdf-lib) | ✓ JWT | ✓ practice-scoped query | — | — (read) | — | — (read-only) | — | PR | none |
+| `/api/attestations/:id/pdf` | GET | Native PDF download (pdf-lib) | ✓ JWT | ✓ practice-scoped query | — | — (read) | — | — (read-only) | — | PR | none |
 | `/api/practice/delete` | POST | Permanently delete a practice | ✓ JWT | ✓ caller in practice | ✓ isOwner | ✗ — must work always | — | ✗ row cascades on delete | — | PR | **add Sentry capture² for external audit** |
 | **Screening** ||||||||||||
 | `/api/screening/preliminary` | POST | Run tier-1 OIG screening | ✓ JWT (+ IP rate-limit) | conditional (practice_id) | — | conditional gate | ✓ | ✓ via `startPreliminary` | ✓ phiFields on first/last name | PR | none |
@@ -163,6 +168,8 @@ list is in section 1's table where "Active access" reads ✓ gate.
 |---|---|
 | `/api/billing/checkout` | Expired demos must be able to subscribe |
 | `/api/team/leave` | A user must always be able to leave a practice |
+| `/api/integrations/disconnect` | A customer must always be able to revoke Fortify's access to their systems (admin-gated) |
+| `/api/invites/redeem` | Membership creation — same class as onboarding |
 | `/api/practice/delete` | Owner can always destroy their own practice |
 | `/api/notifications` POST | Mark-read flag; no real mutation of business data |
 | `/api/onboarding/*` | Practice doesn't exist yet |
@@ -195,7 +202,11 @@ Actions that MUST write `audit_logs` and whether they do:
 | Invite created | DB-side | `invite_codes` table itself (granted_by + granted_at) |
 | Invite revoked | DB-side | `invite_codes.revoked_at` |
 | Integration connected | ✓ | each connect/callback route |
-| Integration disconnect | n/a (not implemented as endpoint) | — |
+| Integration disconnected | ✓ | `/api/integrations/disconnect` `integration.disconnected` |
+| Team invite sent / accepted / revoked | ✓ | `/api/invites/queue`, redeem helper, `/api/invites/:id/revoke` (`team_invite.*`) |
+| Task non-status edit | ✓ | `/api/tasks/:id` writes `task.edited` with changed-field list (closes footnote ³) |
+| Drift alert emailed | — (email only; drift_alerts row is the ledger) | verify-compliance cron, capped 5/practice/run |
+| BAA expiry alert | ✓ notification rows | task-reminders cron (30/14/7/3/1-day milestones) |
 | Policy generated | ✓ | `/api/policies/generate` |
 | Policy acknowledged | ✓ | `/api/policies/:id/acknowledge` |
 | Training completed | ✓ | `/api/training/:id/complete` |
@@ -383,14 +394,19 @@ involve schema changes or behavior shifts that warrant their own PRs.
 1. Move multi-table service-role writes (onboarding finalize, team/add,
    policies/acknowledge, screening helpers) into SECURITY DEFINER RPCs
    with explicit `WITH CHECK` guards. Cuts service-role surface area.
+   Still open — deliberately its own PR; the current pattern was audited
+   route-by-route in section 2 and every write pins the JWT subject.
 2. Move `audit_logs.practice_id` to nullable so practice-deletion can
-   leave a NULL-practice audit row instead of relying on Sentry alone.
-3. Task create/update audit_log rows — nice for compliance audits but
-   the `remediation_tasks` row is already self-auditing.
-4. Integration disconnect endpoints (none today; only connect/callback).
-   Cleanup before customer onboarding.
-5. Per-tenant rate limits beyond IP — currently rate-limiting is global
-   per-IP (signup, screening). A noisy practice could starve others.
+   leave a NULL-practice audit row. Superseded in practice by
+   `platform_audit_logs` (migration 043) + Sentry mirror; keep as a
+   nice-to-have.
+3. ~~Task create/update audit_log rows~~ — done 2026-07-06:
+   `task.edited` written on non-status edits with the changed-field list.
+4. ~~Integration disconnect endpoints~~ — done 2026-07-06:
+   `/api/integrations/disconnect` + UI button + audit row.
+5. ~~Per-tenant rate limits~~ — done 2026-07-06: per-practice token
+   buckets on the three AI routes (policy gen, risk summary, report gen),
+   RATE_LIMITS.ai, keyed `ai:<kind>:<practice_id>`.
 
 ## Verification — run when in doubt
 

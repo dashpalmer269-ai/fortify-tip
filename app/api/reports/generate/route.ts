@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { generateReportSummary } from "@/lib/ai/compliance-ai";
 import { requirePracticeAccess } from "@/lib/billing/require-access";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/security/rate-limit";
 
 export const maxDuration = 60;
 
@@ -24,6 +25,15 @@ export async function POST(req: NextRequest) {
 
   const guard = await requirePracticeAccess(supabase, body.practice_id);
   if (!guard.ok) return guard.response;
+
+  // Per-practice throttle on the expensive AI call.
+  const rl = checkRateLimit(`ai:report:${body.practice_id}`, RATE_LIMITS.ai);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many report generations at once. Try again in a few minutes." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } }
+    );
+  }
 
   // Recompute control statuses from satisfaction_rule + evidence currency
   // BEFORE reading them for the report. Without this the report can ship

@@ -7,6 +7,9 @@ import {
   type CredentialCache,
 } from "@/lib/compliance/runner";
 import { runEvidenceFlow } from "@/lib/compliance/evidence-flow";
+import { sendEmail } from "@/lib/email/provider";
+import { driftAlertEmail } from "@/lib/email/templates";
+import { getOfficerRecipients } from "@/lib/email/recipients";
 
 export const maxDuration = 300;
 
@@ -45,13 +48,19 @@ export async function GET(req: NextRequest) {
     drift_alerts_created: 0,
   };
   const controlsUpdated = new Set<string>();
+  // Drifted checks queued for the end-of-run officer email fan-out.
+  const driftEvents: Array<{
+    practice_id: string;
+    control_id: string;
+    check_title: string;
+  }> = [];
   // Per-run credential cache so 5 M365 checks → 1 decrypt, not 5.
   const credentialCache: CredentialCache = new Map();
 
   // 1. Load every active evidence check
   const { data: checks, error: ecErr } = await supabase
     .from("evidence_checks")
-    .select("id, control_id, check_key, collection_method, source_integration, check_config, pass_criteria, frequency_hours");
+    .select("id, control_id, check_key, title, collection_method, source_integration, check_config, pass_criteria, frequency_hours");
   if (ecErr) return NextResponse.json({ error: `evidence_checks fetch: ${ecErr.message}` }, { status: 500 });
   if (!checks || checks.length === 0) return NextResponse.json({ ok: true, note: "no evidence checks defined" });
 
@@ -117,7 +126,14 @@ export async function GET(req: NextRequest) {
 
       const persistedStatus = outcome.persisted_status as keyof typeof counts;
       if (persistedStatus in counts) counts[persistedStatus]++;
-      if (outcome.drift_detected) counts.drift_alerts_created++;
+      if (outcome.drift_detected) {
+        counts.drift_alerts_created++;
+        driftEvents.push({
+          practice_id: practiceId,
+          control_id: check.control_id,
+          check_title: (check as EvidenceCheckRow & { title?: string }).title ?? check.check_key,
+        });
+      }
 
       controlsUpdated.add(`${practiceId}::${check.control_id}`);
     }
@@ -158,6 +174,51 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // 6. Drift alert emails — one per drifted check to the practice's
+  //    officers, capped per practice per run so a bad integration day
+  //    (say, expired credentials failing 20 checks at once) can't flood
+  //    an inbox. The drift_alerts rows above are the complete record; the
+  //    email is a nudge, not the ledger.
+  const DRIFT_EMAILS_PER_PRACTICE_CAP = 5;
+  let driftEmailsSent = 0;
+  if (driftEvents.length > 0) {
+    const origin = new URL(req.url).origin;
+    const driftPracticeIds = [...new Set(driftEvents.map((d) => d.practice_id))];
+    const { emailsByPractice } = await getOfficerRecipients(supabase, driftPracticeIds);
+
+    const [{ data: practiceRows }, { data: controlRows }] = await Promise.all([
+      supabase.from("practices").select("id, name").in("id", driftPracticeIds),
+      supabase
+        .from("controls")
+        .select("id, title")
+        .in("id", [...new Set(driftEvents.map((d) => d.control_id))]),
+    ]);
+    const practiceName = new Map((practiceRows ?? []).map((p) => [p.id, p.name]));
+    const controlTitle = new Map((controlRows ?? []).map((c) => [c.id, c.title]));
+
+    const sentPerPractice = new Map<string, number>();
+    for (const drift of driftEvents) {
+      const recipients = emailsByPractice.get(drift.practice_id) ?? [];
+      if (recipients.length === 0) continue;
+      const already = sentPerPractice.get(drift.practice_id) ?? 0;
+      if (already >= DRIFT_EMAILS_PER_PRACTICE_CAP) continue;
+      sentPerPractice.set(drift.practice_id, already + 1);
+
+      const result = await sendEmail({
+        to: recipients,
+        subject: `Control drift detected: ${controlTitle.get(drift.control_id) ?? "a monitored control"}`,
+        html: driftAlertEmail({
+          practice_name: practiceName.get(drift.practice_id) ?? "your practice",
+          control_title: controlTitle.get(drift.control_id) ?? "Monitored control",
+          check_title: drift.check_title,
+          app_url: origin,
+        }),
+        tag: "drift.alert",
+      });
+      if (result.ok) driftEmailsSent++;
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     duration_ms: Date.now() - startedAt,
@@ -165,5 +226,6 @@ export async function GET(req: NextRequest) {
     controls_updated: controlsUpdated.size,
     tasks_opened: tasksOpened,
     tasks_resolved: tasksResolved,
+    drift_emails_sent: driftEmailsSent,
   });
 }

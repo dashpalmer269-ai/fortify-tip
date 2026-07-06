@@ -3,6 +3,7 @@ import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { computeBaselineRiskScore } from "@/lib/compliance/risk-questions";
 import { summarizeRiskAssessment } from "@/lib/ai/compliance-ai";
 import { requirePracticeAccess } from "@/lib/billing/require-access";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/security/rate-limit";
 
 export const maxDuration = 60;
 
@@ -20,6 +21,15 @@ export async function POST(req: NextRequest) {
 
   const guard = await requirePracticeAccess(supabase, body.practice_id);
   if (!guard.ok) return guard.response;
+
+  // Per-practice throttle on the expensive AI call.
+  const rl = checkRateLimit(`ai:risk:${body.practice_id}`, RATE_LIMITS.ai);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many risk-assessment runs at once. Try again in a few minutes." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } }
+    );
+  }
 
   // Pull practice context for the AI summary
   const { data: practice } = await supabase

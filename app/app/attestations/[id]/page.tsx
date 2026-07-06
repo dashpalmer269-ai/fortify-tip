@@ -104,21 +104,19 @@ export default async function AttestationDetailPage({ params }: { params: Promis
 
       {/* Actions */}
       <div className="flex flex-wrap items-center gap-3 mb-8">
-        <Link
-          href={`/app/attestations/${att.id}/print?autoprint=1`}
-          target="_blank"
-          rel="noopener"
+        <a
+          href={`/api/attestations/${att.id}/pdf`}
           className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover,#7c3aed)] text-white text-sm font-medium rounded-md transition-colors"
         >
           Download PDF
-        </Link>
+        </a>
         <Link
           href={`/app/attestations/${att.id}/print?autoprint=0`}
           target="_blank"
           rel="noopener"
           className="text-[13px] text-[var(--color-tertiary)] hover:text-[var(--color-primary)] transition-colors"
         >
-          Preview document
+          Print view (wet-ink signing)
         </Link>
       </div>
 

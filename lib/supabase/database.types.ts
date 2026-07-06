@@ -130,6 +130,37 @@ export interface Database {
         Relationships: [];
       };
 
+      practice_invites: {
+        Row: {
+          id: string;
+          practice_id: string;
+          email: string;
+          role: "admin" | "compliance_officer" | "staff" | "auditor_readonly";
+          token_hash: string;
+          invited_by: string | null;
+          status: "pending" | "accepted" | "revoked";
+          created_at: string;
+          expires_at: string;
+          accepted_at: string | null;
+          accepted_user_id: string | null;
+        };
+        Insert: {
+          id?: string;
+          practice_id: string;
+          email: string;
+          role?: Database["public"]["Tables"]["practice_invites"]["Row"]["role"];
+          token_hash: string;
+          invited_by?: string | null;
+          status?: Database["public"]["Tables"]["practice_invites"]["Row"]["status"];
+          created_at?: string;
+          expires_at?: string;
+          accepted_at?: string | null;
+          accepted_user_id?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["practice_invites"]["Insert"]>;
+        Relationships: [];
+      };
+
       frameworks: {
         Row: {
           id: string;

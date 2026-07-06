@@ -81,6 +81,20 @@ export async function POST(
       resource_id: id,
       metadata: { from: task.status, to: body.status },
     });
+  } else {
+    // Non-status edits (notes / reassignment / due date) get their own audit
+    // row so every task mutation is reconstructable in a compliance review.
+    const editedFields = Object.keys(update);
+    if (editedFields.length > 0) {
+      await db.from("audit_logs").insert({
+        practice_id: task.practice_id,
+        actor_user_id: user.id,
+        action: "task.edited",
+        resource_type: "remediation_task",
+        resource_id: id,
+        metadata: { fields: editedFields },
+      });
+    }
   }
 
   return NextResponse.json({ ok: true });

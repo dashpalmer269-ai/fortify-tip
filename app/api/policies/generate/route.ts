@@ -3,6 +3,7 @@ import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { draftPolicy } from "@/lib/ai/compliance-ai";
 import { PolicyGenerateSchema, parseBody } from "@/lib/schemas/api";
 import { requirePracticeAccess } from "@/lib/billing/require-access";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/security/rate-limit";
 
 export const maxDuration = 60;
 
@@ -21,6 +22,16 @@ export async function POST(req: NextRequest) {
 
   const guard = await requirePracticeAccess(supabase, body.practice_id);
   if (!guard.ok) return guard.response;
+
+  // Per-practice throttle on the expensive AI call — IP limits alone let one
+  // noisy tenant starve the shared function budget.
+  const rl = checkRateLimit(`ai:policy:${body.practice_id}`, RATE_LIMITS.ai);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many policy generations at once. Try again in a few minutes." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } }
+    );
+  }
 
   const { data: practice } = await supabase
     .from("practices")

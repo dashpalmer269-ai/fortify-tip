@@ -11,7 +11,9 @@ import {
 } from "@/lib/security/credential-scoring";
 import AwsConnectForm from "./AwsConnectForm";
 import CredentialHealthCard from "./CredentialHealthCard";
+import DisconnectButton from "./DisconnectButton";
 import { INTEGRATION_GUIDANCE } from "@/lib/integrations/setup-guidance";
+import { isAdmin } from "@/lib/auth/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -297,6 +299,9 @@ export default async function IntegrationsPage({
                           </ButtonLink>
                         )}
                         {p.status === "available" && p.inline_form === "aws" && !connected && <AwsConnectForm />}
+                        {connected && isAdmin(session.membership.role) && (
+                          <DisconnectButton integrationType={p.key} label={p.label} />
+                        )}
                       </div>
 
                       {connected && score && <CredentialHealthCard score={score} />}

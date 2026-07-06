@@ -151,10 +151,8 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
       </section>
 
       <div className="mt-8 flex items-center gap-3">
-        <Link
-          href={`/app/reports/${r.id}/print?autoprint=1`}
-          target="_blank"
-          rel="noopener"
+        <a
+          href={`/api/reports/${r.id}/pdf`}
           className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover,#7c3aed)] text-white text-sm font-medium rounded-md transition-colors"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -163,17 +161,17 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
           Download PDF
-        </Link>
+        </a>
         <Link
           href={`/app/reports/${r.id}/print?autoprint=0`}
           target="_blank"
           rel="noopener"
           className="text-[13px] text-[var(--color-tertiary)] hover:text-[var(--color-primary)] transition-colors"
         >
-          Preview print view
+          Print view
         </Link>
         <span className="ml-auto text-[11px] text-[var(--color-quaternary)] font-mono">
-          <Badge variant="muted">PDF</Badge> generated via browser print
+          <Badge variant="muted">PDF</Badge> consistent server-generated output
         </span>
       </div>
     </div>

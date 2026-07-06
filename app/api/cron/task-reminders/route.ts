@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/provider";
-import { taskReminderEmail } from "@/lib/email/templates";
+import { taskReminderEmail, baaExpiringEmail } from "@/lib/email/templates";
+import { getOfficerRecipients } from "@/lib/email/recipients";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -14,11 +15,16 @@ function authorized(req: NextRequest): boolean {
 }
 
 /**
- * Daily task reminder nudge (09:00 UTC).
+ * Daily human-notification cron (09:00 UTC). Two duties:
  *
- * For each assignee with tasks due within 3 days or already overdue, sends a
- * single digest email + an in-app notification. One message per assignee per
- * run — we don't spam per-task.
+ *   1. Task reminders — each assignee with tasks due within 3 days or
+ *      already overdue gets ONE digest email + in-app notification.
+ *   2. BAA expiry alerts — practice officers get a heads-up when an active
+ *      BAA hits a milestone (30/14/7/3/1 days out). Milestone-gated so a
+ *      daily cron doesn't nag daily about the same agreement.
+ *
+ * Both live here because Vercel Hobby caps cron entries — this is the
+ * one daily "notify humans" job.
  */
 export async function GET(req: NextRequest) {
   if (!authorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -28,6 +34,7 @@ export async function GET(req: NextRequest) {
 
   const origin = new URL(req.url).origin;
   const soon = new Date(Date.now() + 3 * 86400_000).toISOString().slice(0, 10);
+  const baaResult = await sendBaaExpiryAlerts(db, origin);
 
   // Open tasks that are due soon or overdue, with an assignee.
   const { data: tasks } = await db
@@ -40,7 +47,7 @@ export async function GET(req: NextRequest) {
     .order("due_date", { ascending: true });
 
   if (!tasks || tasks.length === 0) {
-    return NextResponse.json({ ok: true, assignees_notified: 0, tasks_considered: 0 });
+    return NextResponse.json({ ok: true, assignees_notified: 0, tasks_considered: 0, ...baaResult });
   }
 
   // Group by assignee
@@ -95,5 +102,87 @@ export async function GET(req: NextRequest) {
     notified++;
   }
 
-  return NextResponse.json({ ok: true, assignees_notified: notified, tasks_considered: tasks.length });
+  return NextResponse.json({
+    ok: true,
+    assignees_notified: notified,
+    tasks_considered: tasks.length,
+    ...baaResult,
+  });
+}
+
+/** Days-out milestones that trigger a BAA expiry email. */
+const BAA_ALERT_MILESTONES = new Set([30, 14, 7, 3, 1]);
+
+async function sendBaaExpiryAlerts(
+  db: NonNullable<ReturnType<typeof createServerClient>>,
+  origin: string
+): Promise<{ baa_alerts_sent: number; baas_expiring_30d: number }> {
+  const today = new Date();
+  const horizon = new Date(today.getTime() + 30 * 86400_000).toISOString().slice(0, 10);
+
+  const { data: baas } = await db
+    .from("baas")
+    .select("id, practice_id, vendor_id, expiration_date")
+    .eq("status", "active")
+    .not("expiration_date", "is", null)
+    .gte("expiration_date", today.toISOString().slice(0, 10))
+    .lte("expiration_date", horizon);
+  if (!baas || baas.length === 0) return { baa_alerts_sent: 0, baas_expiring_30d: 0 };
+
+  // Milestone gate: only alert at 30/14/7/3/1 days out.
+  const midnightUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  const due = baas.filter((b) => {
+    const days = Math.round((new Date(b.expiration_date!).getTime() - midnightUtc) / 86400_000);
+    return BAA_ALERT_MILESTONES.has(days);
+  });
+  if (due.length === 0) return { baa_alerts_sent: 0, baas_expiring_30d: baas.length };
+
+  const practiceIds = [...new Set(due.map((b) => b.practice_id))];
+  const [{ emailsByPractice, userIdsByPractice }, { data: practiceRows }, { data: vendorRows }] =
+    await Promise.all([
+      getOfficerRecipients(db, practiceIds),
+      db.from("practices").select("id, name").in("id", practiceIds),
+      db
+        .from("vendors")
+        .select("id, vendor_name")
+        .in("id", [...new Set(due.map((b) => b.vendor_id))]),
+    ]);
+  const practiceName = new Map((practiceRows ?? []).map((p) => [p.id, p.name]));
+  const vendorName = new Map((vendorRows ?? []).map((v) => [v.id, v.vendor_name]));
+
+  let sent = 0;
+  for (const baa of due) {
+    const days = Math.round((new Date(baa.expiration_date!).getTime() - midnightUtc) / 86400_000);
+    const vendor = vendorName.get(baa.vendor_id) ?? "a vendor";
+    const recipients = emailsByPractice.get(baa.practice_id) ?? [];
+
+    // In-app notification for every officer, email alongside (best-effort).
+    for (const userId of userIdsByPractice.get(baa.practice_id) ?? []) {
+      await db.from("notifications").insert({
+        user_id: userId,
+        practice_id: baa.practice_id,
+        kind: "baa.expiring",
+        title: `BAA with ${vendor} expires in ${days} day${days === 1 ? "" : "s"}`,
+        body: "Renew it to keep your HIPAA business-associate coverage intact.",
+        link: "/app/vendors",
+      });
+    }
+
+    if (recipients.length > 0) {
+      const result = await sendEmail({
+        to: recipients,
+        subject: `BAA with ${vendor} expires in ${days} day${days === 1 ? "" : "s"}`,
+        html: baaExpiringEmail({
+          practice_name: practiceName.get(baa.practice_id) ?? "your practice",
+          vendor_name: vendor,
+          days_remaining: days,
+          app_url: origin,
+        }),
+        tag: "baa.expiring",
+      });
+      if (result.ok) sent++;
+    }
+  }
+
+  return { baa_alerts_sent: sent, baas_expiring_30d: baas.length };
 }

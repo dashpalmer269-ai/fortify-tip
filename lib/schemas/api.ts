@@ -118,6 +118,29 @@ export const TeamRenameSchema = z.object({
 export type TeamRenameBody = z.infer<typeof TeamRenameSchema>;
 
 /* ──────────────────────────────────────────────────────────────────────── *
+ * Team — email invites (practice_invites)
+ * ──────────────────────────────────────────────────────────────────────── */
+export const TeamInviteQueueSchema = z.object({
+  practice_id: z.string().uuid(),
+  invites: z
+    .array(
+      z.object({
+        email: z.string().trim().toLowerCase().email().max(254),
+        role: z.enum(["admin", "compliance_officer", "staff", "auditor_readonly"]),
+      })
+    )
+    .min(1)
+    .max(20),
+});
+export type TeamInviteQueueBody = z.infer<typeof TeamInviteQueueSchema>;
+
+export const TeamInviteRedeemSchema = z.object({
+  // Optional: /join/<token> passes it; email-match redemption works without.
+  token: z.string().regex(/^[A-Za-z0-9_-]{8,64}$/).optional(),
+});
+export type TeamInviteRedeemBody = z.infer<typeof TeamInviteRedeemSchema>;
+
+/* ──────────────────────────────────────────────────────────────────────── *
  * Policies — generate
  * ──────────────────────────────────────────────────────────────────────── */
 export const PolicyGenerateSchema = z.object({

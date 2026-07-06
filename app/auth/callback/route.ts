@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
+import { createServerClient as createServiceClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/provider";
 import { welcomeEmail } from "@/lib/email/templates";
+import { redeemPendingInviteByEmail } from "@/lib/billing/team-invites";
 
 /**
  * Post-verification + magic-link + OAuth callback.
@@ -46,6 +48,16 @@ export async function GET(request: NextRequest) {
       });
     } catch {
       /* email failure must not block sign-up */
+    }
+  }
+
+  // Team-invite silent redemption: if this verified email was invited to a
+  // practice (migration 048), join them now — the membership query below
+  // then routes them straight into the app, skipping the join-request queue.
+  if (data.user.email) {
+    const service = createServiceClient();
+    if (service) {
+      await redeemPendingInviteByEmail(service, { id: data.user.id, email: data.user.email });
     }
   }
 

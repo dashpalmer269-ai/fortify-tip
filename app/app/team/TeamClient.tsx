@@ -110,11 +110,13 @@ function AddMemberForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
+  const [inviteOffer, setInviteOffer] = useState<{ email: string; role: Role } | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setHint(null);
+    setInviteOffer(null);
     setSubmitting(true);
     try {
       const res = await fetch("/api/team/add", {
@@ -125,14 +127,57 @@ function AddMemberForm({
       const body = await res.json();
       if (!res.ok) {
         if (body.signup_required) {
-          setHint(
-            `${email.trim()} doesn't have a Fortify account yet. Share this signup link with them, then come back and add them: ${window.location.origin}/signup`
-          );
+          // No account yet — offer the email-invite path instead.
+          setInviteOffer({ email: email.trim().toLowerCase(), role });
         } else {
           setError(body.error ?? "Failed to add member");
         }
         return;
       }
+      setEmail("");
+      onAdded();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function sendInvite() {
+    if (!inviteOffer) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/invites/queue", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          practice_id: practiceId,
+          invites: [{ email: inviteOffer.email, role: inviteOffer.role }],
+        }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        queued?: number;
+        skipped?: Array<{ email: string; reason: string }>;
+      };
+      if (!res.ok) {
+        setError(body.error ?? "Failed to send invitation");
+        return;
+      }
+      if (body.queued === 0) {
+        const reason = body.skipped?.[0]?.reason;
+        setError(
+          reason === "already_invited"
+            ? "They already have a pending invitation — see the list above."
+            : reason === "send_failed"
+              ? "The invitation was created but the email failed to send. They can still be re-invited later."
+              : "Could not send the invitation."
+        );
+        return;
+      }
+      setHint(`Invitation sent to ${inviteOffer.email}. It expires in 14 days.`);
+      setInviteOffer(null);
       setEmail("");
       onAdded();
     } catch (e) {
@@ -152,7 +197,8 @@ function AddMemberForm({
           Add a member
         </h3>
         <p className="text-xs text-[var(--color-tertiary)] mb-5">
-          The person must already have a Fortify account. They&apos;ll get access on their next sign-in.
+          If they already have a Fortify account they get access immediately — otherwise
+          we&apos;ll email them an invitation to join this practice.
         </p>
 
         <form onSubmit={submit} className="space-y-4">
@@ -193,6 +239,16 @@ function AddMemberForm({
           {hint && (
             <div className="text-sm text-[var(--color-accent)] bg-[var(--color-accent-soft)] border border-[var(--color-accent)]/30 rounded-md px-3 py-2">
               {hint}
+            </div>
+          )}
+          {inviteOffer && (
+            <div className="text-sm bg-[var(--color-accent-soft)] border border-[var(--color-accent)]/30 rounded-md px-3 py-3 space-y-2">
+              <p className="text-[var(--color-secondary)]">
+                {inviteOffer.email} doesn&apos;t have a Fortify account yet.
+              </p>
+              <Button type="button" onClick={sendInvite} loading={submitting} variant="primary" size="sm">
+                Email them an invitation
+              </Button>
             </div>
           )}
 
