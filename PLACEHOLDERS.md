@@ -9,7 +9,6 @@ account or service isn't connected.
 
 | Action | Where | Why it can't be done from code |
 |---|---|---|
-| Run migration `048_practice_invites.sql` | Supabase SQL editor | DDL needs the dashboard/CLI |
 | Paste 4 branded auth email templates | Supabase → Auth → Templates | Dashboard-only config — see `docs/supabase-auth-email-templates/README.md` |
 | Verify Supabase Site URL = `https://fortifynow.xyz` | Supabase → Auth → URL Configuration | Dashboard-only config |
 | Point OAuth redirect URIs at fortifynow.xyz | Entra / Google Cloud / DocuSign consoles + Vercel env (`MS_REDIRECT_URI`, `GOOGLE_REDIRECT_URI`, `DOCUSIGN_REDIRECT_URI`) | External consoles |
@@ -34,7 +33,8 @@ Inside `lib/compliance/runner.ts`, these `source_integration` values return
 ## Resolved since the last revision of this file
 
 - Real email team invites: `practice_invites` + `/api/invites/queue` +
-  `/join/<token>` + silent redemption in the auth callback (migration 048)
+  `/join/<token>` + silent redemption in the auth callback (migration 048
+  applied to prod 2026-07-06)
 - Native PDF export for reports and attestations (`lib/pdf/*`,
   `/api/reports/[id]/pdf`, `/api/attestations/[id]/pdf`) — print views remain
   for wet-ink signing
