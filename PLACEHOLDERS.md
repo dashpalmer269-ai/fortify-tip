@@ -9,14 +9,16 @@ account or service isn't connected.
 
 | Action | Where | Why it can't be done from code |
 |---|---|---|
-| Paste 4 branded auth email templates | Supabase → Auth → Templates | Dashboard-only config — see `docs/supabase-auth-email-templates/README.md` |
-| Verify Supabase Site URL = `https://fortifynow.xyz` | Supabase → Auth → URL Configuration | Dashboard-only config |
-| Point OAuth redirect URIs at fortifynow.xyz | Entra / Google Cloud / DocuSign consoles + Vercel env (`MS_REDIRECT_URI`, `GOOGLE_REDIRECT_URI`, `DOCUSIGN_REDIRECT_URI`) | External consoles |
-| Verify Resend sending domain | Resend dashboard + DNS | DNS records |
-| Remove unused `NVD_API_KEY` / `OTX_API_KEY` env vars | Vercel project settings | Leftover from the Intel→TipSec split; nothing reads them |
+| Confirm OAuth redirect URIs point at fortifynow.xyz | Entra / Google Cloud / DocuSign consoles (+ Vercel env `MS_REDIRECT_URI`, `GOOGLE_REDIRECT_URI`, `DOCUSIGN_REDIRECT_URI` if wrong) | External consoles; env values are pull-protected so unverifiable from CLI. Likely already correct (vars created right after the domain went live). 30-second test: click Connect on /app/integrations — consent screen = correct, redirect_uri_mismatch = fix |
+| Verify Resend sending domain | Resend dashboard + Cloudflare DNS | DNS records; no Resend API key available locally to check status |
 | Stripe products + webhook + env vars | Stripe dashboard | Deliberately deferred (user decision) |
 | Vercel Pro upgrade (cron limits) | Vercel dashboard | Deliberately deferred; Hobby silently caps the 6 declared crons |
 | Terms of Service with no-PHI clause | Lawyer | Deliberately deferred |
+
+Done 2026-07-06 (via Management API / Vercel CLI): migrations 048 + 049
+applied and verified in prod (grants + RLS + live /join E2E); all 4 Supabase
+auth email templates branded + subjects set; Site URL + redirect allow-list
+confirmed; unused `NVD_API_KEY` / `OTX_API_KEY` removed from Vercel prod.
 
 ## Feature stubs
 
