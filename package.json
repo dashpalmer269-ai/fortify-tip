@@ -18,7 +18,8 @@
     "test:approval-flow": "tsx scripts/test-approval-flow.ts",
     "test:approval-perms": "tsx scripts/test-approval-perms.ts",
     "test:edit-staff": "tsx scripts/test-edit-staff.ts",
-    "test:all": "tsx scripts/test-no-phi.ts && tsx scripts/test-no-phi-e2e.ts && tsx scripts/test-approval-flow.ts && tsx scripts/test-approval-perms.ts && tsx scripts/test-edit-staff.ts"
+    "test:all": "tsx scripts/test-no-phi.ts && tsx scripts/test-no-phi-e2e.ts && tsx scripts/test-approval-flow.ts && tsx scripts/test-approval-perms.ts && tsx scripts/test-edit-staff.ts",
+    "test:e2e-prod": "node scripts/e2e-prod-probe.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",
