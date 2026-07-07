@@ -8,18 +8,22 @@
  *     policy_type. Prompt injection could place raw HTML / scripts in the
  *     output. Trust MEDIUM.
  *
- * All three call paths funnel through `renderMarkdown()` which:
+ * All call paths funnel through `renderMarkdown()` which:
  *   1. Parses markdown via `marked` (defaults: GFM, headings/lists/links/code)
- *   2. Sanitizes the resulting HTML via DOMPurify, dropping <script>,
+ *   2. Sanitizes the resulting HTML via sanitize-html, dropping <script>,
  *      inline event handlers, <iframe>, javascript: URLs, etc.
  *   3. Returns a string safe to drop into dangerouslySetInnerHTML.
  *
- * Isomorphic via isomorphic-dompurify so the same function works in
- * server components (jsdom under the hood) and client components (window).
+ * Why sanitize-html and not (isomorphic-)dompurify: DOMPurify needs a DOM,
+ * which on the server means jsdom — and jsdom's dependency chain broke the
+ * Vercel lambda runtime (require() of an ESM-only transitive,
+ * html-encoding-sniffer → @exodus/bytes), 500ing every page that imported
+ * this module. sanitize-html is parser-based (htmlparser2), runs identically
+ * in Node and the browser, and needs no DOM.
  */
 
 import { marked } from "marked";
-import DOMPurify from "isomorphic-dompurify";
+import sanitizeHtml from "sanitize-html";
 
 marked.setOptions({
   gfm: true,
@@ -27,9 +31,9 @@ marked.setOptions({
   pedantic: false,
 });
 
-const PURIFY_CONFIG = {
+const SANITIZE_CONFIG: sanitizeHtml.IOptions = {
   // Allowed tags: prose-friendly subset only. No script/iframe/object/embed.
-  ALLOWED_TAGS: [
+  allowedTags: [
     "h1", "h2", "h3", "h4", "h5", "h6",
     "p", "br", "hr",
     "strong", "em", "b", "i", "u", "s", "del", "mark",
@@ -39,12 +43,18 @@ const PURIFY_CONFIG = {
     "blockquote",
     "table", "thead", "tbody", "tr", "th", "td",
     "img",
-  ] as string[],
-  // Added target + rel so we can open external links in a new tab without
-  // them being stripped out of the sanitized output below.
-  ALLOWED_ATTR: ["href", "title", "alt", "src", "class", "id", "target", "rel"] as string[],
-  // Force-treat http:, https:, mailto:; javascript: and others stripped.
-  ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
+  ],
+  allowedAttributes: {
+    a: ["href", "title", "target", "rel", "class", "id"],
+    img: ["src", "alt", "title", "class", "id"],
+    "*": ["class", "id"],
+  },
+  // javascript:, data:, vbscript: etc. are stripped; relative URLs allowed.
+  allowedSchemes: ["http", "https", "mailto"],
+  allowProtocolRelative: false,
+  // Drop disallowed tags entirely (default), keeping their text content —
+  // same net behavior DOMPurify had for e.g. <span>.
+  disallowedTagsMode: "discard",
 };
 
 /**
@@ -53,7 +63,7 @@ const PURIFY_CONFIG = {
  * keeps the source markdown clean (just plain `[text](url)` syntax) while
  * still opening external resources in a new tab with the safe rel value.
  *
- * Run AFTER DOMPurify so we know the input is already validated; the
+ * Run AFTER sanitization so we know the input is already validated; the
  * regex only adds attributes, never removes or escapes content.
  */
 function externalizeLinks(html: string): string {
@@ -70,9 +80,6 @@ function externalizeLinks(html: string): string {
 export function renderMarkdown(input: string | null | undefined): string {
   if (!input) return "";
   const raw = marked.parse(input) as string;
-  // sanitize() returns string when RETURN_TRUSTED_TYPE isn't set (which it
-  // isn't here). The TS type union includes TrustedHTML; cast for the
-  // dangerouslySetInnerHTML consumer.
-  const clean = DOMPurify.sanitize(raw, PURIFY_CONFIG) as unknown as string;
+  const clean = sanitizeHtml(raw, SANITIZE_CONFIG);
   return externalizeLinks(clean);
 }
