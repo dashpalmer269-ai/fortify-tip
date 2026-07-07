@@ -108,7 +108,7 @@ export default async function JoinPage({
 
                 {session.kind === "unauthenticated" ? (
                   <div className="flex flex-col items-center gap-4">
-                    <ButtonLink href="/signup">Create your account</ButtonLink>
+                    <ButtonLink href="/signup?account_type=employee">Create your account</ButtonLink>
                     <p className="text-xs text-[var(--color-quaternary)]">
                       Sign up with {invite.email} and you&apos;ll be connected automatically.
                       Already have an account?{" "}

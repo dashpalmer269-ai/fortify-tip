@@ -31,10 +31,28 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500"],
 });
 
+const SITE_DESCRIPTION =
+  "Continuous HIPAA, SOC 2, ISO 27001, and GDPR compliance for healthcare practices. AI-powered evidence collection, automated audit readiness, and 24/7 drift monitoring.";
+
 export const metadata: Metadata = {
-  title: "Fortify — HIPAA compliance that runs itself",
-  description:
-    "Continuous HIPAA, SOC 2, ISO 27001, and GDPR compliance for healthcare practices. AI-powered evidence collection, automated audit readiness, and 24/7 drift monitoring.",
+  metadataBase: new URL("https://fortifynow.xyz"),
+  title: {
+    default: "Fortify — HIPAA compliance that runs itself",
+    template: "%s · Fortify",
+  },
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    type: "website",
+    siteName: "Fortify",
+    url: "https://fortifynow.xyz",
+    title: "Fortify — HIPAA compliance that runs itself",
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary",
+    title: "Fortify — HIPAA compliance that runs itself",
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

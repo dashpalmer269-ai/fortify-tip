@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { loadSetupChecklist } from "@/lib/setup/checklist";
 import { createServerClient } from "@/lib/supabase/server";
@@ -131,13 +132,19 @@ export default async function DashboardPage() {
   const practiceName = session.membership.practice_name;
 
   // Keep the task surface fresh. Throttled in the generator to once per 10min
-  // per practice — so a tab refresh doesn't re-run the whole regen.
+  // per practice — so a tab refresh doesn't re-run the whole regen. after()
+  // keeps the serverless function alive past the response; a bare floating
+  // promise gets frozen with the lambda and silently truncated.
   if (service) {
-    generateTasksForPractice(service, practiceId).catch((err) => {
-      console.error("[dashboard] task generation failed", {
-        practice_id: practiceId,
-        error: err instanceof Error ? err.message : String(err),
-      });
+    after(async () => {
+      try {
+        await generateTasksForPractice(service, practiceId);
+      } catch (err) {
+        console.error("[dashboard] task generation failed", {
+          practice_id: practiceId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     });
   }
 
@@ -272,10 +279,6 @@ export default async function DashboardPage() {
   const assigneeIds = sortedTasks
     .map((t) => t.assigned_to)
     .filter((id): id is string => !!id);
-  const emailByUser =
-    service && assigneeIds.length > 0
-      ? await emailsForAssignees(service, assigneeIds)
-      : new Map<string, string>();
 
   // Cached AI narrative — regenerates only when the state hash changes.
   // Fallback to deterministic line if AI is unavailable.
@@ -287,30 +290,37 @@ export default async function DashboardPage() {
       ? `${practiceName} is in strong shape at ${overallPct}% overall. ${sortedTasks.length} open ${sortedTasks.length === 1 ? "task" : "tasks"} to clear.`
       : `${practiceName} is at ${overallPct}% overall with ${criticalCount} critical ${criticalCount === 1 ? "item" : "items"} open. Start with the highest-severity task below.`;
 
-  const narrative = service
-    ? (await getOrGenerateNarrative(
-        service,
-        practiceId,
-        {
-          practice_name: practiceName,
-          overall_pct: overallPct,
-          readiness: readinessRows.map((r) => ({ framework_code: r.framework_code, weighted_pct: r.weighted_pct })),
-          open_tasks: sortedTasks.slice(0, 5).map((t) => ({
-            title: t.title ?? "task",
-            severity: t.severity ?? "low",
-            // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is per-request not per-render
-            overdue: !!t.due_date && new Date(t.due_date).getTime() < Date.now(),
-          })),
-          critical_open: criticalCount,
-        },
-        topTaskSigs
-      )) || fallbackNarrative
-    : fallbackNarrative;
-
-  // Setup checklist summary — drives the "finish setup" action card. Only
-  // the compact summary is passed to the client; the full guided list
-  // lives at /app/setup. Cheap head-only count queries.
-  const checklist = await loadSetupChecklist(supabase, practiceId);
+  // Independent tail work — assignee emails, narrative, checklist — runs
+  // concurrently instead of as three sequential awaits.
+  const [emailByUser, narrativeResult, checklist] = await Promise.all([
+    service && assigneeIds.length > 0
+      ? emailsForAssignees(service, assigneeIds)
+      : Promise.resolve(new Map<string, string>()),
+    service
+      ? getOrGenerateNarrative(
+          service,
+          practiceId,
+          {
+            practice_name: practiceName,
+            overall_pct: overallPct,
+            readiness: readinessRows.map((r) => ({ framework_code: r.framework_code, weighted_pct: r.weighted_pct })),
+            open_tasks: sortedTasks.slice(0, 5).map((t) => ({
+              title: t.title ?? "task",
+              severity: t.severity ?? "low",
+              // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is per-request not per-render
+              overdue: !!t.due_date && new Date(t.due_date).getTime() < Date.now(),
+            })),
+            critical_open: criticalCount,
+          },
+          topTaskSigs
+        )
+      : Promise.resolve(null),
+    // Setup checklist summary — drives the "finish setup" action card. Only
+    // the compact summary is passed to the client; the full guided list
+    // lives at /app/setup. Cheap head-only count queries.
+    loadSetupChecklist(supabase, practiceId),
+  ]);
+  const narrative = narrativeResult || fallbackNarrative;
   const setupSummary = checklist.allComplete
     ? null
     : {

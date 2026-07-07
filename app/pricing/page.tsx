@@ -9,11 +9,12 @@ export const dynamic = "force-dynamic";
 export default async function PricingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ expired?: string; canceled?: string }>;
+  searchParams: Promise<{ expired?: string; canceled?: string; activate?: string }>;
 }) {
   const viewer = await getMarketingViewer();
   const params = await searchParams;
   const expiredKind = params.expired === "demo" || params.expired === "unpaid" ? params.expired : null;
+  const activating = !expiredKind && params.activate === "1";
 
   return (
     <div className="relative min-h-screen bg-[var(--color-canvas)] text-[var(--color-primary)] overflow-hidden grain">
@@ -22,6 +23,21 @@ export default async function PricingPage({
       <MarketingNav viewer={viewer} />
 
       <main className="relative z-10 mx-auto max-w-6xl px-8 py-16">
+        {activating && (
+          <div
+            role="status"
+            className="max-w-3xl mx-auto mb-10 rounded-xl border border-emerald-400/40 bg-emerald-400/5 px-6 py-4"
+          >
+            <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-emerald-400 mb-1">
+              Workspace ready
+            </p>
+            <p className="text-[14px] text-[var(--color-primary)] leading-relaxed">
+              Your practice is set up and your compliance baseline is seeded. Choose a plan to
+              activate the workspace — or, if you have a demo invitation from our team, sign up
+              through its link to explore first.
+            </p>
+          </div>
+        )}
         {expiredKind && (
           <div
             role="alert"

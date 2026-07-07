@@ -29,6 +29,8 @@ function LoginForm() {
       }
       router.push(next);
       router.refresh();
+    } catch {
+      setError("Network error — check your connection and try again.");
     } finally {
       setLoading(false);
     }

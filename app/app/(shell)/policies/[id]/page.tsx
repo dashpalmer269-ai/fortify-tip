@@ -3,7 +3,9 @@ import Link from "next/link";
 import { renderMarkdown } from "@/lib/sanitize";
 import { createAuthedServerClient } from "@/lib/supabase/server-auth";
 import { getAppSession, assertActive } from "@/lib/auth/session";
+import { isOfficer } from "@/lib/auth/permissions";
 import AckButton from "./AckButton";
+import ActivateButton from "./ActivateButton";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +75,19 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
         .policy-prose strong { color: var(--color-primary); font-weight: 500; }
         .policy-prose code { font-family: var(--font-mono); font-size: 13px; background: var(--color-surface); padding: 1px 6px; border-radius: 4px; }
       `}</style>
+
+      {policy.status === "draft" && isOfficer(session.membership.role) && (
+        <div className="mt-6">
+          <ActivateButton policyId={policy.id} />
+        </div>
+      )}
+
+      {policy.status === "draft" && !isOfficer(session.membership.role) && (
+        <p className="mt-6 text-xs text-[var(--color-tertiary)]">
+          This policy is still a draft. You&apos;ll be able to acknowledge it once a compliance
+          officer activates it.
+        </p>
+      )}
 
       {policy.status === "active" && (
         <div className="mt-6">

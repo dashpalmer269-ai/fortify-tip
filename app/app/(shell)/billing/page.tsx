@@ -1,5 +1,7 @@
 import { getAppSession, assertActive } from "@/lib/auth/session";
 import { PLANS, isBillingConfigured } from "@/lib/billing/plans";
+import { computeAccessState } from "@/lib/billing/access";
+import { createServerClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
@@ -12,6 +14,49 @@ export default async function BillingPage() {
   assertActive(session);
 
   const configured = isBillingConfigured();
+
+  // Real access state — never show a plan the practice doesn't have.
+  const db = createServerClient();
+  let current: {
+    label: string;
+    detail: string;
+    badge: string;
+    badgeVariant: "accent" | "warning" | "success";
+  } = {
+    label: "Not activated",
+    detail: "Choose a plan to activate this workspace.",
+    badge: "Inactive",
+    badgeVariant: "warning",
+  };
+  if (db) {
+    const { data: practice } = await db
+      .from("practices")
+      .select("plan_source, access_expires_at, billing_status, selected_plan")
+      .eq("id", session.membership.practice_id)
+      .maybeSingle();
+    if (practice) {
+      const state = computeAccessState(practice);
+      const planName = PLANS.find((p) => p.id === practice.selected_plan)?.name ?? "Subscription";
+      if (state.kind === "active" && state.via === "stripe") {
+        current = {
+          label: planName,
+          detail: `Billing status: ${practice.billing_status ?? "active"}.`,
+          badge: "Active",
+          badgeVariant: "success",
+        };
+      } else if (state.kind === "active" && state.via === "invite") {
+        const until = practice.access_expires_at
+          ? new Date(practice.access_expires_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })
+          : "";
+        current = {
+          label: "Demo access",
+          detail: `Full access via demo invitation${until ? ` until ${until}` : ""}. Pick a plan below to keep the workspace after the demo ends.`,
+          badge: "Demo",
+          badgeVariant: "accent",
+        };
+      }
+    }
+  }
 
   return (
     <div className="px-8 py-10 max-w-3xl mx-auto">
@@ -42,10 +87,10 @@ export default async function BillingPage() {
               <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--color-tertiary)] mb-1">
                 Current plan
               </p>
-              <p className="text-[var(--color-primary)] text-base">Free trial</p>
-              <p className="text-xs text-[var(--color-tertiary)] mt-0.5">14-day trial · no credit card on file</p>
+              <p className="text-[var(--color-primary)] text-base">{current.label}</p>
+              <p className="text-xs text-[var(--color-tertiary)] mt-0.5">{current.detail}</p>
             </div>
-            <Badge variant="accent">Trial</Badge>
+            <Badge variant={current.badgeVariant}>{current.badge}</Badge>
           </div>
         </Card>
       </section>

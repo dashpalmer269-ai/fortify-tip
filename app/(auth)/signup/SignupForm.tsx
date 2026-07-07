@@ -27,8 +27,13 @@ export default function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const inviteCode = searchParams.get("invite");
+  // /join/<token> links here with ?account_type=employee so invited team
+  // members land on the right side of the selector.
+  const presetType = searchParams.get("account_type");
 
-  const [accountType, setAccountType] = useState<AccountType>("admin");
+  const [accountType, setAccountType] = useState<AccountType>(
+    presetType === "employee" ? "employee" : "admin"
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [verifyPassword, setVerifyPassword] = useState("");
@@ -80,6 +85,8 @@ export default function SignupForm() {
         return;
       }
       router.push(`/auth/verify-sent?email=${encodeURIComponent(email)}`);
+    } catch {
+      setError("Network error — check your connection and try again.");
     } finally {
       setLoading(false);
     }

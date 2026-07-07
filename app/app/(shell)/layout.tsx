@@ -59,7 +59,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         redirect("/pricing?expired=demo");
       }
       if (state.kind === "unpaid") {
-        redirect("/pricing?expired=unpaid");
+        // Distinguish "never activated" (fresh self-serve practice that has
+        // not chosen a plan yet) from "had Stripe, lapsed" — the pricing
+        // page copy is welcoming for the first and alarming for the second.
+        if (practice.plan_source === "stripe") {
+          redirect("/pricing?expired=unpaid");
+        }
+        redirect("/pricing?activate=1");
       }
     }
   }
